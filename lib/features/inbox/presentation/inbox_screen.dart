@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/push/push_target.dart';
+import '../../dashboard/data/dashboard_repository.dart';
 import 'contacts/contacts_tab.dart';
 import 'engagements/engagements_tab.dart';
 import 'testimonials/testimonials_tab.dart';
@@ -64,12 +65,24 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final todo = ref.watch(dashboardProvider).value?.todo;
+    // Même ordre que InboxScreen._tabs (voir aussi PushResourceType.inboxTabIndex).
+    final counts = [todo?.contacts ?? 0, todo?.engagements ?? 0, todo?.testimonials ?? 0];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Boîte de réception'),
         bottom: TabBar(
           controller: _controller,
-          tabs: [for (final tab in InboxScreen._tabs) Tab(icon: Icon(tab.icon), text: tab.label)],
+          tabs: [
+            for (var i = 0; i < InboxScreen._tabs.length; i++)
+              Tab(
+                icon: counts[i] > 0
+                    ? Badge(label: Text('${counts[i]}'), child: Icon(InboxScreen._tabs[i].icon))
+                    : Icon(InboxScreen._tabs[i].icon),
+                text: InboxScreen._tabs[i].label,
+              ),
+          ],
         ),
       ),
       body: TabBarView(

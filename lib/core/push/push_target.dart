@@ -4,15 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Les trois éléments qui déclenchent une notification push (§4.6) : nouveau
 /// message, nouvelle demande de collaboration, nouvel avis déposé.
 enum PushResourceType {
-  contact('contact', 'message', 0),
-  engagement('engagement', 'demande de collaboration', 1),
-  testimonial('testimonial', 'avis', 2);
+  contact('contact', 'message', 'Nouveau message', 0),
+  engagement('engagement', 'demande de collaboration', 'Nouvelle demande de collaboration', 1),
+  testimonial('testimonial', 'avis', 'Nouvel avis déposé', 2);
 
-  const PushResourceType(this.wireValue, this.label, this.inboxTabIndex);
+  const PushResourceType(this.wireValue, this.label, this.notificationTitle, this.inboxTabIndex);
 
   /// Valeur de `data.type` telle qu'envoyée par le serveur.
   final String wireValue;
   final String label;
+
+  /// Titre de repli pour les push « data-only » (sans bloc `notification`),
+  /// affichées manuellement en avant-plan comme en arrière-plan.
+  final String notificationTitle;
 
   /// Onglet de la boîte de réception à ouvrir.
   final int inboxTabIndex;

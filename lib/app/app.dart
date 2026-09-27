@@ -8,6 +8,7 @@ import '../features/auth/application/session_controller.dart';
 import '../features/dashboard/data/dashboard_repository.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_preferences.dart';
 
 class MeAdminApp extends ConsumerStatefulWidget {
   const MeAdminApp({super.key});
@@ -47,11 +48,16 @@ class _MeAdminAppState extends ConsumerState<MeAdminApp> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
+    // Suit le réglage système par défaut ; l'utilisateur peut le forcer en
+    // clair ou sombre depuis Compte > Apparence (voir account_screen.dart).
+    final themeMode = ref.watch(themeModeProvider).value ?? ThemeMode.system;
+
     return MaterialApp.router(
       title: 'Me Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       routerConfig: ref.watch(routerProvider),
       locale: const Locale('fr'),
       supportedLocales: const [Locale('fr')],

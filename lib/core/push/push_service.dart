@@ -11,6 +11,7 @@ import '../../features/auth/application/session_controller.dart';
 import '../../features/dashboard/data/dashboard_repository.dart';
 import '../api/api_exception.dart';
 import 'push_background_handler.dart';
+import 'push_notification_channel.dart';
 import 'push_target.dart';
 import 'push_token_repository.dart';
 
@@ -18,19 +19,14 @@ final pushServiceProvider = Provider<PushService>((ref) => PushService(ref));
 
 /// Notifications push : jeton FCM, réception au premier plan (affichage
 /// manuel via `flutter_local_notifications`) et en arrière-plan (affichage
-/// automatique par FCM), et ouverture du bon onglet au tap (§4.6).
+/// automatique par FCM pour les messages avec un bloc `notification`,
+/// affichage manuel dans [firebaseMessagingBackgroundHandler] sinon), et
+/// ouverture du bon onglet au tap (§4.6).
 ///
 /// Se met en veille silencieusement si Firebase n'est pas configuré
 /// (`google-services.json` absent) : le reste de l'app continue de fonctionner.
 class PushService {
   PushService(this._ref);
-
-  static const _channel = AndroidNotificationChannel(
-    'me_admin_todo',
-    'À traiter',
-    description: 'Nouveaux messages, demandes de collaboration et avis déposés.',
-    importance: Importance.high,
-  );
 
   final Ref _ref;
   final _localNotifications = FlutterLocalNotificationsPlugin();
@@ -47,7 +43,7 @@ class PushService {
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+        ?.createNotificationChannel(pushNotificationChannel);
     await _localNotifications.initialize(
       const InitializationSettings(android: AndroidInitializationSettings('ic_launcher_monochrome')),
       onDidReceiveNotificationResponse: (response) => _handlePayload(response.payload),
@@ -57,10 +53,18 @@ class PushService {
     FirebaseMessaging.onMessageOpenedApp.listen((message) => _handleTap(message.data));
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // App lancée depuis fermée en tapant sur la notification.
+    // App lancée depuis fermée en tapant sur une notification affichée par FCM
+    // (message avec bloc `notification`).
     final initial = await FirebaseMessaging.instance.getInitialMessage();
     if (initial != null) {
       _handleTap(initial.data);
+    }
+
+    // App lancée depuis fermée en tapant sur une notification affichée
+    // manuellement (message « data-only », voir [firebaseMessagingBackgroundHandler]).
+    final launchDetails = await _localNotifications.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp ?? false) {
+      _handlePayload(launchDetails!.notificationResponse?.payload);
     }
 
     FirebaseMessaging.instance.onTokenRefresh.listen((token) {
@@ -135,23 +139,20 @@ class PushService {
     // le tableau de bord à la réception d'une notification push).
     _ref.invalidate(dashboardProvider);
 
+    // Certains push sont « data-only » (pas de bloc `notification` : c'est au
+    // client de l'afficher). On retombe alors sur un titre générique selon le
+    // type visé, sinon rien ne s'affiche jamais en premier plan (§4.6).
     final notification = message.notification;
-    if (notification == null) {
+    final target = PushTarget.fromData(message.data);
+    final title = notification?.title ?? target?.type.notificationTitle;
+    if (title == null) {
       return;
     }
     await _localNotifications.show(
       message.hashCode,
-      notification.title,
-      notification.body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
+      title,
+      notification?.body,
+      buildPushNotificationDetails(),
       payload: jsonEncode(message.data),
     );
   }

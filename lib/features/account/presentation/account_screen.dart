@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/env.dart';
+import '../../../app/theme/theme_preferences.dart';
 import '../../../core/biometrics/biometric_authenticator.dart';
 import '../../../core/biometrics/biometric_lock_controller.dart';
 import '../../../core/biometrics/biometric_preferences.dart';
@@ -19,6 +20,19 @@ class AccountScreen extends ConsumerStatefulWidget {
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   bool _loggingOut = false;
   bool _updatingBiometric = false;
+  bool _updatingTheme = false;
+
+  Future<void> _setThemeMode(ThemeMode mode) async {
+    setState(() => _updatingTheme = true);
+    try {
+      await ref.read(themePreferencesProvider).setThemeMode(mode);
+      ref.invalidate(themeModeProvider);
+    } finally {
+      if (mounted) {
+        setState(() => _updatingTheme = false);
+      }
+    }
+  }
 
   Future<void> _toggleBiometric(bool value) async {
     setState(() => _updatingBiometric = true);
@@ -70,6 +84,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final theme = Theme.of(context);
     final biometricSupported = ref.watch(biometricSupportedProvider).value ?? false;
     final biometricEnabled = ref.watch(biometricEnabledProvider).value ?? false;
+    final themeMode = ref.watch(themeModeProvider).value ?? ThemeMode.system;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Compte')),
@@ -117,6 +132,35 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     title: Text('Déverrouillage biométrique'),
                     subtitle: Text('Aucune empreinte ni visage configuré sur cet appareil.'),
                   ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.contrast_rounded),
+                      const SizedBox(width: 12),
+                      Text('Apparence', style: theme.textTheme.titleMedium),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(value: ThemeMode.system, label: Text('Système'), icon: Icon(Icons.brightness_auto_outlined)),
+                      ButtonSegment(value: ThemeMode.light, label: Text('Clair'), icon: Icon(Icons.light_mode_outlined)),
+                      ButtonSegment(value: ThemeMode.dark, label: Text('Sombre'), icon: Icon(Icons.dark_mode_outlined)),
+                    ],
+                    selected: {themeMode},
+                    onSelectionChanged: _updatingTheme ? null : (modes) => _setThemeMode(modes.single),
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           Card(

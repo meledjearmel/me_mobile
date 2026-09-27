@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../content/music/presentation/widgets/mini_player_bar.dart';
 import '../dashboard/data/dashboard_repository.dart';
 
 /// Coque à 4 onglets : Accueil, Boîte de réception, Contenu, Compte.
@@ -37,16 +38,22 @@ class AppShell extends ConsumerWidget {
 
     return Scaffold(
       body: shell,
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
-        ),
-        child: NavigationBar(
-          selectedIndex: shell.currentIndex,
-          // Retoucher l'onglet actif revient à sa racine.
-          onDestinationSelected: (index) => shell.goBranch(index, initialLocation: index == shell.currentIndex),
-          destinations: destinations,
-        ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayerBar(),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+            ),
+            child: NavigationBar(
+              selectedIndex: shell.currentIndex,
+              // Retoucher l'onglet actif revient à sa racine.
+              onDestinationSelected: (index) => shell.goBranch(index, initialLocation: index == shell.currentIndex),
+              destinations: destinations,
+            ),
+          ),
+        ],
       ),
     );
   }

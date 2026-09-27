@@ -52,7 +52,8 @@ class TracksListScreen extends ConsumerWidget {
           ),
       ],
       itemBuilder: (context, track) {
-        final isCurrentTrack = player.playingTrackId == track.id;
+        final isCurrentTrack = player.track?.id == track.id;
+        final isPlaying = isCurrentTrack && player.isPlaying;
         return ListTile(
           onTap: () => _openForm(context, ref, id: track.id),
           leading: track.audioUrl == null
@@ -60,13 +61,15 @@ class TracksListScreen extends ConsumerWidget {
               : IconButton(
                   tooltip: isCurrentTrack && player.isLoading
                       ? 'Chargement…'
-                      : isCurrentTrack
+                      : isPlaying
                           ? 'Mettre en pause'
                           : 'Lire cette piste',
                   icon: isCurrentTrack && player.isLoading
                       ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Icon(isCurrentTrack ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
-                  onPressed: () => ref.read(trackPlayerProvider.notifier).toggle(track.id, track.audioUrl!),
+                      : Icon(isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
+                  onPressed: () => ref
+                      .read(trackPlayerProvider.notifier)
+                      .playFromList(state.value?.items ?? [track], track),
                 ),
           title: Text(track.title),
           subtitle: Text(track.artist?.isNotEmpty == true ? track.artist! : 'Artiste inconnu'),
