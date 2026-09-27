@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/biometrics/biometric_lock_controller.dart';
 import '../core/push/push_service.dart';
+import '../features/auth/application/session_controller.dart';
+import '../features/dashboard/data/dashboard_repository.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -36,6 +38,10 @@ class _MeAdminAppState extends ConsumerState<MeAdminApp> with WidgetsBindingObse
     // l'aperçu du multitâche ne doit pas montrer le contenu de l'app.
     if (state == AppLifecycleState.paused) {
       ref.read(biometricLockControllerProvider.notifier).lockIfEnabled();
+    }
+    // Retour au premier plan : les compteurs ont pu bouger pendant l'absence (§5).
+    if (state == AppLifecycleState.resumed && ref.read(sessionProvider).value != null) {
+      ref.invalidate(dashboardProvider);
     }
   }
 

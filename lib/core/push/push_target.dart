@@ -46,8 +46,12 @@ class PushTarget {
 }
 
 /// Cible en attente d'ouverture, posée par [PushService] au tap sur une
-/// notification et consommée par l'écran de la boîte de réception.
-///
-/// Le détail de chaque élément arrive à l'étape 3 : en attendant, ce provider
-/// permet déjà d'ouvrir le bon onglet.
+/// notification (ou par le tableau de bord, pour un élément « récent ») et
+/// consommée par l'écran de la boîte de réception, qui ouvre directement le
+/// détail visé.
 final pendingPushTargetProvider = StateProvider<PushTarget?>((ref) => null);
+
+/// Onglet à ouvrir sans viser un élément précis (ex. depuis la ligne « à
+/// compléter » Avis à la une du tableau de bord). Ignoré si
+/// [pendingPushTargetProvider] est aussi posé (celui-ci est plus précis).
+final initialInboxTabProvider = StateProvider<int?>((ref) => null);

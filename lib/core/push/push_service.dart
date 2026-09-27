@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/router.dart';
 import '../../features/auth/application/session_controller.dart';
+import '../../features/dashboard/data/dashboard_repository.dart';
 import '../api/api_exception.dart';
 import 'push_background_handler.dart';
 import 'push_target.dart';
@@ -130,6 +131,10 @@ class PushService {
   }
 
   Future<void> _showForeground(RemoteMessage message) async {
+    // Le compteur « à traiter » vient de bouger côté serveur (§5 : rafraîchir
+    // le tableau de bord à la réception d'une notification push).
+    _ref.invalidate(dashboardProvider);
+
     final notification = message.notification;
     if (notification == null) {
       return;
@@ -158,9 +163,7 @@ class PushService {
     _handleTap(jsonDecode(payload) as Map<String, dynamic>);
   }
 
-  /// Ouvre la boîte de réception sur le bon onglet. Le détail précis de
-  /// l'élément (ouvrir directement la fiche du message, de la demande ou de
-  /// l'avis) arrive à l'étape 3, une fois ces écrans construits.
+  /// Ouvre directement le détail de l'élément visé dans la boîte de réception.
   void _handleTap(Map<String, dynamic> data) {
     final target = PushTarget.fromData(data);
     if (target == null) {
