@@ -7,11 +7,15 @@ import 'package:dio/dio.dart';
 /// canée, sans passer par le réseau. Permet de tester le client API et les
 /// dépôts qui l'utilisent (auth, 2FA, erreurs) de bout en bout.
 class FakeDioAdapter implements HttpClientAdapter {
-  final _routes = <String, _CannedResponse>{};
+  // Une file par route : plusieurs appels à whenRequest() pour la même clé
+  // renvoient les réponses dans l'ordre (utile pour paginer), puis répètent
+  // la dernière — un seul appel se comporte donc comme avant (même réponse
+  // à chaque requête).
+  final _routes = <String, List<_CannedResponse>>{};
   final requests = <RequestOptions>[];
 
   void whenRequest(String method, String path, {required int statusCode, Object? body, Map<String, String>? headers}) {
-    _routes['${method.toUpperCase()} $path'] = _CannedResponse(statusCode, body, headers ?? const {});
+    _routes.putIfAbsent('${method.toUpperCase()} $path', () => []).add(_CannedResponse(statusCode, body, headers ?? const {}));
   }
 
   @override
@@ -22,10 +26,12 @@ class FakeDioAdapter implements HttpClientAdapter {
   ) async {
     requests.add(options);
     final key = '${options.method.toUpperCase()} ${options.path}';
-    final canned = _routes[key];
-    if (canned == null) {
+    final queue = _routes[key];
+    if (queue == null || queue.isEmpty) {
       throw StateError('Aucune réponse simulée pour $key. Routes connues : ${_routes.keys}');
     }
+    final callsForKey = requests.where((r) => '${r.method.toUpperCase()} ${r.path}' == key).length;
+    final canned = queue[(callsForKey - 1).clamp(0, queue.length - 1)];
 
     return ResponseBody.fromString(
       canned.body == null ? '' : jsonEncode(canned.body),

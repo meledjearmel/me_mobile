@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../shared/widgets/image_source_sheet.dart';
+
 /// Photo (profil ou CV) : aperçu rond, tap pour choisir galerie ou appareil
 /// photo. Pas de bouton « retirer » : l'API ne permet que de remplacer (§4.3).
 class PhotoPickerTile extends StatelessWidget {
@@ -20,26 +22,7 @@ class PhotoPickerTile extends StatelessWidget {
   final ValueChanged<XFile> onPicked;
 
   Future<void> _pick(BuildContext context) async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choisir depuis la galerie'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Prendre une photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-          ],
-        ),
-      ),
-    );
+    final source = await pickImageSource(context);
     if (source == null) {
       return;
     }
