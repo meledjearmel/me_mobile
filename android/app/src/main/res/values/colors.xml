@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleurs du site public (me/resources/css/public.css), thème jour. -->
+    <color name="ic_launcher_background">#FFDA3F</color>
+    <color name="launch_background">#FFF9F1</color>
+    <color name="logo_ink">#060606</color>
+</resources>

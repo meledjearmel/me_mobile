@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monogramme AM du portfolio (me/public/favicon.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp" android:height="40dp"
+    android:viewportWidth="56" android:viewportHeight="40">
+    <path android:fillColor="@color/logo_ink" android:pathData="M0,40 L22,0 L26,0 L26,12.7 L22,12.7 L7,40 Z" />
+    <path android:fillColor="@color/logo_ink" android:pathData="M9,26 L25,26 L25,32 L9,32 Z" />
+    <path android:fillColor="@color/logo_ink" android:pathData="M22,0 L28,0 L28,40 L22,40 Z" />
+    <path android:fillColor="@color/logo_ink" android:pathData="M22,0 L28,0 L39,16.8 L50,0 L56,0 L39,26 Z" />
+    <path android:fillColor="@color/logo_ink" android:pathData="M50,0 L56,0 L56,40 L50,40 Z" />
+</vector>

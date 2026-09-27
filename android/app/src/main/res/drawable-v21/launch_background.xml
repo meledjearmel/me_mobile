@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Écran de lancement : fond crème (nuit : bleu nuit) et monogramme AM centré. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background" />
+    <item
+        android:width="84dp"
+        android:height="60dp"
+        android:gravity="center"
+        android:drawable="@drawable/logo_mark" />
+</layer-list>
