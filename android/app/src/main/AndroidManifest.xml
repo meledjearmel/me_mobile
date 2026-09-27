@@ -2,6 +2,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Android 13+ (API 33) : sans elle, aucune notification ne s'affiche (voir §5 du cahier des charges). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Photo du profil / du CV prise directement avec l'appareil (§5 : galerie ou appareil photo). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="Me Admin"
         android:name="${applicationName}"

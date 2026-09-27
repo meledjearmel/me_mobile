@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Sommaire des sections de contenu. Les écrans arrivent aux étapes 4 à 7.
+import '../../profile/presentation/profile_screen.dart';
+
+/// Sommaire des sections de contenu. Les écrans restants arrivent aux
+/// étapes 5 à 7.
 class ContentScreen extends StatelessWidget {
   const ContentScreen({super.key});
 
@@ -32,15 +35,25 @@ class ContentScreen extends StatelessWidget {
               children: [
                 for (final (index, (icon, label, step)) in _sections.indexed) ...[
                   if (index > 0) const Divider(indent: 20, endIndent: 20),
-                  ListTile(
-                    enabled: false,
-                    leading: Icon(icon),
-                    title: Text(label),
-                    trailing: Text(
-                      'Étape $step',
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  if (label == 'Profil')
+                    ListTile(
+                      leading: Icon(icon),
+                      title: const Text('Profil'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                      ),
+                    )
+                  else
+                    ListTile(
+                      enabled: false,
+                      leading: Icon(icon),
+                      title: Text(label),
+                      trailing: Text(
+                        'Étape $step',
+                        style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
                     ),
-                  ),
                 ],
               ],
             ),

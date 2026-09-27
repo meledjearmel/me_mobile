@@ -14,7 +14,9 @@ if (file("google-services.json").exists()) {
 
 android {
     namespace = "com.meledjearmel.me"
-    compileSdk = flutter.compileSdkVersion
+    // file_picker (via flutter_plugin_android_lifecycle) exige compileSdk 36 ;
+    // flutter.compileSdkVersion (34) ne suffit plus.
+    compileSdk = maxOf(flutter.compileSdkVersion, 36)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
