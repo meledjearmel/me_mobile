@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../shared/widgets/full_screen_image_viewer.dart';
 import '../application/profile_providers.dart';
 import '../data/profile.dart';
 import 'profile_edit_screen.dart';
@@ -61,13 +63,25 @@ class _ProfileBody extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
       children: [
         Center(
-          child: CircleAvatar(
-            radius: 48,
-            backgroundColor: theme.colorScheme.surfaceContainerHigh,
-            backgroundImage: profile.photoUrl != null ? NetworkImage(profile.photoUrl!) : null,
-            child: profile.photoUrl == null
-                ? Icon(Icons.person_outline_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant)
-                : null,
+          child: GestureDetector(
+            onTap: profile.photoUrl == null
+                ? null
+                : () => FullScreenImageViewer.open(context, profile.photoUrl!, heroTag: 'profile-photo'),
+            child: Semantics(
+              button: profile.photoUrl != null,
+              label: profile.photoUrl != null ? 'Photo du profil, voir en plein écran' : 'Aucune photo de profil',
+              child: Hero(
+                tag: 'profile-photo',
+                child: CircleAvatar(
+                  radius: 48,
+                  backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                  backgroundImage: profile.photoUrl != null ? NetworkImage(profile.photoUrl!) : null,
+                  child: profile.photoUrl == null
+                      ? Icon(Icons.person_outline_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant)
+                      : null,
+                ),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -126,17 +140,9 @@ class _ProfileBody extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
-              ListTile(
-                leading: const Icon(Icons.picture_as_pdf_outlined),
-                title: const Text('CV — Français'),
-                subtitle: Text(profile.cvFiles.fr?.fileName ?? 'Secours ou généré automatiquement'),
-              ),
+              _CvTile(label: 'CV — Français', file: profile.cvFiles.fr),
               const Divider(height: 1, indent: 16, endIndent: 16),
-              ListTile(
-                leading: const Icon(Icons.picture_as_pdf_outlined),
-                title: const Text('CV — Anglais'),
-                subtitle: Text(profile.cvFiles.en?.fileName ?? 'Secours ou généré automatiquement'),
-              ),
+              _CvTile(label: 'CV — Anglais', file: profile.cvFiles.en),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 leading: const Icon(Icons.music_note_outlined),
@@ -147,6 +153,24 @@ class _ProfileBody extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CvTile extends StatelessWidget {
+  const _CvTile({required this.label, required this.file});
+
+  final String label;
+  final UploadedFile? file;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.picture_as_pdf_outlined),
+      title: Text(label),
+      subtitle: Text(file?.fileName ?? 'Secours ou généré automatiquement'),
+      trailing: file == null ? null : const Icon(Icons.open_in_new_rounded),
+      onTap: file == null ? null : () => launchUrl(Uri.parse(file!.url), mode: LaunchMode.externalApplication),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../pagination/paginated_list_controller.dart';
 import 'feedback.dart';
+import 'list_skeleton.dart';
 
 /// Coque commune à toutes les listes de contenu (§5) : recherche, puces de
 /// filtre fournies par l'appelant, défilement infini, tirer pour rafraîchir,
@@ -96,6 +97,7 @@ class _ResourceListScaffoldState<T> extends State<ResourceListScaffold<T>> {
                 suffixIcon: _searchController.text.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Effacer la recherche',
                         icon: const Icon(Icons.close_rounded),
                         onPressed: () {
                           _searchController.clear();
@@ -119,7 +121,7 @@ class _ResourceListScaffoldState<T> extends State<ResourceListScaffold<T>> {
           const SizedBox(height: 4),
           Expanded(
             child: widget.state.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const ListSkeleton(),
               error: (error, _) => Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

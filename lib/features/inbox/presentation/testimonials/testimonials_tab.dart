@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/list_skeleton.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../application/testimonial_list_controller.dart';
 import '../../data/testimonial.dart';
@@ -114,6 +115,7 @@ class _TestimonialsTabState extends ConsumerState<TestimonialsTab> {
               suffixIcon: _searchController.text.isEmpty
                   ? null
                   : IconButton(
+                      tooltip: 'Effacer la recherche',
                       icon: const Icon(Icons.close_rounded),
                       onPressed: () {
                         _searchController.clear();
@@ -144,7 +146,7 @@ class _TestimonialsTabState extends ConsumerState<TestimonialsTab> {
         const SizedBox(height: 4),
         Expanded(
           child: state.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const ListSkeleton(),
             error: (error, _) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

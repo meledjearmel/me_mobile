@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/utils/relative_date.dart';
+import '../../../shared/widgets/list_skeleton.dart';
 import '../../content/data/reference_repository.dart';
 import '../../content/domains/application/domain_list_controller.dart';
 import '../../content/educations/application/education_list_controller.dart';
@@ -175,6 +176,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
                 suffixIcon: _searchController.text.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Effacer la recherche',
                         icon: const Icon(Icons.close_rounded),
                         onPressed: () {
                           _searchController.clear();
@@ -205,7 +207,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
           const SizedBox(height: 4),
           Expanded(
             child: state.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const ListSkeleton(),
               error: (error, _) => Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

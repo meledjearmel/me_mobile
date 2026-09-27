@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/list_skeleton.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../application/engagement_list_controller.dart';
 import '../../data/engagement.dart';
@@ -73,6 +74,7 @@ class _EngagementsTabState extends ConsumerState<EngagementsTab> {
               suffixIcon: _searchController.text.isEmpty
                   ? null
                   : IconButton(
+                      tooltip: 'Effacer la recherche',
                       icon: const Icon(Icons.close_rounded),
                       onPressed: () {
                         _searchController.clear();
@@ -103,7 +105,7 @@ class _EngagementsTabState extends ConsumerState<EngagementsTab> {
         const SizedBox(height: 4),
         Expanded(
           child: state.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const ListSkeleton(),
             error: (error, _) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

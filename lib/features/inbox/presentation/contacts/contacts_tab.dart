@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/list_skeleton.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../application/contact_list_controller.dart';
 import '../../data/contact.dart';
@@ -76,6 +77,7 @@ class _ContactsTabState extends ConsumerState<ContactsTab> {
               suffixIcon: _searchController.text.isEmpty
                   ? null
                   : IconButton(
+                      tooltip: 'Effacer la recherche',
                       icon: const Icon(Icons.close_rounded),
                       onPressed: () {
                         _searchController.clear();
@@ -106,7 +108,7 @@ class _ContactsTabState extends ConsumerState<ContactsTab> {
         const SizedBox(height: 4),
         Expanded(
           child: state.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const ListSkeleton(),
             error: (error, _) => _ErrorState(onRetry: () => ref.invalidate(contactListProvider)),
             data: (data) {
               if (data.items.isEmpty) {

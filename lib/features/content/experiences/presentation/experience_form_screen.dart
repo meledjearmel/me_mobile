@@ -362,6 +362,7 @@ class _ExperienceFormScreenState extends ConsumerState<ExperienceFormScreen> {
                         ),
                         onTap: () => _editHighlight(index),
                         trailing: IconButton(
+                          tooltip: 'Retirer ce point marquant',
                           icon: const Icon(Icons.delete_outline_rounded),
                           onPressed: () => _removeHighlight(index),
                         ),

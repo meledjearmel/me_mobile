@@ -155,7 +155,7 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
         appBar: AppBar(
           title: const Text('Avis'),
           actions: [
-            IconButton(icon: const Icon(Icons.delete_outline_rounded), onPressed: _delete),
+            IconButton(tooltip: 'Supprimer', icon: const Icon(Icons.delete_outline_rounded), onPressed: _delete),
           ],
         ),
         body: FutureBuilder<Testimonial>(

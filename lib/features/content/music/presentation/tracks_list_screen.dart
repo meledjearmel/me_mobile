@@ -58,6 +58,11 @@ class TracksListScreen extends ConsumerWidget {
           leading: track.audioUrl == null
               ? const Icon(Icons.music_off_outlined)
               : IconButton(
+                  tooltip: isCurrentTrack && player.isLoading
+                      ? 'Chargement…'
+                      : isCurrentTrack
+                          ? 'Mettre en pause'
+                          : 'Lire cette piste',
                   icon: isCurrentTrack && player.isLoading
                       ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : Icon(isCurrentTrack ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
