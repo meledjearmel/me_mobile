@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
-import '../../data/profile.dart';
+import '../../core/models/uploaded_file.dart';
 
 /// Ligne de sélection pour un fichier déjà uploadé (CV PDF, musique) : nom du
 /// fichier courant, remplacement, et retrait quand l'API le permet (§4.3).

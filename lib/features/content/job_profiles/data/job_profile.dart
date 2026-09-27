@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/models/publication_status.dart';
 import '../../../../core/models/translated.dart';
+import '../../../../core/models/uploaded_file.dart';
 
 @immutable
 class JobProfile {
@@ -15,6 +16,7 @@ class JobProfile {
     required this.cvDescription,
     required this.sortOrder,
     required this.status,
+    required this.cvFiles,
   });
 
   factory JobProfile.fromJson(Map<String, dynamic> json) => JobProfile(
@@ -27,6 +29,7 @@ class JobProfile {
         cvDescription: Translated.fromJson(json['cv_description']),
         sortOrder: json['sort_order'] as int? ?? 0,
         status: PublicationStatus.fromWire(json['status'] as String?),
+        cvFiles: CvFiles.fromJson(json['cv_files'] as Map<String, dynamic>?),
       );
 
   final int id;
@@ -40,4 +43,8 @@ class JobProfile {
   final Translated cvDescription;
   final int sortOrder;
   final PublicationStatus status;
+
+  /// CV PDF uploadé pour ce profil métier, par langue. Sans fichier pour une
+  /// langue, le CV de l'autre langue sert de secours, sinon il est généré.
+  final CvFiles cvFiles;
 }

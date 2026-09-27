@@ -6,16 +6,15 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/models/translated.dart';
+import '../../../shared/widgets/document_picker_tile.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/translated_field.dart';
 import '../application/profile_providers.dart';
 import '../data/profile.dart';
 import '../data/profile_repository.dart';
-import 'widgets/document_picker_tile.dart';
 import 'widgets/photo_picker_tile.dart';
 
 const _maxPhotoBytes = 5 * 1024 * 1024;
-const _maxCvBytes = 10 * 1024 * 1024;
 const _maxMusicBytes = 20 * 1024 * 1024;
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
@@ -43,14 +42,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
   XFile? _photo;
   XFile? _cvPhoto;
-  PlatformFile? _cvFileFr;
-  PlatformFile? _cvFileEn;
   PlatformFile? _music;
 
   bool _dirty = false;
   bool _saving = false;
+  bool _removingMusic = false;
   double? _uploadProgress;
-  String? _removingCv; // 'fr' | 'en' | 'music', pour l'indicateur de chargement.
   String? _error;
   ValidationException? _validation;
 
@@ -116,27 +113,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _markDirty();
   }
 
-  Future<void> _removeCv(String locale) async {
-    setState(() => _removingCv = locale);
-    try {
-      await ref.read(profileRepositoryProvider).deleteCv(locale);
-      ref.invalidate(profileProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('CV ${locale.toUpperCase()} retiré.')));
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _removingCv = null);
-      }
-    }
-  }
-
   Future<void> _removeMusic() async {
-    setState(() => _removingCv = 'music');
+    setState(() => _removingMusic = true);
     try {
       await ref.read(profileRepositoryProvider).deleteMusic();
       ref.invalidate(profileProvider);
@@ -149,7 +127,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _removingCv = null);
+        setState(() => _removingMusic = false);
       }
     }
   }
@@ -182,8 +160,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             photo: _photoMultipart(_photo),
             cvPhoto: _photoMultipart(_cvPhoto),
             music: _music == null ? null : dio.MultipartFile.fromFileSync(_music!.path!, filename: _music!.name),
-            cvFileFr: _cvFileFr == null ? null : dio.MultipartFile.fromFileSync(_cvFileFr!.path!, filename: _cvFileFr!.name),
-            cvFileEn: _cvFileEn == null ? null : dio.MultipartFile.fromFileSync(_cvFileEn!.path!, filename: _cvFileEn!.name),
             onProgress: (sent, total) {
               if (total > 0 && mounted) {
                 setState(() => _uploadProgress = sent / total);
@@ -348,42 +324,14 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               ),
             ),
             const Divider(height: 32),
-            Text('CV et musique du site', style: theme.textTheme.labelLarge),
+            Text('Musique du site', style: theme.textTheme.labelLarge),
             const SizedBox(height: 4),
             Text(
-              'Sans CV uploadé pour une langue, celui de l\'autre langue sert de secours, sinon '
-              'il est généré automatiquement. Sans musique, le site joue une piste par défaut.',
+              'Sans musique uploadée, le site joue une piste par défaut. Le CV se gère '
+              'désormais par profil métier (Contenu → Profils métier).',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
-            DocumentPickerTile(
-              icon: Icons.picture_as_pdf_outlined,
-              label: 'CV — Français',
-              hint: 'Aucun CV FR : secours ou généré automatiquement',
-              extensions: const ['pdf'],
-              maxBytes: _maxCvBytes,
-              tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
-              current: widget.profile.cvFiles.fr,
-              pickedFile: _cvFileFr,
-              onPicked: (file) => _applyDocument(() => _cvFileFr = file),
-              onRemove: () => _removeCv('fr'),
-              removing: _removingCv == 'fr',
-            ),
-            const SizedBox(height: 10),
-            DocumentPickerTile(
-              icon: Icons.picture_as_pdf_outlined,
-              label: 'CV — Anglais',
-              hint: 'Aucun CV EN : secours ou généré automatiquement',
-              extensions: const ['pdf'],
-              maxBytes: _maxCvBytes,
-              tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
-              current: widget.profile.cvFiles.en,
-              pickedFile: _cvFileEn,
-              onPicked: (file) => _applyDocument(() => _cvFileEn = file),
-              onRemove: () => _removeCv('en'),
-              removing: _removingCv == 'en',
-            ),
-            const SizedBox(height: 10),
             DocumentPickerTile(
               icon: Icons.music_note_outlined,
               label: 'Musique du site',
@@ -395,7 +343,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               pickedFile: _music,
               onPicked: (file) => _applyDocument(() => _music = file),
               onRemove: _removeMusic,
-              removing: _removingCv == 'music',
+              removing: _removingMusic,
             ),
             const SizedBox(height: 28),
             if (_uploadProgress != null) ...[

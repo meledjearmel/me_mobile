@@ -23,7 +23,6 @@ const _profileJson = {
   'photo_url': null,
   'cv_photo_url': null,
   'music': null,
-  'cv_files': null,
 };
 
 Map<String, String> _fieldMap(FormData form) => {for (final e in form.fields) e.key: e.value};
@@ -78,13 +77,5 @@ void main() {
     await repository.deleteMusic();
 
     expect(adapter.requests.single.path, '/v1/profile/music');
-  });
-
-  test('deleteCv appelle DELETE /v1/profile/cv/{locale}', () async {
-    adapter.whenRequest('DELETE', '/v1/profile/cv/en', statusCode: 204);
-
-    await repository.deleteCv('en');
-
-    expect(adapter.requests.single.path, '/v1/profile/cv/en');
   });
 }

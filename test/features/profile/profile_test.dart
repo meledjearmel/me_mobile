@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:me_mobile/features/profile/data/profile.dart';
 
 void main() {
-  test('parse un profil complet, avec CV et musique uploadés', () {
+  test('parse un profil complet, avec musique uploadée (le CV vit désormais sur les profils métier)', () {
     final profile = Profile.fromJson({
       'id': 1,
       'name': 'Armel Meledje',
@@ -18,10 +18,6 @@ void main() {
       'photo_url': 'https://me.armeldev.xyz/photo.jpg',
       'cv_photo_url': null,
       'music': {'file_name': 'ambient.mp3', 'url': 'https://me.armeldev.xyz/music/ambient.mp3'},
-      'cv_files': {
-        'fr': {'file_name': 'cv-fr.pdf', 'url': 'https://me.armeldev.xyz/cv/fr.pdf'},
-        'en': null,
-      },
     });
 
     expect(profile.name, 'Armel Meledje');
@@ -29,11 +25,9 @@ void main() {
     expect(profile.socialLinks.github, 'https://github.com/armel');
     expect(profile.socialLinks.linkedin, isNull);
     expect(profile.music!.fileName, 'ambient.mp3');
-    expect(profile.cvFiles.fr!.fileName, 'cv-fr.pdf');
-    expect(profile.cvFiles.en, isNull);
   });
 
-  test('sans musique ni CV uploadés, sans réseaux sociaux : tout reste null proprement', () {
+  test('sans musique ni réseaux sociaux : tout reste null proprement', () {
     final profile = Profile.fromJson({
       'id': 1,
       'name': 'Armel Meledje',
@@ -49,12 +43,9 @@ void main() {
       'photo_url': null,
       'cv_photo_url': null,
       'music': null,
-      'cv_files': null,
     });
 
     expect(profile.music, isNull);
-    expect(profile.cvFiles.fr, isNull);
-    expect(profile.cvFiles.en, isNull);
     expect(profile.socialLinks.github, isNull);
   });
 }

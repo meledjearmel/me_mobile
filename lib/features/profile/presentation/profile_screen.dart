@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../shared/widgets/full_screen_image_viewer.dart';
 import '../application/profile_providers.dart';
@@ -134,43 +133,22 @@ class _ProfileBody extends StatelessWidget {
           Text(profile.bioFull.display),
         ],
         const SizedBox(height: 20),
-        Text('CV et musique', style: theme.textTheme.labelLarge),
+        Text('Musique', style: theme.textTheme.labelLarge),
+        const SizedBox(height: 4),
+        Text(
+          'Le CV se gère par profil métier (Contenu → Profils métier).',
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
         const SizedBox(height: 8),
         Card(
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              _CvTile(label: 'CV — Français', file: profile.cvFiles.fr),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              _CvTile(label: 'CV — Anglais', file: profile.cvFiles.en),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              ListTile(
-                leading: const Icon(Icons.music_note_outlined),
-                title: const Text('Musique du site'),
-                subtitle: Text(profile.music?.fileName ?? 'Piste par défaut'),
-              ),
-            ],
+          child: ListTile(
+            leading: const Icon(Icons.music_note_outlined),
+            title: const Text('Musique du site'),
+            subtitle: Text(profile.music?.fileName ?? 'Piste par défaut'),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _CvTile extends StatelessWidget {
-  const _CvTile({required this.label, required this.file});
-
-  final String label;
-  final UploadedFile? file;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.picture_as_pdf_outlined),
-      title: Text(label),
-      subtitle: Text(file?.fileName ?? 'Secours ou généré automatiquement'),
-      trailing: file == null ? null : const Icon(Icons.open_in_new_rounded),
-      onTap: file == null ? null : () => launchUrl(Uri.parse(file!.url), mode: LaunchMode.externalApplication),
     );
   }
 }

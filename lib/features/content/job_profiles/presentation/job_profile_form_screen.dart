@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart' as dio;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,11 +7,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../core/models/translated.dart';
+import '../../../../core/models/uploaded_file.dart';
+import '../../../../shared/widgets/document_picker_tile.dart';
 import '../../../../shared/widgets/feedback.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../../data/reference_repository.dart';
 import '../application/job_profile_list_controller.dart';
 import '../data/job_profile_repository.dart';
+
+const _maxCvBytes = 10 * 1024 * 1024;
 
 /// Création ou modification d'un profil métier (§4.3). `id == null` : création.
 class JobProfileFormScreen extends ConsumerStatefulWidget {
@@ -34,9 +40,15 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
   PublicationStatus _status = PublicationStatus.draft;
   String _keyForTitle = '';
 
+  CvFiles _cvFiles = const CvFiles();
+  PlatformFile? _cvFileFr;
+  PlatformFile? _cvFileEn;
+  String? _removingCv; // 'fr' | 'en', pour l'indicateur de chargement.
+
   bool _dirty = false;
   bool _saving = false;
   bool _deleting = false;
+  double? _uploadProgress;
   String? _error;
   ValidationException? _validation;
 
@@ -56,6 +68,7 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
     _sortOrder.text = '${jobProfile.sortOrder}';
     _status = jobProfile.status;
     _keyForTitle = jobProfile.label.display;
+    _cvFiles = jobProfile.cvFiles;
   }
 
   @override
@@ -91,11 +104,37 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
     }
   }
 
+  void _applyCvFile(void Function() apply) {
+    setState(apply);
+    _markDirty();
+  }
+
+  Future<void> _removeCv(String locale) async {
+    setState(() => _removingCv = locale);
+    try {
+      final updated = await ref.read(jobProfileRepositoryProvider).deleteCv(widget.id!, locale);
+      setState(() => _cvFiles = updated.cvFiles);
+      ref.read(jobProfileListProvider.notifier).updateItem((j) => j.id == widget.id, (j) => updated);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('CV ${locale.toUpperCase()} retiré.')));
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _removingCv = null);
+      }
+    }
+  }
+
   Future<void> _save() async {
     setState(() {
       _saving = true;
       _error = null;
       _validation = null;
+      _uploadProgress = null;
     });
     try {
       await ref.read(jobProfileRepositoryProvider).save(
@@ -108,6 +147,13 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
             cvDescription: _cvDescription,
             sortOrder: int.tryParse(_sortOrder.text.trim()) ?? 0,
             status: _status,
+            cvFileFr: _cvFileFr == null ? null : dio.MultipartFile.fromFileSync(_cvFileFr!.path!, filename: _cvFileFr!.name),
+            cvFileEn: _cvFileEn == null ? null : dio.MultipartFile.fromFileSync(_cvFileEn!.path!, filename: _cvFileEn!.name),
+            onProgress: (sent, total) {
+              if (total > 0 && mounted) {
+                setState(() => _uploadProgress = sent / total);
+              }
+            },
           );
       ref.invalidate(jobProfileListProvider);
       ref.invalidate(jobProfilesRefProvider); // §4.4 : sélecteur (formulaire Projets).
@@ -121,7 +167,10 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
       setState(() => _error = e.message);
     } finally {
       if (mounted) {
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          _uploadProgress = null;
+        });
       }
     }
   }
@@ -162,6 +211,7 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final v = _validation;
 
     return PopScope(
@@ -273,7 +323,43 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
                     _markDirty();
                   },
                 ),
+                const SizedBox(height: 20),
+                Text('CV ciblé pour ce profil', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 4),
+                Text(
+                  'Sans CV uploadé pour une langue, celui de l\'autre langue sert de secours, '
+                  'sinon il est généré automatiquement.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
                 const SizedBox(height: 12),
+                DocumentPickerTile(
+                  icon: Icons.picture_as_pdf_outlined,
+                  label: 'CV — Français',
+                  hint: 'Aucun CV FR : secours ou généré automatiquement',
+                  extensions: const ['pdf'],
+                  maxBytes: _maxCvBytes,
+                  tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
+                  current: _cvFiles.fr,
+                  pickedFile: _cvFileFr,
+                  onPicked: (file) => _applyCvFile(() => _cvFileFr = file),
+                  onRemove: _isEditing ? () => _removeCv('fr') : null,
+                  removing: _removingCv == 'fr',
+                ),
+                const SizedBox(height: 10),
+                DocumentPickerTile(
+                  icon: Icons.picture_as_pdf_outlined,
+                  label: 'CV — Anglais',
+                  hint: 'Aucun CV EN : secours ou généré automatiquement',
+                  extensions: const ['pdf'],
+                  maxBytes: _maxCvBytes,
+                  tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
+                  current: _cvFiles.en,
+                  pickedFile: _cvFileEn,
+                  onPicked: (file) => _applyCvFile(() => _cvFileEn = file),
+                  onRemove: _isEditing ? () => _removeCv('en') : null,
+                  removing: _removingCv == 'en',
+                ),
+                const SizedBox(height: 20),
                 TextField(
                   controller: _sortOrder,
                   keyboardType: TextInputType.number,
@@ -294,6 +380,10 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
                   },
                 ),
                 const SizedBox(height: 28),
+                if (_uploadProgress != null) ...[
+                  LinearProgressIndicator(value: _uploadProgress),
+                  const SizedBox(height: 12),
+                ],
                 FilledButton(
                   onPressed: _saving ? null : _save,
                   child: _saving
