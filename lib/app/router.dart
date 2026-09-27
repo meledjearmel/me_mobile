@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/biometrics/biometric_lock_controller.dart';
+import '../core/push/push_target.dart';
 import '../features/account/presentation/account_screen.dart';
 import '../features/auth/application/session_controller.dart';
 import '../features/auth/presentation/login_screen.dart';
@@ -9,14 +11,15 @@ import '../features/auth/presentation/splash_screen.dart';
 import '../features/auth/presentation/two_factor_screen.dart';
 import '../features/content/presentation/content_screen.dart';
 import '../features/dashboard/presentation/home_screen.dart';
-import '../core/push/push_target.dart';
 import '../features/inbox/presentation/inbox_screen.dart';
+import '../features/lock/presentation/lock_screen.dart';
 import '../features/shell/app_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(sessionProvider);
-  // Rafraîchit le routeur à chaque changement de session, ou quand une
-  // notification tapée pose une cible en attente, pour que `redirect` se rejoue.
+  final locked = ref.watch(biometricLockControllerProvider).value ?? false;
+  // Rafraîchit le routeur à chaque changement de session, de verrouillage, ou
+  // quand une notification tapée pose une cible en attente.
   final refresh = GoRouterRefreshStream(ref);
 
   return GoRouter(
@@ -33,7 +36,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!loggedIn) {
         return onAuthRoute ? null : '/login';
       }
-      if (onAuthRoute || state.matchedLocation == '/') {
+      if (locked) {
+        return state.matchedLocation == '/lock' ? null : '/lock';
+      }
+      if (onAuthRoute || state.matchedLocation == '/' || state.matchedLocation == '/lock') {
         // Une notification tapée avant la connexion (app relancée) ouvre la
         // boîte de réception plutôt que l'accueil.
         return ref.read(pendingPushTargetProvider) != null ? '/inbox' : '/home';
@@ -42,6 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+      GoRoute(path: '/lock', builder: (context, state) => const LockScreen()),
       GoRoute(
         path: '/login',
         builder: (context, state) => LoginScreen(notice: state.extra as String?),
@@ -70,5 +77,6 @@ class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Ref ref) {
     ref.listen(sessionProvider, (_, _) => notifyListeners());
     ref.listen(pendingPushTargetProvider, (_, _) => notifyListeners());
+    ref.listen(biometricLockControllerProvider, (_, _) => notifyListeners());
   }
 }

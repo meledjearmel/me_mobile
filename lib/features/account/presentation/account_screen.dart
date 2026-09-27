@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/env.dart';
+import '../../../core/biometrics/biometric_authenticator.dart';
+import '../../../core/biometrics/biometric_lock_controller.dart';
+import '../../../core/biometrics/biometric_preferences.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../auth/application/session_controller.dart';
 
@@ -14,6 +17,30 @@ class AccountScreen extends ConsumerStatefulWidget {
 
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   bool _loggingOut = false;
+  bool _updatingBiometric = false;
+
+  Future<void> _toggleBiometric(bool value) async {
+    setState(() => _updatingBiometric = true);
+    try {
+      if (value) {
+        final ok = await ref
+            .read(biometricAuthenticatorProvider)
+            .authenticate('Confirmez votre identité pour activer le déverrouillage biométrique.');
+        if (!ok) {
+          return;
+        }
+      }
+      await ref.read(biometricPreferencesProvider).setEnabled(value);
+      ref.invalidate(biometricEnabledProvider);
+      if (!value) {
+        ref.read(biometricLockControllerProvider.notifier).unlock();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _updatingBiometric = false);
+      }
+    }
+  }
 
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
@@ -40,6 +67,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(sessionProvider).value;
     final theme = Theme.of(context);
+    final biometricSupported = ref.watch(biometricSupportedProvider).value ?? false;
+    final biometricEnabled = ref.watch(biometricEnabledProvider).value ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Compte')),
@@ -69,6 +98,24 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: biometricSupported
+                ? SwitchListTile(
+                    secondary: const Icon(Icons.fingerprint_rounded),
+                    title: const Text('Déverrouillage biométrique'),
+                    subtitle: const Text('Empreinte ou visage à l\'ouverture de l\'app, au lieu du mot de passe.'),
+                    value: biometricEnabled,
+                    onChanged: _updatingBiometric ? null : _toggleBiometric,
+                  )
+                : const ListTile(
+                    enabled: false,
+                    leading: Icon(Icons.fingerprint_rounded),
+                    title: Text('Déverrouillage biométrique'),
+                    subtitle: Text('Aucune empreinte ni visage configuré sur cet appareil.'),
+                  ),
           ),
           const SizedBox(height: 16),
           Card(

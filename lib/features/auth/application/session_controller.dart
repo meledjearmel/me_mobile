@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/api_providers.dart';
+import '../../../core/biometrics/biometric_lock_controller.dart';
 import '../../../core/device/device_name.dart';
 import '../../../core/push/push_service.dart';
 import '../data/auth_repository.dart';
@@ -70,12 +71,15 @@ class SessionController extends AsyncNotifier<User?> {
     } finally {
       await ref.read(tokenStorageProvider).clear();
       state = const AsyncData(null);
+      ref.read(biometricLockControllerProvider.notifier).unlock();
     }
   }
 
   Future<void> _open(LoginSucceeded result) async {
     await ref.read(tokenStorageProvider).write(result.token);
     state = AsyncData(result.user);
+    // Inutile de redemander l'empreinte juste après une connexion interactive.
+    ref.read(biometricLockControllerProvider.notifier).unlock();
   }
 
   /// 401 reçu en cours de session : jeton révoqué depuis le web, retour à la connexion.

@@ -1,5 +1,7 @@
 package com.meledjearmel.me
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FlutterFragmentActivity (et non FlutterActivity) : requis par local_auth,
+// qui affiche l'invite biométrique via un DialogFragment androidx.
+class MainActivity : FlutterFragmentActivity()
