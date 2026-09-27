@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/push/push_service.dart';
 import '../../../shared/widgets/app_logo.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../auth/application/session_controller.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Après la connexion (pas au premier lancement à froid) et à chaque
+    // démarrage tant que la session est ouverte : le jeton FCM a pu changer.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(pushServiceProvider).registerForCurrentSession(context);
+      }
+    });
+  }
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -14,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final user = ref.watch(sessionProvider).value;
     final theme = Theme.of(context);
 

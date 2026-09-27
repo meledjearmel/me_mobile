@@ -32,7 +32,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     }
 
     setState(() => _loggingOut = true);
-    // Étape 2 : retirer aussi le jeton push (DELETE /v1/push-tokens) avant la révocation.
+    // Retire aussi le jeton push de l'appareil (voir SessionController.logout).
     await ref.read(sessionProvider.notifier).logout();
   }
 

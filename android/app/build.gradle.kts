@@ -4,6 +4,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Le plugin Google Services échoue si google-services.json est absent : on ne
+// l'applique que quand le fichier existe, pour ne pas casser le build en
+// attendant que tu le déposes ici (Firebase console → Paramètres du projet →
+// Vos applications → app Android `com.meledjearmel.me` → google-services.json).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.meledjearmel.me"
     compileSdk = flutter.compileSdkVersion
@@ -12,6 +20,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Requis par flutter_local_notifications (affichage des notifications au premier plan).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -45,4 +55,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

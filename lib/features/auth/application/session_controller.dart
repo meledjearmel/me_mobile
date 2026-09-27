@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/api_providers.dart';
 import '../../../core/device/device_name.dart';
+import '../../../core/push/push_service.dart';
 import '../data/auth_repository.dart';
 import '../data/user.dart';
 
@@ -57,8 +58,11 @@ class SessionController extends AsyncNotifier<User?> {
     await _open(result);
   }
 
-  /// Révoque le jeton côté serveur si possible, puis ferme la session dans tous les cas.
+  /// Retire le jeton push de l'appareil, révoque le jeton d'API côté serveur si
+  /// possible, puis ferme la session dans tous les cas (§3.1 : l'appareil ne
+  /// doit plus recevoir de notifications une fois déconnecté).
   Future<void> logout() async {
+    await ref.read(pushServiceProvider).unregisterCurrentDevice();
     try {
       await ref.read(authRepositoryProvider).logout();
     } on ApiException {

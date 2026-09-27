@@ -9,12 +9,14 @@ import '../features/auth/presentation/splash_screen.dart';
 import '../features/auth/presentation/two_factor_screen.dart';
 import '../features/content/presentation/content_screen.dart';
 import '../features/dashboard/presentation/home_screen.dart';
+import '../core/push/push_target.dart';
 import '../features/inbox/presentation/inbox_screen.dart';
 import '../features/shell/app_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(sessionProvider);
-  // Rafraîchit le routeur à chaque changement de session pour que `redirect` se rejoue.
+  // Rafraîchit le routeur à chaque changement de session, ou quand une
+  // notification tapée pose une cible en attente, pour que `redirect` se rejoue.
   final refresh = GoRouterRefreshStream(ref);
 
   return GoRouter(
@@ -31,7 +33,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!loggedIn) {
         return onAuthRoute ? null : '/login';
       }
-      return loggedIn && (onAuthRoute || state.matchedLocation == '/') ? '/home' : null;
+      if (onAuthRoute || state.matchedLocation == '/') {
+        // Une notification tapée avant la connexion (app relancée) ouvre la
+        // boîte de réception plutôt que l'accueil.
+        return ref.read(pendingPushTargetProvider) != null ? '/inbox' : '/home';
+      }
+      return null;
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
@@ -62,5 +69,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Ref ref) {
     ref.listen(sessionProvider, (_, _) => notifyListeners());
+    ref.listen(pendingPushTargetProvider, (_, _) => notifyListeners());
   }
 }
