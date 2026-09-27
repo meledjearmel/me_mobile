@@ -7,6 +7,7 @@ import '../../../core/biometrics/biometric_lock_controller.dart';
 import '../../../core/biometrics/biometric_preferences.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../auth/application/session_controller.dart';
+import '../../trash/presentation/trash_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -122,11 +123,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-                const ListTile(
-                  enabled: false,
-                  leading: Icon(Icons.delete_outline_rounded),
-                  title: Text('Corbeille'),
-                  subtitle: Text('Prévu à l\'étape 8'),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded),
+                  title: const Text('Corbeille'),
+                  subtitle: const Text('Restaurer ou purger un élément supprimé'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const TrashScreen()),
+                  ),
                 ),
                 const Divider(indent: 20, endIndent: 20),
                 ListTile(

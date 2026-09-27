@@ -49,6 +49,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   local_auth: ^2.3.0
   url_launcher: ^6.3.1
+  just_audio: ^0.9.42
   image_picker: ^1.1.2
   # 8.x compile en dur compileSdk 34 côté Android (bogue connu du plugin),
   # incompatible avec flutter_plugin_android_lifecycle qui exige 36+.
