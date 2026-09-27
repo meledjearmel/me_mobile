@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/utils/hex_color.dart';
+import '../../core/utils/hex_color.dart';
 
 const _presetColors = [
   '#71B7F4',

@@ -18,7 +18,7 @@ import '../../content/data/reference_repository.dart';
 import '../application/project_list_controller.dart';
 import '../data/project.dart';
 import '../data/project_repository.dart';
-import 'widgets/color_picker_field.dart';
+import '../../../shared/widgets/color_picker_field.dart';
 import 'widgets/gallery_grid.dart';
 
 const _maxImageBytes = 5 * 1024 * 1024;
