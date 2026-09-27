@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/ai/ai_assist_repository.dart';
+import '../../core/ai/text_tone.dart';
+import '../../core/api/api_exception.dart';
 import '../../core/models/translated.dart';
 
 /// Champ de texte bilingue avec bascule FR | EN (§5 : « chaque texte traduit
 /// s'édite avec une bascule »). Affiche un point d'avertissement sur l'onglet
 /// dont le texte est vide ou en erreur.
-class TranslatedField extends StatefulWidget {
+///
+/// Propose aussi une assistance IA (traduire vers l'autre langue, ou
+/// réécrire le texte de la langue affichée) : le résultat est toujours
+/// montré en aperçu avant d'être appliqué, jamais substitué en silence.
+class TranslatedField extends ConsumerStatefulWidget {
   const TranslatedField({
     super.key,
     required this.label,
@@ -26,15 +34,20 @@ class TranslatedField extends StatefulWidget {
   final int? maxLength;
 
   @override
-  State<TranslatedField> createState() => _TranslatedFieldState();
+  ConsumerState<TranslatedField> createState() => _TranslatedFieldState();
 }
 
-class _TranslatedFieldState extends State<TranslatedField> {
+enum _AiAction { translate, improve }
+
+class _TranslatedFieldState extends ConsumerState<TranslatedField> {
   var _locale = 'fr';
   late final _controllers = {
     'fr': TextEditingController(text: widget.value.fr),
     'en': TextEditingController(text: widget.value.en),
   };
+  bool _assisting = false;
+
+  String get _otherLocale => _locale == 'fr' ? 'en' : 'fr';
 
   @override
   void didUpdateWidget(TranslatedField oldWidget) {
@@ -61,18 +74,148 @@ class _TranslatedFieldState extends State<TranslatedField> {
     return error != null || widget.value[locale].trim().isEmpty;
   }
 
+  Future<void> _openAiMenu() async {
+    final hasText = widget.value[_locale].trim().isNotEmpty;
+    final action = await showModalBottomSheet<_AiAction>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              enabled: hasText,
+              leading: const Icon(Icons.translate_rounded),
+              title: Text('Traduire vers ${_otherLocale.toUpperCase()}'),
+              subtitle: Text('Remplit ${_otherLocale.toUpperCase()} depuis ${_locale.toUpperCase()}'),
+              onTap: () => Navigator.pop(context, _AiAction.translate),
+            ),
+            ListTile(
+              enabled: hasText,
+              leading: const Icon(Icons.auto_fix_high_rounded),
+              title: Text('Améliorer le texte (${_locale.toUpperCase()})'),
+              subtitle: const Text('Réécrit dans la même langue, avec un ton au choix'),
+              onTap: () => Navigator.pop(context, _AiAction.improve),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) {
+      return;
+    }
+    switch (action) {
+      case _AiAction.translate:
+        await _translate();
+      case _AiAction.improve:
+        await _improve();
+    }
+  }
+
+  Future<void> _translate() async {
+    final source = widget.value[_locale];
+    final target = _otherLocale;
+    setState(() => _assisting = true);
+    try {
+      final result = await ref.read(aiAssistRepositoryProvider).translate(
+            text: source,
+            sourceLocale: _locale,
+            targetLocale: target,
+          );
+      if (!mounted) {
+        return;
+      }
+      final accepted = await _showPreview('Traduction proposée (${target.toUpperCase()})', result);
+      if (accepted == true && mounted) {
+        setState(() {
+          _controllers[target]!.text = result;
+          _locale = target;
+        });
+        widget.onChanged(widget.value.withLocale(target, result));
+      }
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) {
+        setState(() => _assisting = false);
+      }
+    }
+  }
+
+  Future<void> _improve() async {
+    final options = await showModalBottomSheet<_ImproveOptions>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const _ImproveOptionsSheet(),
+    );
+    if (options == null || !mounted) {
+      return;
+    }
+
+    final locale = _locale;
+    setState(() => _assisting = true);
+    try {
+      final result = await ref.read(aiAssistRepositoryProvider).improve(
+            text: widget.value[locale],
+            locale: locale,
+            tone: options.tone,
+            instructions: options.instructions,
+          );
+      if (!mounted) {
+        return;
+      }
+      final accepted = await _showPreview('Version améliorée (${locale.toUpperCase()})', result);
+      if (accepted == true && mounted) {
+        setState(() => _controllers[locale]!.text = result);
+        widget.onChanged(widget.value.withLocale(locale, result));
+      }
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) {
+        setState(() => _assisting = false);
+      }
+    }
+  }
+
+  Future<bool?> _showPreview(String title, String text) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(child: Text(text)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Utiliser')),
+        ],
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final error = _locale == 'en' ? widget.errorEn : widget.errorFr;
+    final canAssist = widget.value[_locale].trim().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(widget.label, style: theme.textTheme.labelLarge),
-            const Spacer(),
+            Expanded(child: Text(widget.label, style: theme.textTheme.labelLarge)),
+            IconButton(
+              tooltip: canAssist ? 'Assistance IA' : 'Écrivez d\'abord un texte à traduire ou améliorer',
+              onPressed: _assisting || !canAssist ? null : _openAiMenu,
+              icon: _assisting
+                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.auto_awesome_rounded),
+            ),
             SegmentedButton<String>(
               segments: [
                 for (final locale in Translated.locales)
@@ -114,6 +257,91 @@ class _TranslatedFieldState extends State<TranslatedField> {
             ),
           ),
       ],
+    );
+  }
+}
+
+typedef _ImproveOptions = ({TextTone? tone, String? instructions});
+
+class _ImproveOptionsSheet extends StatefulWidget {
+  const _ImproveOptionsSheet();
+
+  @override
+  State<_ImproveOptionsSheet> createState() => _ImproveOptionsSheetState();
+}
+
+class _ImproveOptionsSheetState extends State<_ImproveOptionsSheet> {
+  TextTone? _tone;
+  final _instructions = TextEditingController();
+
+  @override
+  void dispose() {
+    _instructions.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Améliorer le texte', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 16),
+          Text('Ton (facultatif)', style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Sans ton précis'),
+                selected: _tone == null,
+                onSelected: (_) => setState(() => _tone = null),
+                showCheckmark: false,
+              ),
+              for (final tone in TextTone.values)
+                ChoiceChip(
+                  label: Text(tone.label),
+                  selected: _tone == tone,
+                  onSelected: (_) => setState(() => _tone = tone),
+                  showCheckmark: false,
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _instructions,
+            maxLength: 500,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: 'Consigne libre (facultatif)',
+              hintText: 'Ex. « plus court », « pour un CV »…',
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: () {
+              final _ImproveOptions options = (
+                tone: _tone,
+                instructions: _instructions.text.trim().isEmpty ? null : _instructions.text.trim(),
+              );
+              Navigator.pop(context, options);
+            },
+            icon: const Icon(Icons.auto_fix_high_rounded),
+            label: const Text('Générer'),
+          ),
+        ],
+      ),
     );
   }
 }
