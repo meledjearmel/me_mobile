@@ -5,6 +5,7 @@ import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../application/technology_list_controller.dart';
 import '../data/technology.dart';
 import 'technology_form_screen.dart';
+import 'technology_logo.dart';
 
 class TechnologiesListScreen extends ConsumerWidget {
   const TechnologiesListScreen({super.key});
@@ -45,7 +46,7 @@ class TechnologiesListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, technology) => ListTile(
         onTap: () => _openForm(context, ref, id: technology.id),
-        leading: const Icon(Icons.memory_rounded),
+        leading: TechnologyLogo(lightUrl: technology.iconLightUrl, darkUrl: technology.iconDarkUrl),
         title: Text(technology.name),
         subtitle: Text(technology.category.label),
       ),

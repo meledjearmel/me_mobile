@@ -54,6 +54,7 @@ dependencies:
   # 8.x compile en dur compileSdk 34 côté Android (bogue connu du plugin),
   # incompatible avec flutter_plugin_android_lifecycle qui exige 36+.
   file_picker: ^13.1.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:

@@ -6,7 +6,10 @@ import '../../../../shared/widgets/feedback.dart';
 import '../../data/reference_repository.dart';
 import '../application/technology_list_controller.dart';
 import '../data/technology.dart';
+import '../data/technology_icon.dart';
 import '../data/technology_repository.dart';
+import 'technology_icon_picker_screen.dart';
+import 'technology_logo.dart';
 
 /// Création ou modification d'une technologie (§4.3). `id == null` : création.
 class TechnologyFormScreen extends ConsumerStatefulWidget {
@@ -22,7 +25,9 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
   late Future<void> _future = _load();
 
   late final _name = TextEditingController();
-  late final _icon = TextEditingController();
+  String? _icon;
+  String? _iconLightUrl;
+  String? _iconDarkUrl;
   TechnologyCategory _category = TechnologyCategory.langages;
 
   bool _dirty = false;
@@ -39,18 +44,41 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
     }
     final technology = await ref.read(technologyRepositoryProvider).get(widget.id!);
     _name.text = technology.name;
-    _icon.text = technology.icon ?? '';
+    _icon = technology.icon;
+    _iconLightUrl = technology.iconLightUrl;
+    _iconDarkUrl = technology.iconDarkUrl;
     _category = technology.category;
   }
 
   @override
   void dispose() {
     _name.dispose();
-    _icon.dispose();
     super.dispose();
   }
 
   void _markDirty() => setState(() => _dirty = true);
+
+  Future<void> _pickIcon() async {
+    final picked = await Navigator.of(context).push<TechnologyIcon>(
+      MaterialPageRoute(builder: (context) => TechnologyIconPickerScreen(selectedSlug: _icon)),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _icon = picked.slug;
+      _iconLightUrl = picked.lightUrl;
+      _iconDarkUrl = picked.darkUrl;
+      _dirty = true;
+    });
+  }
+
+  void _clearIcon() => setState(() {
+        _icon = null;
+        _iconLightUrl = null;
+        _iconDarkUrl = null;
+        _dirty = true;
+      });
 
   Future<bool> _confirmDiscard() async {
     if (!_dirty) {
@@ -87,7 +115,7 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
             id: widget.id,
             name: _name.text.trim(),
             category: _category,
-            icon: _icon.text.trim().isEmpty ? null : _icon.text.trim(),
+            icon: _icon,
           );
       ref.invalidate(technologyListProvider);
       ref.invalidate(technologiesRefProvider);
@@ -209,10 +237,13 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _icon,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Icône (facultatif)', errorText: v?.errorFor('icon')),
+                _IconTile(
+                  slug: _icon,
+                  lightUrl: _iconLightUrl,
+                  darkUrl: _iconDarkUrl,
+                  error: v?.errorFor('icon'),
+                  onPick: _pickIcon,
+                  onClear: _clearIcon,
                 ),
                 const SizedBox(height: 28),
                 FilledButton(
@@ -224,6 +255,61 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Ligne « Logo » du formulaire : aperçu, nom dans la bibliothèque, changement et retrait.
+class _IconTile extends StatelessWidget {
+  const _IconTile({
+    required this.slug,
+    required this.lightUrl,
+    required this.darkUrl,
+    required this.error,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final String? slug;
+  final String? lightUrl;
+  final String? darkUrl;
+  final String? error;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            TechnologyLogo(lightUrl: lightUrl, darkUrl: darkUrl, size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Logo (facultatif)', style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 2),
+                  Text(
+                    error ?? slug ?? 'Aucun logo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: error != null ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (slug != null) IconButton(tooltip: 'Retirer le logo', onPressed: onClear, icon: const Icon(Icons.close_rounded)),
+            TextButton(onPressed: onPick, child: Text(slug == null ? 'Choisir' : 'Changer')),
+          ],
         ),
       ),
     );

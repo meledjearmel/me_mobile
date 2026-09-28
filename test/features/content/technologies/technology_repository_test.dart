@@ -16,6 +16,18 @@ void main() {
     expect(technology.icon, isNull);
   });
 
+  test('Technology.fromJson lit les URL de logo claire et sombre', () {
+    final technology = Technology.fromJson({
+      ..._technologyJson,
+      'icon': 'flutter',
+      'icon_light_url': 'https://cdn/flutter-light.svg',
+      'icon_dark_url': 'https://cdn/flutter-dark.svg',
+    });
+    expect(technology.icon, 'flutter');
+    expect(technology.iconLightUrl, 'https://cdn/flutter-light.svg');
+    expect(technology.iconDarkUrl, 'https://cdn/flutter-dark.svg');
+  });
+
   test('un catégorie inconnue retombe sur "langages" plutôt que de planter', () {
     expect(TechnologyCategory.fromWire('autre'), TechnologyCategory.langages);
   });
