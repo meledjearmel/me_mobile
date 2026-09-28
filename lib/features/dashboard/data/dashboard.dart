@@ -219,12 +219,13 @@ class DomainCount {
 
 @immutable
 class CategoryCount {
-  const CategoryCount({required this.category, required this.count});
+  const CategoryCount({required this.label, required this.count});
 
+  /// Les catégories sont gérées côté API : le libellé (français) arrive déjà prêt.
   factory CategoryCount.fromJson(Map<String, dynamic> json) =>
-      CategoryCount(category: json['category'] as String? ?? '', count: json['count'] as int? ?? 0);
+      CategoryCount(label: json['label'] as String? ?? '', count: json['count'] as int? ?? 0);
 
-  final String category;
+  final String label;
   final int count;
 }
 

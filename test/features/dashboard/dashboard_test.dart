@@ -45,7 +45,7 @@ void main() {
         {'label': 'Backend', 'color': '#22c55e', 'count': 4},
       ],
       'technologies_by_category': [
-        {'category': 'langages', 'count': 6},
+        {'label': 'Langages', 'count': 6},
       ],
     },
     'health': [
@@ -88,6 +88,7 @@ void main() {
     expect(dashboard.content.projects.published, 8);
     expect(dashboard.content.testimonials.pending, 3);
     expect(dashboard.distribution.skillsByDomain.single.color, '#22c55e');
+    expect(dashboard.distribution.technologiesByCategory.single.label, 'Langages');
     expect(dashboard.recent.contacts.single.name, 'Jeanne');
     expect(dashboard.recent.engagements.single.company, 'Acme');
     expect(dashboard.recent.testimonials.single.excerpt, 'Super travail…');

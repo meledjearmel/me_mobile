@@ -51,23 +51,11 @@ class DomainDistributionList extends StatelessWidget {
   }
 }
 
-/// Répartition des technologies par catégorie (§3.6 pour les libellés).
+/// Répartition des technologies par catégorie.
 class CategoryDistributionList extends StatelessWidget {
   const CategoryDistributionList({super.key, required this.items});
 
   final List<CategoryCount> items;
-
-  static const _labels = {
-    'langages': 'Langages',
-    'frameworks': 'Frameworks',
-    'donnees': 'Données',
-    'qualite': 'Qualité',
-    'securite': 'Sécurité',
-    'infra': 'Infra',
-    'ia': 'IA',
-    'design': 'Design',
-    'cms': 'CMS',
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +76,7 @@ class CategoryDistributionList extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              '${_labels[item.category] ?? item.category} · ${item.count}',
+              '${item.label} · ${item.count}',
               style: theme.textTheme.bodySmall,
             ),
           ),

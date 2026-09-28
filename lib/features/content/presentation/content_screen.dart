@@ -10,6 +10,7 @@ import '../music/presentation/music_screen.dart';
 import '../professional_references/presentation/professional_references_list_screen.dart';
 import '../skills/presentation/skills_list_screen.dart';
 import '../technologies/presentation/technologies_list_screen.dart';
+import '../technologies/presentation/technology_categories_list_screen.dart';
 
 /// Sommaire des sections de contenu (§4.3).
 class ContentScreen extends StatelessWidget {
@@ -22,6 +23,7 @@ class ContentScreen extends StatelessWidget {
     (icon: Icons.timeline_rounded, label: 'Expériences', builder: _experiencesScreen),
     (icon: Icons.school_outlined, label: 'Formations', builder: _educationsScreen),
     (icon: Icons.memory_rounded, label: 'Technologies', builder: _technologiesScreen),
+    (icon: Icons.label_outline_rounded, label: 'Catégories de technologies', builder: _technologyCategoriesScreen),
     (icon: Icons.category_outlined, label: 'Domaines', builder: _domainsScreen),
     (icon: Icons.assignment_ind_outlined, label: 'Profils métier', builder: _jobProfilesScreen),
     (icon: Icons.handshake_outlined, label: 'Références', builder: _referencesScreen),
@@ -34,6 +36,7 @@ class ContentScreen extends StatelessWidget {
   static Widget _experiencesScreen(BuildContext context) => const ExperiencesListScreen();
   static Widget _educationsScreen(BuildContext context) => const EducationsListScreen();
   static Widget _technologiesScreen(BuildContext context) => const TechnologiesListScreen();
+  static Widget _technologyCategoriesScreen(BuildContext context) => const TechnologyCategoriesListScreen();
   static Widget _domainsScreen(BuildContext context) => const DomainsListScreen();
   static Widget _jobProfilesScreen(BuildContext context) => const JobProfilesListScreen();
   static Widget _referencesScreen(BuildContext context) => const ProfessionalReferencesListScreen();

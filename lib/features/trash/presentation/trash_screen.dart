@@ -14,7 +14,9 @@ import '../../content/music/application/track_list_controller.dart';
 import '../../content/music/data/music_genre_repository.dart';
 import '../../content/professional_references/application/professional_reference_list_controller.dart';
 import '../../content/skills/application/skill_list_controller.dart';
+import '../../content/technologies/application/technology_category_list_controller.dart';
 import '../../content/technologies/application/technology_list_controller.dart';
+import '../../content/technologies/data/technology_category_repository.dart';
 import '../../inbox/application/contact_list_controller.dart';
 import '../../inbox/application/engagement_list_controller.dart';
 import '../../inbox/application/testimonial_list_controller.dart';
@@ -71,6 +73,12 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
       case 'tracks':
         ref.invalidate(trackListProvider);
       case 'technologies':
+        ref.invalidate(technologyListProvider);
+        ref.invalidate(technologiesRefProvider);
+      case 'technology-categories':
+        // Restaurer une catégorie ramène aussi ses technologies.
+        ref.invalidate(technologyCategoryListProvider);
+        ref.invalidate(technologyCategoriesAllProvider);
         ref.invalidate(technologyListProvider);
         ref.invalidate(technologiesRefProvider);
       case 'job-profiles':

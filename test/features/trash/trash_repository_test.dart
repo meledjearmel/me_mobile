@@ -22,13 +22,14 @@ void main() {
     expect(item.deletedAt, isNotNull);
   });
 
-  test('les 13 types documentés sont bien listés (§4.5)', () {
+  test('les 14 types de l\'API sont bien listés (§4.5)', () {
     final wireValues = trashTypes.map((t) => t.$1).toSet();
     expect(wireValues, {
       'domains',
       'music-genres',
       'tracks',
       'technologies',
+      'technology-categories',
       'job-profiles',
       'skills',
       'educations',

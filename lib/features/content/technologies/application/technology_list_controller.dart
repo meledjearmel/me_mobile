@@ -15,6 +15,6 @@ class TechnologyListController extends PaginatedListController<Technology> {
   Future<Paginated<Technology>> fetchPage({required int page, required ListQuery query}) {
     return ref
         .read(technologyRepositoryProvider)
-        .list(page: page, search: query.search, category: query.filters['category'] as String?);
+        .list(page: page, search: query.search, categoryId: query.filters['category_id'] as int?);
   }
 }

@@ -38,11 +38,18 @@ class TechnologyRef {
   factory TechnologyRef.fromJson(Map<String, dynamic> json) => TechnologyRef(
         id: json['id'] as int,
         name: json['name'] as String,
-        category: json['category'] as String? ?? '',
+        // L'API renvoie la catégorie en objet ({id, key, label}) ; ancien format : sa clé.
+        category: switch (json['category']) {
+          final Map<dynamic, dynamic> category => Translated.fromJson(category['label']).display,
+          final String key => key,
+          _ => '',
+        },
       );
 
   final int id;
   final String name;
+
+  /// Libellé français de la catégorie.
   final String category;
 }
 

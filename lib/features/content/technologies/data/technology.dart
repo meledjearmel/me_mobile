@@ -1,51 +1,45 @@
 import 'package:flutter/foundation.dart';
 
-enum TechnologyCategory {
-  langages('langages', 'Langages'),
-  frameworks('frameworks', 'Frameworks'),
-  donnees('donnees', 'Données'),
-  qualite('qualite', 'Qualité'),
-  securite('securite', 'Sécurité'),
-  infra('infra', 'Infra'),
-  ia('ia', 'IA'),
-  design('design', 'Design'),
-  cms('cms', 'CMS');
-
-  const TechnologyCategory(this.wireValue, this.label);
-
-  final String wireValue;
-  final String label;
-
-  static TechnologyCategory fromWire(String? value) =>
-      values.firstWhere((c) => c.wireValue == value, orElse: () => TechnologyCategory.langages);
-}
+import '../../../../core/models/translated.dart';
+import 'technology_category.dart';
 
 @immutable
 class Technology {
   const Technology({
     required this.id,
     required this.name,
+    required this.categoryId,
     required this.category,
     required this.icon,
     this.iconLightUrl,
     this.iconDarkUrl,
+    this.description = const Translated(),
   });
 
-  factory Technology.fromJson(Map<String, dynamic> json) => Technology(
-        id: json['id'] as int,
-        name: json['name'] as String,
-        category: TechnologyCategory.fromWire(json['category'] as String?),
-        icon: json['icon'] as String?,
-        iconLightUrl: json['icon_light_url'] as String?,
-        iconDarkUrl: json['icon_dark_url'] as String?,
-      );
+  factory Technology.fromJson(Map<String, dynamic> json) {
+    final category = json['category'];
+    return Technology(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      categoryId: json['category_id'] as int? ?? (category is Map ? category['id'] as int? : null),
+      category: category is Map<String, dynamic> ? TechnologyCategory.fromJson(category) : null,
+      icon: json['icon'] as String?,
+      iconLightUrl: json['icon_light_url'] as String?,
+      iconDarkUrl: json['icon_dark_url'] as String?,
+      description: Translated.fromJson(json['description']),
+    );
+  }
 
   final int id;
   final String name;
-  final TechnologyCategory category;
+  final int? categoryId;
+  final TechnologyCategory? category;
 
   /// Slug du logo dans la bibliothèque (`null` : pas de logo).
   final String? icon;
   final String? iconLightUrl;
   final String? iconDarkUrl;
+
+  /// Infobulle affichée au survol du logo sur la page publique (150 caractères max).
+  final Translated description;
 }

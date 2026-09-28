@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_exception.dart';
+import '../../../../core/models/translated.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/translated_field.dart';
 import '../../data/reference_repository.dart';
 import '../application/technology_list_controller.dart';
-import '../data/technology.dart';
+import '../data/technology_category_repository.dart';
 import '../data/technology_icon.dart';
 import '../data/technology_repository.dart';
 import 'technology_icon_picker_screen.dart';
@@ -28,7 +30,8 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
   String? _icon;
   String? _iconLightUrl;
   String? _iconDarkUrl;
-  TechnologyCategory _category = TechnologyCategory.langages;
+  int? _categoryId;
+  Translated _description = const Translated();
 
   bool _dirty = false;
   bool _saving = false;
@@ -47,7 +50,8 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
     _icon = technology.icon;
     _iconLightUrl = technology.iconLightUrl;
     _iconDarkUrl = technology.iconDarkUrl;
-    _category = technology.category;
+    _categoryId = technology.categoryId;
+    _description = technology.description;
   }
 
   @override
@@ -105,6 +109,12 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
   }
 
   Future<void> _save() async {
+    if (_categoryId == null) {
+      setState(() => _validation = const ValidationException('Choisissez une catégorie.', {
+            'category_id': ['Choisissez une catégorie.'],
+          }));
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -114,7 +124,8 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
       await ref.read(technologyRepositoryProvider).save(
             id: widget.id,
             name: _name.text.trim(),
-            category: _category,
+            categoryId: _categoryId!,
+            description: _description,
             icon: _icon,
           );
       ref.invalidate(technologyListProvider);
@@ -222,18 +233,25 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
                   decoration: InputDecoration(labelText: 'Nom', errorText: v?.errorFor('name')),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<TechnologyCategory>(
-                  initialValue: _category,
-                  decoration: InputDecoration(labelText: 'Catégorie', errorText: v?.errorFor('category')),
-                  items: [
-                    for (final category in TechnologyCategory.values)
-                      DropdownMenuItem(value: category, child: Text(category.label)),
-                  ],
+                _CategoryField(
+                  value: _categoryId,
+                  error: v?.errorFor('category_id'),
                   onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _category = value);
-                      _markDirty();
-                    }
+                    setState(() => _categoryId = value);
+                    _markDirty();
+                  },
+                ),
+                const SizedBox(height: 12),
+                TranslatedField(
+                  label: 'Description (infobulle, facultatif)',
+                  value: _description,
+                  maxLength: 150,
+                  maxLines: 2,
+                  errorFr: v?.errorFor('description.fr'),
+                  errorEn: v?.errorFor('description.en'),
+                  onChanged: (value) {
+                    setState(() => _description = value);
+                    _markDirty();
                   },
                 ),
                 const SizedBox(height: 12),
@@ -311,6 +329,51 @@ class _IconTile extends StatelessWidget {
             TextButton(onPressed: onPick, child: Text(slug == null ? 'Choisir' : 'Changer')),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Sélecteur de catégorie, alimenté par `/v1/technology-categories`.
+class _CategoryField extends ConsumerWidget {
+  const _CategoryField({required this.value, required this.error, required this.onChanged});
+
+  final int? value;
+  final String? error;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(technologyCategoriesAllProvider);
+
+    return categories.when(
+      loading: () => const InputDecorator(
+        decoration: InputDecoration(labelText: 'Catégorie'),
+        child: LinearProgressIndicator(),
+      ),
+      error: (error, _) => InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Catégorie',
+          errorText: error is ApiException ? error.message : 'Catégories indisponibles.',
+          suffixIcon: IconButton(
+            tooltip: 'Réessayer',
+            onPressed: () => ref.invalidate(technologyCategoriesAllProvider),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ),
+        child: const SizedBox.shrink(),
+      ),
+      data: (all) => DropdownButtonFormField<int>(
+        // Une catégorie supprimée entre-temps ne doit pas faire planter le menu.
+        initialValue: all.any((c) => c.id == value) ? value : null,
+        decoration: InputDecoration(
+          labelText: 'Catégorie',
+          errorText: error,
+          helperText: all.isEmpty ? 'Aucune catégorie : créez-en une depuis Contenu › Catégories de technologies.' : null,
+          helperMaxLines: 2,
+        ),
+        items: [for (final category in all) DropdownMenuItem(value: category.id, child: Text(category.label.display))],
+        onChanged: onChanged,
       ),
     );
   }
