@@ -28,6 +28,7 @@ class ResourceListScaffold<T> extends StatefulWidget {
     required this.onRetry,
     this.onCreate,
     this.filterChips = const [],
+    this.actions = const [],
   });
 
   final String title;
@@ -47,6 +48,9 @@ class ResourceListScaffold<T> extends StatefulWidget {
 
   /// Puces déjà construites par l'appelant (elles connaissent leur provider).
   final List<Widget> filterChips;
+
+  /// Actions de l'AppBar (accès à une sous-table, par exemple).
+  final List<Widget> actions;
 
   @override
   State<ResourceListScaffold<T>> createState() => _ResourceListScaffoldState<T>();
@@ -78,7 +82,7 @@ class _ResourceListScaffoldState<T> extends State<ResourceListScaffold<T>> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(title: Text(widget.title), actions: widget.actions),
       floatingActionButton: widget.onCreate == null
           ? null
           : FloatingActionButton(onPressed: widget.onCreate, child: const Icon(Icons.add_rounded)),

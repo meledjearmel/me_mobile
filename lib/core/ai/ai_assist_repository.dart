@@ -2,15 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../api/api_providers.dart';
+import '../models/translated.dart';
 import 'text_tone.dart';
 
 final aiAssistRepositoryProvider = Provider<AiAssistRepository>(
   (ref) => AiAssistRepository(ref.watch(apiClientProvider)),
 );
 
-/// Assistance IA (`POST /v1/ai/translate`, `POST /v1/ai/improve`) : traduit
-/// un texte entre français et anglais, ou le réécrit dans sa langue
-/// d'origine avec un ton et une consigne libres et optionnels.
+/// Assistance IA (`POST /v1/ai/translate`, `/improve`, `/describe-technology`) :
+/// traduit un texte entre français et anglais, le réécrit dans sa langue
+/// d'origine avec un ton et une consigne libres et optionnels, ou rédige la
+/// description d'une technologie.
 ///
 /// Peut répondre 503 (« L'assistance IA est momentanément indisponible »,
 /// tous les fournisseurs configurés ont échoué côté serveur) : ce cas passe
@@ -40,5 +42,15 @@ class AiAssistRepository {
       data: {'text': text, 'locale': locale, 'tone': tone?.wireValue, 'instructions': instructions},
     ) as Map<String, dynamic>;
     return json['text'] as String;
+  }
+
+  /// Rédige la description (infobulle) d'une technologie en français, traduite en
+  /// anglais. [category] : libellé de sa catégorie, pour aider à la situer.
+  Future<Translated> describeTechnology({required String name, String? category}) async {
+    final json = await _api.post(
+      '/v1/ai/describe-technology',
+      data: {'name': name, 'category': category},
+    ) as Map<String, dynamic>;
+    return Translated.fromJson(json['description']);
   }
 }

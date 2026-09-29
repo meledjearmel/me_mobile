@@ -5,6 +5,7 @@ import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../application/technology_list_controller.dart';
 import '../data/technology.dart';
 import '../data/technology_category_repository.dart';
+import 'technology_categories_list_screen.dart';
 import 'technology_form_screen.dart';
 import 'technology_logo.dart';
 
@@ -32,6 +33,16 @@ class TechnologiesListScreen extends ConsumerWidget {
       onRefresh: notifier.refresh,
       onRetry: () => ref.invalidate(technologyListProvider),
       onCreate: () => _openForm(context, ref),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.label_outline_rounded),
+          tooltip: 'Gérer les catégories',
+          onPressed: () async {
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TechnologyCategoriesListScreen()));
+            ref.invalidate(technologyCategoriesAllProvider);
+          },
+        ),
+      ],
       emptyIcon: Icons.memory_rounded,
       emptyTitle: 'Aucune technologie pour l\'instant',
       emptyDescription: 'Créez votre première technologie avec le bouton +.',

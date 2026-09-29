@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ai/ai_assist_repository.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../shared/widgets/feedback.dart';
@@ -61,6 +62,17 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
   }
 
   void _markDirty() => setState(() => _dirty = true);
+
+  /// Description générée par l'IA à partir du nom et du libellé de la catégorie.
+  Future<Translated> _generateDescription() {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      throw const ValidationException('Saisissez d\'abord le nom de la technologie.', {});
+    }
+    final categories = ref.read(technologyCategoriesAllProvider).value ?? const [];
+    final category = categories.where((c) => c.id == _categoryId).firstOrNull;
+    return ref.read(aiAssistRepositoryProvider).describeTechnology(name: name, category: category?.label.fr);
+  }
 
   Future<void> _pickIcon() async {
     final picked = await Navigator.of(context).push<TechnologyIcon>(
@@ -249,6 +261,7 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
                   maxLines: 2,
                   errorFr: v?.errorFor('description.fr'),
                   errorEn: v?.errorFor('description.en'),
+                  generate: _generateDescription,
                   onChanged: (value) {
                     setState(() => _description = value);
                     _markDirty();

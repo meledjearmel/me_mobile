@@ -48,6 +48,23 @@ void main() {
     expect(body['instructions'], isNull);
   });
 
+  test('describeTechnology envoie nom et catégorie, renvoie la description bilingue', () async {
+    adapter.whenRequest(
+      'POST',
+      '/v1/ai/describe-technology',
+      statusCode: 200,
+      body: {
+        'description': {'fr': 'Base en mémoire : cache, files d\'attente.', 'en': 'In-memory store: cache, queues.'},
+      },
+    );
+
+    final result = await repository.describeTechnology(name: 'Redis', category: 'Données');
+
+    expect(result.fr, 'Base en mémoire : cache, files d\'attente.');
+    expect(result.en, 'In-memory store: cache, queues.');
+    expect(adapter.requests.single.data, {'name': 'Redis', 'category': 'Données'});
+  });
+
   test('un 503 (tous les fournisseurs IA indisponibles) devient une ApiException avec le message serveur', () async {
     adapter.whenRequest(
       'POST',

@@ -23,6 +23,7 @@ class TranslatedField extends ConsumerStatefulWidget {
     this.errorEn,
     this.maxLines = 1,
     this.maxLength,
+    this.generate,
   });
 
   final String label;
@@ -33,11 +34,16 @@ class TranslatedField extends ConsumerStatefulWidget {
   final int maxLines;
   final int? maxLength;
 
+  /// Génère le texte dans les deux langues (ex. description d'une technologie).
+  /// Quand il est fourni, « Générer » remplace « Améliorer » dans le menu IA et
+  /// reste disponible sur un champ vide.
+  final Future<Translated> Function()? generate;
+
   @override
   ConsumerState<TranslatedField> createState() => _TranslatedFieldState();
 }
 
-enum _AiAction { translate, improve }
+enum _AiAction { translate, improve, generate }
 
 class _TranslatedFieldState extends ConsumerState<TranslatedField> {
   var _locale = 'fr';
@@ -76,6 +82,7 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
 
   Future<void> _openAiMenu() async {
     final hasText = widget.value[_locale].trim().isNotEmpty;
+    final canGenerate = widget.generate != null;
     final action = await showModalBottomSheet<_AiAction>(
       context: context,
       builder: (context) => SafeArea(
@@ -89,13 +96,21 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
               subtitle: Text('Remplit ${_otherLocale.toUpperCase()} depuis ${_locale.toUpperCase()}'),
               onTap: () => Navigator.pop(context, _AiAction.translate),
             ),
-            ListTile(
-              enabled: hasText,
-              leading: const Icon(Icons.auto_fix_high_rounded),
-              title: Text('Améliorer le texte (${_locale.toUpperCase()})'),
-              subtitle: const Text('Réécrit dans la même langue, avec un ton au choix'),
-              onTap: () => Navigator.pop(context, _AiAction.improve),
-            ),
+            if (canGenerate)
+              ListTile(
+                leading: const Icon(Icons.auto_awesome_rounded),
+                title: const Text('Générer (FR + EN)'),
+                subtitle: const Text('Rédige le texte en français puis le traduit en anglais'),
+                onTap: () => Navigator.pop(context, _AiAction.generate),
+              )
+            else
+              ListTile(
+                enabled: hasText,
+                leading: const Icon(Icons.auto_fix_high_rounded),
+                title: Text('Améliorer le texte (${_locale.toUpperCase()})'),
+                subtitle: const Text('Réécrit dans la même langue, avec un ton au choix'),
+                onTap: () => Navigator.pop(context, _AiAction.improve),
+              ),
           ],
         ),
       ),
@@ -108,6 +123,32 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
         await _translate();
       case _AiAction.improve:
         await _improve();
+      case _AiAction.generate:
+        await _generate();
+    }
+  }
+
+  Future<void> _generate() async {
+    setState(() => _assisting = true);
+    try {
+      final result = await widget.generate!();
+      if (!mounted) {
+        return;
+      }
+      final accepted = await _showPreview('Texte proposé', 'FR : ${result.fr}\n\nEN : ${result.en}');
+      if (accepted == true && mounted) {
+        setState(() {
+          _controllers['fr']!.text = result.fr;
+          _controllers['en']!.text = result.en;
+        });
+        widget.onChanged(result);
+      }
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) {
+        setState(() => _assisting = false);
+      }
     }
   }
 
@@ -201,7 +242,7 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final error = _locale == 'en' ? widget.errorEn : widget.errorFr;
-    final canAssist = widget.value[_locale].trim().isNotEmpty;
+    final canAssist = widget.generate != null || widget.value[_locale].trim().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
