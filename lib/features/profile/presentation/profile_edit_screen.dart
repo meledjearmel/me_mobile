@@ -7,6 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/models/translated.dart';
 import '../../../shared/widgets/document_picker_tile.dart';
+import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/form_layout.dart';
+import '../../../shared/widgets/surfaces.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/translated_field.dart';
 import '../application/profile_providers.dart';
@@ -119,7 +122,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       await ref.read(profileRepositoryProvider).deleteMusic();
       ref.invalidate(profileProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Musique retirée : la piste par défaut jouera.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Musique retirée : la piste par défaut jouera.')));
       }
     } on ApiException catch (e) {
       if (mounted) {
@@ -143,7 +147,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       _uploadProgress = null;
     });
     try {
-      final updated = await ref.read(profileRepositoryProvider).update(
+      final updated = await ref
+          .read(profileRepositoryProvider)
+          .update(
             name: _name.text.trim(),
             cvLastName: _cvLastName.text.trim().isEmpty ? null : _cvLastName.text.trim(),
             cvFirstName: _cvFirstName.text.trim().isEmpty ? null : _cvFirstName.text.trim(),
@@ -197,164 +203,173 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Modifier le profil')),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: const GlassAppBar(),
+        bottomNavigationBar: SaveBar(onPressed: _save, saving: _saving, progress: _uploadProgress),
+        body: PageListView(
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FormHeader(title: 'Modifier le profil'),
+            ),
+            const SizedBox(height: 16),
             if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                PhotoPickerTile(
-                  label: 'Photo du profil',
-                  currentUrl: widget.profile.photoUrl,
-                  pickedFile: _photo,
-                  onPicked: (file) => _pickPhoto(false, file),
-                ),
-                PhotoPickerTile(
-                  label: 'Photo du CV',
-                  currentUrl: widget.profile.cvPhotoUrl,
-                  pickedFile: _cvPhoto,
-                  onPicked: (file) => _pickPhoto(true, file),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _name,
-              onChanged: (_) => _markDirty(),
-              decoration: InputDecoration(labelText: 'Nom affiché', errorText: v?.errorFor('name')),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _cvFirstName,
-                    onChanged: (_) => _markDirty(),
-                    decoration: InputDecoration(labelText: 'Prénom (CV)', errorText: v?.errorFor('cv_first_name')),
+            SurfaceCard(
+              radius: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      PhotoPickerTile(
+                        label: 'Photo du profil',
+                        currentUrl: widget.profile.photoUrl,
+                        pickedFile: _photo,
+                        onPicked: (file) => _pickPhoto(false, file),
+                      ),
+                      PhotoPickerTile(
+                        label: 'Photo du CV',
+                        currentUrl: widget.profile.cvPhotoUrl,
+                        pickedFile: _cvPhoto,
+                        onPicked: (file) => _pickPhoto(true, file),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _cvLastName,
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _name,
                     onChanged: (_) => _markDirty(),
-                    decoration: InputDecoration(labelText: 'Nom (CV)', errorText: v?.errorFor('cv_last_name')),
+                    decoration: InputDecoration(labelText: 'Nom affiché', errorText: v?.errorFor('name')),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TranslatedField(
-              label: 'Accroche',
-              value: _headline,
-              maxLength: 255,
-              errorFr: v?.errorFor('headline.fr'),
-              errorEn: v?.errorFor('headline.en'),
-              onChanged: (value) {
-                setState(() => _headline = value);
-                _markDirty();
-              },
-            ),
-            const SizedBox(height: 12),
-            TranslatedField(
-              label: 'Bio courte',
-              value: _bioShort,
-              maxLines: 3,
-              errorFr: v?.errorFor('bio_short.fr'),
-              errorEn: v?.errorFor('bio_short.en'),
-              onChanged: (value) {
-                setState(() => _bioShort = value);
-                _markDirty();
-              },
-            ),
-            const SizedBox(height: 12),
-            TranslatedField(
-              label: 'Bio complète',
-              value: _bioFull,
-              maxLines: 8,
-              errorFr: v?.errorFor('bio_full.fr'),
-              errorEn: v?.errorFor('bio_full.en'),
-              onChanged: (value) {
-                setState(() => _bioFull = value);
-                _markDirty();
-              },
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              onChanged: (_) => _markDirty(),
-              decoration: InputDecoration(labelText: 'E-mail', errorText: v?.errorFor('email')),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              onChanged: (_) => _markDirty(),
-              decoration: InputDecoration(labelText: 'Téléphone', errorText: v?.errorFor('phone')),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _location,
-              onChanged: (_) => _markDirty(),
-              decoration: InputDecoration(labelText: 'Localisation', errorText: v?.errorFor('location')),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _github,
-              keyboardType: TextInputType.url,
-              onChanged: (_) => _markDirty(),
-              decoration: InputDecoration(
-                labelText: 'GitHub',
-                prefixIcon: const Icon(Icons.link_rounded),
-                errorText: v?.errorFor('social_links.github'),
+                  const SizedBox(height: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _cvFirstName,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Prénom (CV)', errorText: v?.errorFor('cv_first_name')),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _cvLastName,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Nom (CV)', errorText: v?.errorFor('cv_last_name')),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TranslatedField(
+                    label: 'Accroche',
+                    value: _headline,
+                    maxLength: 255,
+                    errorFr: v?.errorFor('headline.fr'),
+                    errorEn: v?.errorFor('headline.en'),
+                    onChanged: (value) {
+                      setState(() => _headline = value);
+                      _markDirty();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TranslatedField(
+                    label: 'Bio courte',
+                    value: _bioShort,
+                    maxLines: 3,
+                    errorFr: v?.errorFor('bio_short.fr'),
+                    errorEn: v?.errorFor('bio_short.en'),
+                    onChanged: (value) {
+                      setState(() => _bioShort = value);
+                      _markDirty();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TranslatedField(
+                    label: 'Bio complète',
+                    value: _bioFull,
+                    maxLines: 8,
+                    errorFr: v?.errorFor('bio_full.fr'),
+                    errorEn: v?.errorFor('bio_full.en'),
+                    onChanged: (value) {
+                      setState(() => _bioFull = value);
+                      _markDirty();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    onChanged: (_) => _markDirty(),
+                    decoration: InputDecoration(labelText: 'E-mail', errorText: v?.errorFor('email')),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    onChanged: (_) => _markDirty(),
+                    decoration: InputDecoration(labelText: 'Téléphone', errorText: v?.errorFor('phone')),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _location,
+                    onChanged: (_) => _markDirty(),
+                    decoration: InputDecoration(labelText: 'Localisation', errorText: v?.errorFor('location')),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _github,
+                    keyboardType: TextInputType.url,
+                    onChanged: (_) => _markDirty(),
+                    decoration: InputDecoration(
+                      labelText: 'GitHub',
+                      prefixIcon: const Icon(Icons.link_rounded),
+                      errorText: v?.errorFor('social_links.github'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _linkedin,
+                    keyboardType: TextInputType.url,
+                    onChanged: (_) => _markDirty(),
+                    decoration: InputDecoration(
+                      labelText: 'LinkedIn',
+                      prefixIcon: const Icon(Icons.link_rounded),
+                      errorText: v?.errorFor('social_links.linkedin'),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _linkedin,
-              keyboardType: TextInputType.url,
-              onChanged: (_) => _markDirty(),
-              decoration: InputDecoration(
-                labelText: 'LinkedIn',
-                prefixIcon: const Icon(Icons.link_rounded),
-                errorText: v?.errorFor('social_links.linkedin'),
+            SurfaceCard(
+              radius: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Musique du site', style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Sans musique uploadée, le site joue une piste par défaut. Le CV se gère '
+                    'désormais par profil métier (Contenu → Profils métier).',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 12),
+                  DocumentPickerTile(
+                    icon: Icons.music_note_outlined,
+                    label: 'Musique du site',
+                    hint: 'Aucune musique : piste par défaut',
+                    extensions: const ['mp3', 'ogg', 'wav', 'm4a', 'aac'],
+                    maxBytes: _maxMusicBytes,
+                    tooLargeLabel: 'Fichier audio trop lourd (20 Mo maximum).',
+                    current: widget.profile.music,
+                    pickedFile: _music,
+                    onPicked: (file) => _applyDocument(() => _music = file),
+                    onRemove: _removeMusic,
+                    removing: _removingMusic,
+                  ),
+                ],
               ),
-            ),
-            const Divider(height: 32),
-            Text('Musique du site', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 4),
-            Text(
-              'Sans musique uploadée, le site joue une piste par défaut. Le CV se gère '
-              'désormais par profil métier (Contenu → Profils métier).',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 12),
-            DocumentPickerTile(
-              icon: Icons.music_note_outlined,
-              label: 'Musique du site',
-              hint: 'Aucune musique : piste par défaut',
-              extensions: const ['mp3', 'ogg', 'wav', 'm4a', 'aac'],
-              maxBytes: _maxMusicBytes,
-              tooLargeLabel: 'Fichier audio trop lourd (20 Mo maximum).',
-              current: widget.profile.music,
-              pickedFile: _music,
-              onPicked: (file) => _applyDocument(() => _music = file),
-              onRemove: _removeMusic,
-              removing: _removingMusic,
-            ),
-            const SizedBox(height: 28),
-            if (_uploadProgress != null) ...[
-              LinearProgressIndicator(value: _uploadProgress),
-              const SizedBox(height: 12),
-            ],
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                  : const Text('Enregistrer'),
             ),
           ],
         ),

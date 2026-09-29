@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../app/theme/app_palette.dart';
+import '../../../../shared/widgets/surfaces.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../application/engagement_list_controller.dart';
 import '../../data/engagement.dart';
 import '../../data/engagement_repository.dart';
@@ -73,17 +78,68 @@ class _EngagementDetailScreenState extends ConsumerState<EngagementDetailScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Demande de collaboration')),
-      body: FutureBuilder<Engagement>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
+    return FutureBuilder<Engagement>(
+      future: _future,
+      builder: (context, snapshot) {
+        final engagement = snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+            ? snapshot.data
+            : null;
+
+        return Scaffold(
+          extendBodyBehindAppBar: true,
+          extendBody: true,
+          appBar: GlassAppBar(
+            actions: [
+              if (engagement != null)
+                IconButton(
+                  tooltip: 'Supprimer',
+                  onPressed: () => _delete(engagement),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          bottomNavigationBar: engagement == null
+              ? null
+              : BottomFade(
+                  child: SafeArea(
+                    minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Row(
+                      children: [
+                        SizedBox.square(
+                          dimension: 56,
+                          child: IconButton.filledTonal(
+                            tooltip: engagement.status == EngagementStatus.newRequest
+                                ? 'Marquer comme traitée'
+                                : 'Remettre en nouvelle',
+                            onPressed: _updating ? null : () => _toggleHandled(engagement),
+                            style: IconButton.styleFrom(backgroundColor: context.appColors.card),
+                            icon: _updating
+                                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                : Icon(
+                                    engagement.status == EngagementStatus.newRequest
+                                        ? Icons.done_all_rounded
+                                        : Icons.mark_email_unread_outlined,
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => launchUrl(Uri.parse('mailto:${engagement.email}')),
+                            icon: const Icon(Icons.email_outlined),
+                            label: const Text('Contacter par e-mail'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          body: switch (snapshot) {
+            _ when snapshot.connectionState != ConnectionState.done => const Center(child: CircularProgressIndicator()),
+            _ when snapshot.hasError => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -95,45 +151,67 @@ class _EngagementDetailScreenState extends ConsumerState<EngagementDetailScreen>
                   ),
                 ],
               ),
-            );
-          }
+            ),
+            _ => _EngagementBody(engagement: engagement!, muted: muted),
+          },
+        );
+      },
+    );
+  }
+}
 
-          final engagement = snapshot.data!;
-          final isHiring = engagement.type == EngagementType.hiring;
+class _EngagementBody extends StatelessWidget {
+  const _EngagementBody({required this.engagement, required this.muted});
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+  final Engagement engagement;
+  final Color muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isHiring = engagement.type == EngagementType.hiring;
+
+    return ListView(
+      padding: pageInsets(context),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(child: Text(engagement.name, style: theme.textTheme.headlineSmall)),
-                  StatusBadge(
-                    engagement.status.label,
-                    prominent: engagement.status == EngagementStatus.newRequest,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(engagement.email, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary)),
-              if (engagement.createdAt != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  fullDate(engagement.createdAt!),
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              InitialsTile(engagement.name, size: 52),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(engagement.name, style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: 2),
+                    SelectableText(engagement.email, style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  StatusBadge(isHiring ? 'Embauche' : 'Freelance'),
-                  if (engagement.company?.isNotEmpty == true) StatusBadge(engagement.company!),
-                  if (engagement.jobProfile != null) StatusBadge(engagement.jobProfile!.label.display),
-                ],
               ),
-              const SizedBox(height: 20),
-              _Field(label: 'Sujet', value: engagement.subject),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        KeyFacts(
+          facts: [
+            (value: isHiring ? 'Embauche' : 'Freelance', label: 'Type'),
+            (value: engagement.status.label, label: 'Statut'),
+            if (engagement.createdAt != null) (value: relativeDate(engagement.createdAt!), label: 'Reçue'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SurfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (engagement.subject?.isNotEmpty == true) ...[
+                Text(engagement.subject!, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 12),
+              ],
+              _Field(label: 'Société', value: engagement.company),
+              _Field(label: 'Profil visé', value: engagement.jobProfile?.label.display),
               _Field(label: 'Budget', value: engagement.budget),
               _Field(label: 'Contrat', value: engagement.contract),
               _Field(label: 'Délai souhaité', value: engagement.timeline),
@@ -142,39 +220,25 @@ class _EngagementDetailScreenState extends ConsumerState<EngagementDetailScreen>
                   label: 'CV envoyé',
                   value: engagement.cvSentAt != null ? fullDate(engagement.cvSentAt!) : 'Pas encore',
                 ),
-              if (engagement.message?.isNotEmpty == true) ...[
-                const SizedBox(height: 8),
-                Text('Message', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 4),
-                Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(engagement.message!))),
-              ],
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => launchUrl(Uri.parse('mailto:${engagement.email}')),
-                icon: const Icon(Icons.email_outlined),
-                label: const Text('Contacter par e-mail'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _updating ? null : () => _toggleHandled(engagement),
-                icon: _updating
-                    ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.check_circle_outline_rounded),
-                label: Text(
-                  engagement.status == EngagementStatus.newRequest ? 'Marquer comme traitée' : 'Remettre en nouvelle',
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextButton.icon(
-                onPressed: () => _delete(engagement),
-                style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Supprimer'),
-              ),
+              if (engagement.createdAt != null)
+                Text(fullDate(engagement.createdAt!), style: theme.textTheme.labelSmall?.copyWith(color: muted)),
             ],
-          );
-        },
-      ),
+          ),
+        ),
+        if (engagement.message?.isNotEmpty == true) ...[
+          const SizedBox(height: 12),
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Message', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                SelectableText(engagement.message!, style: theme.textTheme.bodyMedium?.copyWith(height: 1.55)),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/push/push_target.dart';
+import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 import 'contacts/contacts_tab.dart';
 import 'engagements/engagements_tab.dart';
@@ -11,11 +13,7 @@ import 'testimonials/testimonials_tab.dart';
 class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
 
-  static const _tabs = [
-    (icon: Icons.mail_outline_rounded, label: 'Messages'),
-    (icon: Icons.handshake_outlined, label: 'Collaborations'),
-    (icon: Icons.reviews_outlined, label: 'Avis'),
-  ];
+  static const _tabs = [(label: 'Messages'), (label: 'Demandes'), (label: 'Avis')];
 
   @override
   ConsumerState<InboxScreen> createState() => _InboxScreenState();
@@ -70,18 +68,30 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
     final counts = [todo?.contacts ?? 0, todo?.engagements ?? 0, todo?.testimonials ?? 0];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Boîte de réception'),
-        bottom: TabBar(
-          controller: _controller,
-          tabs: [
-            for (var i = 0; i < InboxScreen._tabs.length; i++)
-              Tab(
-                icon: counts[i] > 0
-                    ? Badge(label: Text('${counts[i]}'), child: Icon(InboxScreen._tabs[i].icon))
-                    : Icon(InboxScreen._tabs[i].icon),
-                text: InboxScreen._tabs[i].label,
+      // Titre et sélecteur flottent : les listes défilent dessous.
+      extendBodyBehindAppBar: true,
+      appBar: GlassHeader(
+        height: 124,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Text(
+                'Boîte de réception',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SegmentedTabs(
+                controller: _controller,
+                labels: [for (final tab in InboxScreen._tabs) tab.label],
+                counts: counts,
+              ),
+            ),
           ],
         ),
       ),

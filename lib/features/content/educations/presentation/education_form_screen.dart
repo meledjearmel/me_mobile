@@ -6,6 +6,9 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../shared/widgets/date_field.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../../../shared/widgets/feedback.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../application/education_list_controller.dart';
@@ -100,7 +103,9 @@ class _EducationFormScreenState extends ConsumerState<EducationFormScreen> {
       _validation = null;
     });
     try {
-      await ref.read(educationRepositoryProvider).save(
+      await ref
+          .read(educationRepositoryProvider)
+          .save(
             id: widget.id,
             institution: _institution.text.trim(),
             degree: _degree,
@@ -172,8 +177,9 @@ class _EducationFormScreenState extends ConsumerState<EducationFormScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier la formation' : 'Nouvelle formation'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -184,6 +190,13 @@ class _EducationFormScreenState extends ConsumerState<EducationFormScreen> {
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -205,108 +218,113 @@ class _EducationFormScreenState extends ConsumerState<EducationFormScreen> {
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier la formation' : 'Nouvelle formation'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                TextField(
-                  controller: _institution,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Établissement', errorText: v?.errorFor('institution')),
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Diplôme',
-                  value: _degree,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('degree.fr'),
-                  errorEn: v?.errorFor('degree.en'),
-                  onChanged: (value) {
-                    setState(() => _degree = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Domaine d\'études',
-                  value: _field,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('field.fr'),
-                  errorEn: v?.errorFor('field.en'),
-                  onChanged: (value) {
-                    setState(() => _field = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: DateField(
-                        label: 'Début',
-                        value: _startDate,
-                        error: v?.errorFor('start_date'),
-                        onChanged: (date) {
-                          setState(() => _startDate = date);
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _institution,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Établissement', errorText: v?.errorFor('institution')),
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Diplôme',
+                        value: _degree,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('degree.fr'),
+                        errorEn: v?.errorFor('degree.en'),
+                        onChanged: (value) {
+                          setState(() => _degree = value);
                           _markDirty();
                         },
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DateField(
-                        label: 'Fin',
-                        value: _endDate,
-                        error: v?.errorFor('end_date'),
-                        allowClear: true,
-                        emptyLabel: 'En cours',
-                        firstDate: _startDate,
-                        onChanged: (date) {
-                          setState(() => _endDate = date);
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Domaine d\'études',
+                        value: _field,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('field.fr'),
+                        errorEn: v?.errorFor('field.en'),
+                        onChanged: (value) {
+                          setState(() => _field = value);
                           _markDirty();
                         },
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Description',
-                  value: _description,
-                  maxLines: 4,
-                  errorFr: v?.errorFor('description.fr'),
-                  errorEn: v?.errorFor('description.en'),
-                  onChanged: (value) {
-                    setState(() => _description = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _sortOrder,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Ordre d\'affichage', errorText: v?.errorFor('sort_order')),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<PublicationStatus>(
-                  segments: const [
-                    ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
-                    ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
-                  ],
-                  selected: {_status},
-                  onSelectionChanged: (selection) {
-                    setState(() => _status = selection.first);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
+                      const SizedBox(height: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DateField(
+                            label: 'Début',
+                            value: _startDate,
+                            error: v?.errorFor('start_date'),
+                            onChanged: (date) {
+                              setState(() => _startDate = date);
+                              _markDirty();
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          DateField(
+                            label: 'Fin',
+                            value: _endDate,
+                            error: v?.errorFor('end_date'),
+                            allowClear: true,
+                            emptyLabel: 'En cours',
+                            firstDate: _startDate,
+                            onChanged: (date) {
+                              setState(() => _endDate = date);
+                              _markDirty();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Description',
+                        value: _description,
+                        maxLines: 4,
+                        errorFr: v?.errorFor('description.fr'),
+                        errorEn: v?.errorFor('description.en'),
+                        onChanged: (value) {
+                          setState(() => _description = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _sortOrder,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Ordre d\'affichage',
+                          errorText: v?.errorFor('sort_order'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<PublicationStatus>(
+                        segments: const [
+                          ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
+                          ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
+                        ],
+                        selected: {_status},
+                        onSelectionChanged: (selection) {
+                          setState(() => _status = selection.first);
+                          _markDirty();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );

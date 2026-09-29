@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/app_palette.dart';
+
 /// Pastille de statut discrète (§3.6 : libellés français à afficher).
 class StatusBadge extends StatelessWidget {
   const StatusBadge(this.label, {super.key, this.color, this.prominent = false});
@@ -14,21 +16,22 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tint = color ?? scheme.onSurfaceVariant;
+    final colors = context.appColors;
+    // Sans couleur imposée : la couleur secondaire de la palette, discrète.
+    final tint = color ?? colors.onSecond;
+    final background = prominent
+        ? tint
+        : color == null
+        ? colors.second
+        : tint.withValues(alpha: 0.14);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: prominent ? tint : tint.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: prominent ? _onTint(tint) : tint,
-              fontWeight: FontWeight.w600,
-            ),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: prominent ? _onTint(tint) : tint, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -36,8 +39,8 @@ class StatusBadge extends StatelessWidget {
   Color _onTint(Color tint) => tint.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 }
 
-/// Puce de filtre (statut, type…), cochée ou non — utilisée dans les barres de
-/// filtre des listes (§3.3).
+/// Puce de filtre (statut, type…) en pilule : fond carte, or une fois
+/// sélectionnée — utilisée dans les barres de filtre des listes (§3.3).
 class PillFilterChip extends StatelessWidget {
   const PillFilterChip({super.key, required this.label, required this.selected, required this.onTap});
 
@@ -47,13 +50,28 @@ class PillFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ChoiceChip(
-      label: Text(label),
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    return Semantics(
+      button: true,
       selected: selected,
-      onSelected: (_) => onTap(),
-      showCheckmark: false,
-      labelStyle: TextStyle(color: selected ? scheme.onSurface : scheme.onSurfaceVariant),
+      child: Material(
+        color: selected ? colors.accent : colors.card,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Text(
+              label,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: selected ? colors.onAccent : theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

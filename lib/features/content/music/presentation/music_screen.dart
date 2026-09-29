@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/glass.dart';
+
 import 'music_genres_list_screen.dart';
 import 'tracks_list_screen.dart';
 
@@ -10,10 +12,15 @@ class MusicScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Musique')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      appBar: const GlassAppBar(),
+      body: PageListView(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+            child: Text('Musique', style: Theme.of(context).textTheme.headlineMedium),
+          ),
           Card(
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -23,9 +30,9 @@ class MusicScreen extends StatelessWidget {
                   title: const Text('Registres'),
                   subtitle: const Text('Catégories de pistes (ambiance, focus…)'),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const MusicGenresListScreen()),
-                  ),
+                  onTap: () =>
+                      Navigator.of(context)
+                          .push(MaterialPageRoute(builder: (context) => const MusicGenresListScreen())),
                 ),
                 const Divider(indent: 20, endIndent: 20),
                 ListTile(
@@ -33,9 +40,8 @@ class MusicScreen extends StatelessWidget {
                   title: const Text('Pistes'),
                   subtitle: const Text('Fichiers audio du lecteur du site'),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const TracksListScreen()),
-                  ),
+                  onTap: () =>
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const TracksListScreen())),
                 ),
               ],
             ),

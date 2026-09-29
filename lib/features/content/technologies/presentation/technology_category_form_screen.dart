@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../../data/reference_repository.dart';
 import '../application/technology_category_list_controller.dart';
@@ -86,7 +89,9 @@ class _TechnologyCategoryFormScreenState extends ConsumerState<TechnologyCategor
       _validation = null;
     });
     try {
-      await ref.read(technologyCategoryRepositoryProvider).save(
+      await ref
+          .read(technologyCategoryRepositoryProvider)
+          .save(
             id: widget.id,
             key: _key.text.trim(),
             label: _label,
@@ -115,7 +120,9 @@ class _TechnologyCategoryFormScreenState extends ConsumerState<TechnologyCategor
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Supprimer la catégorie « ${_label.display} » ?'),
-        content: const Text('Elle part à la corbeille avec toutes les technologies qui lui sont rattachées. Vous pourrez la restaurer si besoin.'),
+        content: const Text(
+          'Elle part à la corbeille avec toutes les technologies qui lui sont rattachées. Vous pourrez la restaurer si besoin.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Supprimer')),
@@ -159,8 +166,9 @@ class _TechnologyCategoryFormScreenState extends ConsumerState<TechnologyCategor
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier la catégorie' : 'Nouvelle catégorie'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -171,6 +179,13 @@ class _TechnologyCategoryFormScreenState extends ConsumerState<TechnologyCategor
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -192,40 +207,49 @@ class _TechnologyCategoryFormScreenState extends ConsumerState<TechnologyCategor
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier la catégorie' : 'Nouvelle catégorie'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                TextField(
-                  controller: _key,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Clé (unique)', errorText: v?.errorFor('key')),
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Libellé',
-                  value: _label,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('label.fr'),
-                  errorEn: v?.errorFor('label.en'),
-                  onChanged: (value) {
-                    setState(() => _label = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _sortOrder,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Ordre d\'affichage', errorText: v?.errorFor('sort_order')),
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _key,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Clé (unique)', errorText: v?.errorFor('key')),
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Libellé',
+                        value: _label,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('label.fr'),
+                        errorEn: v?.errorFor('label.en'),
+                        onChanged: (value) {
+                          setState(() => _label = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _sortOrder,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Ordre d\'affichage',
+                          errorText: v?.errorFor('sort_order'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );

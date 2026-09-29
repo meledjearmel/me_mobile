@@ -9,6 +9,9 @@ import '../../../../core/models/publication_status.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../core/models/uploaded_file.dart';
 import '../../../../shared/widgets/document_picker_tile.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../../../shared/widgets/feedback.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../../data/reference_repository.dart';
@@ -137,7 +140,9 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
       _uploadProgress = null;
     });
     try {
-      await ref.read(jobProfileRepositoryProvider).save(
+      await ref
+          .read(jobProfileRepositoryProvider)
+          .save(
             id: widget.id,
             key: _key.text.trim(),
             label: _label,
@@ -147,8 +152,12 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
             cvDescription: _cvDescription,
             sortOrder: int.tryParse(_sortOrder.text.trim()) ?? 0,
             status: _status,
-            cvFileFr: _cvFileFr == null ? null : dio.MultipartFile.fromFileSync(_cvFileFr!.path!, filename: _cvFileFr!.name),
-            cvFileEn: _cvFileEn == null ? null : dio.MultipartFile.fromFileSync(_cvFileEn!.path!, filename: _cvFileEn!.name),
+            cvFileFr: _cvFileFr == null
+                ? null
+                : dio.MultipartFile.fromFileSync(_cvFileFr!.path!, filename: _cvFileFr!.name),
+            cvFileEn: _cvFileEn == null
+                ? null
+                : dio.MultipartFile.fromFileSync(_cvFileEn!.path!, filename: _cvFileEn!.name),
             onProgress: (sent, total) {
               if (total > 0 && mounted) {
                 setState(() => _uploadProgress = sent / total);
@@ -222,8 +231,9 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier le profil métier' : 'Nouveau profil métier'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -234,6 +244,13 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving, progress: _uploadProgress)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -255,140 +272,145 @@ class _JobProfileFormScreenState extends ConsumerState<JobProfileFormScreen> {
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier le profil métier' : 'Nouveau profil métier'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                TextField(
-                  controller: _key,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Clé (unique)', errorText: v?.errorFor('key')),
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Libellé',
-                  value: _label,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('label.fr'),
-                  errorEn: v?.errorFor('label.en'),
-                  onChanged: (value) {
-                    setState(() => _label = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Description',
-                  value: _description,
-                  maxLines: 5,
-                  errorFr: v?.errorFor('description.fr'),
-                  errorEn: v?.errorFor('description.en'),
-                  onChanged: (value) {
-                    setState(() => _description = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Titre du hero (15 caractères max.)',
-                  value: _heroTitle,
-                  maxLength: 15,
-                  errorFr: v?.errorFor('hero_title.fr'),
-                  errorEn: v?.errorFor('hero_title.en'),
-                  onChanged: (value) {
-                    setState(() => _heroTitle = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Mots du hero',
-                  value: _heroWords,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('hero_words.fr'),
-                  errorEn: v?.errorFor('hero_words.en'),
-                  onChanged: (value) {
-                    setState(() => _heroWords = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Description pour le CV',
-                  value: _cvDescription,
-                  maxLines: 5,
-                  errorFr: v?.errorFor('cv_description.fr'),
-                  errorEn: v?.errorFor('cv_description.en'),
-                  onChanged: (value) {
-                    setState(() => _cvDescription = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 20),
-                Text('CV ciblé pour ce profil', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 4),
-                Text(
-                  'Sans CV uploadé pour une langue, celui de l\'autre langue sert de secours, '
-                  'sinon il est généré automatiquement.',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 12),
-                DocumentPickerTile(
-                  icon: Icons.picture_as_pdf_outlined,
-                  label: 'CV — Français',
-                  hint: 'Aucun CV FR : secours ou généré automatiquement',
-                  extensions: const ['pdf'],
-                  maxBytes: _maxCvBytes,
-                  tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
-                  current: _cvFiles.fr,
-                  pickedFile: _cvFileFr,
-                  onPicked: (file) => _applyCvFile(() => _cvFileFr = file),
-                  onRemove: _isEditing ? () => _removeCv('fr') : null,
-                  removing: _removingCv == 'fr',
-                ),
-                const SizedBox(height: 10),
-                DocumentPickerTile(
-                  icon: Icons.picture_as_pdf_outlined,
-                  label: 'CV — Anglais',
-                  hint: 'Aucun CV EN : secours ou généré automatiquement',
-                  extensions: const ['pdf'],
-                  maxBytes: _maxCvBytes,
-                  tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
-                  current: _cvFiles.en,
-                  pickedFile: _cvFileEn,
-                  onPicked: (file) => _applyCvFile(() => _cvFileEn = file),
-                  onRemove: _isEditing ? () => _removeCv('en') : null,
-                  removing: _removingCv == 'en',
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _sortOrder,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Ordre d\'affichage', errorText: v?.errorFor('sort_order')),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<PublicationStatus>(
-                  segments: const [
-                    ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
-                    ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
-                  ],
-                  selected: {_status},
-                  onSelectionChanged: (selection) {
-                    setState(() => _status = selection.first);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 28),
-                if (_uploadProgress != null) ...[
-                  LinearProgressIndicator(value: _uploadProgress),
-                  const SizedBox(height: 12),
-                ],
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _key,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Clé (unique)', errorText: v?.errorFor('key')),
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Libellé',
+                        value: _label,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('label.fr'),
+                        errorEn: v?.errorFor('label.en'),
+                        onChanged: (value) {
+                          setState(() => _label = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Description',
+                        value: _description,
+                        maxLines: 5,
+                        errorFr: v?.errorFor('description.fr'),
+                        errorEn: v?.errorFor('description.en'),
+                        onChanged: (value) {
+                          setState(() => _description = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Titre du hero (15 caractères max.)',
+                        value: _heroTitle,
+                        maxLength: 15,
+                        errorFr: v?.errorFor('hero_title.fr'),
+                        errorEn: v?.errorFor('hero_title.en'),
+                        onChanged: (value) {
+                          setState(() => _heroTitle = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Mots du hero',
+                        value: _heroWords,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('hero_words.fr'),
+                        errorEn: v?.errorFor('hero_words.en'),
+                        onChanged: (value) {
+                          setState(() => _heroWords = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Description pour le CV',
+                        value: _cvDescription,
+                        maxLines: 5,
+                        errorFr: v?.errorFor('cv_description.fr'),
+                        errorEn: v?.errorFor('cv_description.en'),
+                        onChanged: (value) {
+                          setState(() => _cvDescription = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      Text('CV ciblé pour ce profil', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Sans CV uploadé pour une langue, celui de l\'autre langue sert de secours, '
+                        'sinon il est généré automatiquement.',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 12),
+                      DocumentPickerTile(
+                        icon: Icons.picture_as_pdf_outlined,
+                        label: 'CV — Français',
+                        hint: 'Aucun CV FR : secours ou généré automatiquement',
+                        extensions: const ['pdf'],
+                        maxBytes: _maxCvBytes,
+                        tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
+                        current: _cvFiles.fr,
+                        pickedFile: _cvFileFr,
+                        onPicked: (file) => _applyCvFile(() => _cvFileFr = file),
+                        onRemove: _isEditing ? () => _removeCv('fr') : null,
+                        removing: _removingCv == 'fr',
+                      ),
+                      const SizedBox(height: 10),
+                      DocumentPickerTile(
+                        icon: Icons.picture_as_pdf_outlined,
+                        label: 'CV — Anglais',
+                        hint: 'Aucun CV EN : secours ou généré automatiquement',
+                        extensions: const ['pdf'],
+                        maxBytes: _maxCvBytes,
+                        tooLargeLabel: 'PDF trop lourd (10 Mo maximum).',
+                        current: _cvFiles.en,
+                        pickedFile: _cvFileEn,
+                        onPicked: (file) => _applyCvFile(() => _cvFileEn = file),
+                        onRemove: _isEditing ? () => _removeCv('en') : null,
+                        removing: _removingCv == 'en',
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _sortOrder,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Ordre d\'affichage',
+                          errorText: v?.errorFor('sort_order'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<PublicationStatus>(
+                        segments: const [
+                          ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
+                          ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
+                        ],
+                        selected: {_status},
+                        onSelectionChanged: (selection) {
+                          setState(() => _status = selection.first);
+                          _markDirty();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );

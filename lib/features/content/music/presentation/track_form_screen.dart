@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_exception.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../application/track_list_controller.dart';
 import '../data/music_genre_repository.dart';
 import '../data/track_repository.dart';
@@ -99,9 +102,8 @@ class _TrackFormScreenState extends ConsumerState<TrackFormScreen> {
     final size = file.lengthSync() ?? await file.length();
     if (size != null && size > _maxAudioBytes) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fichier audio trop lourd (30 Mo maximum).')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Fichier audio trop lourd (30 Mo maximum).')));
       }
       return;
     }
@@ -125,7 +127,9 @@ class _TrackFormScreenState extends ConsumerState<TrackFormScreen> {
       _uploadProgress = null;
     });
     try {
-      await ref.read(trackRepositoryProvider).save(
+      await ref
+          .read(trackRepositoryProvider)
+          .save(
             id: widget.id,
             musicGenreId: _musicGenreId!,
             title: _title.text.trim(),
@@ -206,8 +210,9 @@ class _TrackFormScreenState extends ConsumerState<TrackFormScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier la piste' : 'Nouvelle piste'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -218,6 +223,13 @@ class _TrackFormScreenState extends ConsumerState<TrackFormScreen> {
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving, progress: _uploadProgress)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -239,91 +251,101 @@ class _TrackFormScreenState extends ConsumerState<TrackFormScreen> {
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier la piste' : 'Nouvelle piste'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                genres.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, _) => const Text('Registres indisponibles.'),
-                  data: (list) => DropdownButtonFormField<int>(
-                    initialValue: _musicGenreId,
-                    decoration: InputDecoration(labelText: 'Registre', errorText: v?.errorFor('music_genre_id')),
-                    items: [for (final g in list) DropdownMenuItem(value: g.id, child: Text(g.label.display))],
-                    onChanged: (value) {
-                      setState(() => _musicGenreId = value);
-                      _markDirty();
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _title,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Titre', errorText: v?.errorFor('title')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _artist,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Artiste (facultatif)', errorText: v?.errorFor('artist')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _sortOrder,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Ordre d\'affichage', errorText: v?.errorFor('sort_order')),
-                ),
-                const SizedBox(height: 20),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.audiotrack_rounded),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      genres.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) => const Text('Registres indisponibles.'),
+                        data: (list) => DropdownButtonFormField<int>(
+                          initialValue: _musicGenreId,
+                          decoration: InputDecoration(labelText: 'Registre', errorText: v?.errorFor('music_genre_id')),
+                          items: [for (final g in list) DropdownMenuItem(value: g.id, child: Text(g.label.display))],
+                          onChanged: (value) {
+                            setState(() => _musicGenreId = value);
+                            _markDirty();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _title,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Titre', errorText: v?.errorFor('title')),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _artist,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Artiste (facultatif)',
+                          errorText: v?.errorFor('artist'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _sortOrder,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Ordre d\'affichage',
+                          errorText: v?.errorFor('sort_order'),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
                             children: [
-                              Text('Fichier audio', style: theme.textTheme.labelLarge),
-                              const SizedBox(height: 2),
-                              Text(
-                                _audioPending != null
-                                    ? '${_audioPending!.name} · sera envoyé à l\'enregistrement'
-                                    : _existingAudioUrl != null
-                                        ? 'Fichier actuel conservé sauf remplacement'
-                                        : 'Aucun fichier (obligatoire à la création)',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              const Icon(Icons.audiotrack_rounded),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Fichier audio', style: theme.textTheme.labelLarge),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _audioPending != null
+                                          ? '${_audioPending!.name} · sera envoyé à l\'enregistrement'
+                                          : _existingAudioUrl != null
+                                          ? 'Fichier actuel conservé sauf remplacement'
+                                          : 'Aucun fichier (obligatoire à la création)',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _pickAudio,
+                                child: Text(_existingAudioUrl != null || _audioPending != null ? 'Changer' : 'Choisir'),
                               ),
                             ],
                           ),
                         ),
-                        TextButton(
-                          onPressed: _pickAudio,
-                          child: Text(_existingAudioUrl != null || _audioPending != null ? 'Changer' : 'Choisir'),
-                        ),
+                      ),
+                      if (v?.errorFor('audio') != null) ...[
+                        const SizedBox(height: 4),
+                        Text(v!.errorFor('audio')!, style: TextStyle(color: theme.colorScheme.error)),
                       ],
-                    ),
+                    ],
                   ),
-                ),
-                if (v?.errorFor('audio') != null) ...[
-                  const SizedBox(height: 4),
-                  Text(v!.errorFor('audio')!, style: TextStyle(color: theme.colorScheme.error)),
-                ],
-                const SizedBox(height: 28),
-                if (_uploadProgress != null) ...[
-                  LinearProgressIndicator(value: _uploadProgress),
-                  const SizedBox(height: 12),
-                ],
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
                 ),
               ],
             );

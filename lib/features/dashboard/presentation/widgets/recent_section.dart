@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/relative_date.dart';
+import '../../../../shared/widgets/surfaces.dart';
 
 typedef RecentItem = ({int id, String title, String subtitle, bool isNew, DateTime? at});
 
-/// Les 5 derniers éléments d'une ressource de la boîte de réception (§4.1).
+/// Les derniers éléments d'une ressource de la boîte de réception (§4.1),
+/// en cartes séparées : initiales, nom, extrait, date et point or si non lu.
 class RecentSection extends StatelessWidget {
   const RecentSection({
     super.key,
@@ -28,49 +30,35 @@ class RecentSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(title, style: theme.textTheme.titleMedium),
-            const Spacer(),
-            if (items.isNotEmpty)
-              TextButton(onPressed: onSeeAll, child: const Text('Voir tout')),
-          ],
-        ),
+        SectionHeader(title, actionLabel: items.isEmpty ? null : 'Voir tout', onAction: onSeeAll),
+        const SizedBox(height: 8),
         if (items.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(emptyLabel, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          )
+          Text(emptyLabel, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))
         else
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (final (index, item) in items.indexed) ...[
-                  if (index > 0) const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    dense: true,
-                    onTap: () => onTapItem(item.id),
-                    title: Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: item.isNew ? FontWeight.w700 : FontWeight.w400),
-                    ),
-                    subtitle: Text(item.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: item.at == null
-                        ? null
-                        : Text(relativeDate(item.at!), style: theme.textTheme.bodySmall),
-                    leading: SizedBox(
-                      width: 12,
-                      child: item.isNew ? Icon(Icons.circle, size: 8, color: theme.colorScheme.primary) : null,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          for (final (index, item) in items.indexed) ...[
+            if (index > 0) const SizedBox(height: 8),
+            RecentTile(item: item, onTap: () => onTapItem(item.id)),
+          ],
       ],
+    );
+  }
+}
+
+class RecentTile extends StatelessWidget {
+  const RecentTile({super.key, required this.item, required this.onTap});
+
+  final RecentItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListCardTile(
+      onTap: onTap,
+      leading: InitialsTile(item.title),
+      title: item.title,
+      unread: item.isNew,
+      meta: item.at == null ? null : relativeDate(item.at!),
+      subtitle: item.subtitle,
     );
   }
 }

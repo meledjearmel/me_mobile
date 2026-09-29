@@ -6,6 +6,9 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../../../shared/widgets/multi_select_field.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../../data/reference_repository.dart';
@@ -107,7 +110,9 @@ class _SkillFormScreenState extends ConsumerState<SkillFormScreen> {
       _validation = null;
     });
     try {
-      await ref.read(skillRepositoryProvider).save(
+      await ref
+          .read(skillRepositoryProvider)
+          .save(
             id: widget.id,
             domainId: _domainId!,
             name: _name,
@@ -181,8 +186,9 @@ class _SkillFormScreenState extends ConsumerState<SkillFormScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier la compétence' : 'Nouvelle compétence'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -193,6 +199,13 @@ class _SkillFormScreenState extends ConsumerState<SkillFormScreen> {
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -214,130 +227,139 @@ class _SkillFormScreenState extends ConsumerState<SkillFormScreen> {
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier la compétence' : 'Nouvelle compétence'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                domains.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, _) => const Text('Domaines indisponibles.'),
-                  data: (list) => DropdownButtonFormField<int>(
-                    initialValue: _domainId,
-                    decoration: InputDecoration(labelText: 'Domaine', errorText: v?.errorFor('domain_id')),
-                    items: [for (final d in list) DropdownMenuItem(value: d.id, child: Text(d.label.display))],
-                    onChanged: (value) {
-                      setState(() => _domainId = value);
-                      _markDirty();
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Nom',
-                  value: _name,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('name.fr'),
-                  errorEn: v?.errorFor('name.en'),
-                  onChanged: (value) {
-                    setState(() => _name = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Description',
-                  value: _description,
-                  maxLines: 4,
-                  errorFr: v?.errorFor('description.fr'),
-                  errorEn: v?.errorFor('description.en'),
-                  onChanged: (value) {
-                    setState(() => _description = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Détails',
-                  value: _details,
-                  maxLines: 4,
-                  errorFr: v?.errorFor('details.fr'),
-                  errorEn: v?.errorFor('details.en'),
-                  onChanged: (value) {
-                    setState(() => _details = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 20),
-                technologies.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, _) => const SizedBox.shrink(),
-                  data: (list) => MultiSelectField(
-                    label: 'Technologies',
-                    options: [for (final t in list) (id: t.id, label: t.name, color: null)],
-                    selectedIds: _technologyIds,
-                    onChanged: _onTechnologiesChanged,
-                  ),
-                ),
-                if (_technologyIds.length > 1) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Glissez pour ordonner (l\'ordre est conservé) :',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 4),
-                  technologies.maybeWhen(
-                    data: (list) {
-                      final byId = {for (final t in list) t.id: t.name};
-                      return ReorderableListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _technologyIds.length,
-                        onReorderItem: (oldIndex, newIndex) {
-                          setState(() {
-                            final id = _technologyIds.removeAt(oldIndex);
-                            _technologyIds.insert(newIndex, id);
-                          });
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      domains.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) => const Text('Domaines indisponibles.'),
+                        data: (list) => DropdownButtonFormField<int>(
+                          initialValue: _domainId,
+                          decoration: InputDecoration(labelText: 'Domaine', errorText: v?.errorFor('domain_id')),
+                          items: [for (final d in list) DropdownMenuItem(value: d.id, child: Text(d.label.display))],
+                          onChanged: (value) {
+                            setState(() => _domainId = value);
+                            _markDirty();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Nom',
+                        value: _name,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('name.fr'),
+                        errorEn: v?.errorFor('name.en'),
+                        onChanged: (value) {
+                          setState(() => _name = value);
                           _markDirty();
                         },
-                        itemBuilder: (context, index) {
-                          final id = _technologyIds[index];
-                          return ListTile(
-                            key: ValueKey(id),
-                            dense: true,
-                            leading: const Icon(Icons.drag_indicator_rounded),
-                            title: Text(byId[id] ?? '#$id'),
-                          );
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Description',
+                        value: _description,
+                        maxLines: 4,
+                        errorFr: v?.errorFor('description.fr'),
+                        errorEn: v?.errorFor('description.en'),
+                        onChanged: (value) {
+                          setState(() => _description = value);
+                          _markDirty();
                         },
-                      );
-                    },
-                    orElse: () => const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Détails',
+                        value: _details,
+                        maxLines: 4,
+                        errorFr: v?.errorFor('details.fr'),
+                        errorEn: v?.errorFor('details.en'),
+                        onChanged: (value) {
+                          setState(() => _details = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      technologies.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) => const SizedBox.shrink(),
+                        data: (list) => MultiSelectField(
+                          label: 'Technologies',
+                          options: [for (final t in list) (id: t.id, label: t.name, color: null)],
+                          selectedIds: _technologyIds,
+                          onChanged: _onTechnologiesChanged,
+                        ),
+                      ),
+                      if (_technologyIds.length > 1) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Glissez pour ordonner (l\'ordre est conservé) :',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 4),
+                        technologies.maybeWhen(
+                          data: (list) {
+                            final byId = {for (final t in list) t.id: t.name};
+                            return ReorderableListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _technologyIds.length,
+                              onReorderItem: (oldIndex, newIndex) {
+                                setState(() {
+                                  final id = _technologyIds.removeAt(oldIndex);
+                                  _technologyIds.insert(newIndex, id);
+                                });
+                                _markDirty();
+                              },
+                              itemBuilder: (context, index) {
+                                final id = _technologyIds[index];
+                                return ListTile(
+                                  key: ValueKey(id),
+                                  dense: true,
+                                  leading: const Icon(Icons.drag_indicator_rounded),
+                                  title: Text(byId[id] ?? '#$id'),
+                                );
+                              },
+                            );
+                          },
+                          orElse: () => const SizedBox.shrink(),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _sortOrder,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Ordre d\'affichage',
+                          errorText: v?.errorFor('sort_order'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<PublicationStatus>(
+                        segments: const [
+                          ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
+                          ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
+                        ],
+                        selected: {_status},
+                        onSelectionChanged: (selection) {
+                          setState(() => _status = selection.first);
+                          _markDirty();
+                        },
+                      ),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _sortOrder,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Ordre d\'affichage', errorText: v?.errorFor('sort_order')),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<PublicationStatus>(
-                  segments: const [
-                    ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
-                    ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
-                  ],
-                  selected: {_status},
-                  onSelectionChanged: (selection) {
-                    setState(() => _status = selection.first);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
                 ),
               ],
             );

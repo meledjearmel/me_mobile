@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/slugify.dart';
+import '../../../../app/theme/app_palette.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../data/technology_icon.dart';
 import '../data/technology_icon_repository.dart';
 import 'technology_logo.dart';
@@ -59,16 +62,52 @@ class TechnologyIconPickerScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Logo'),
-          actions: [
-            IconButton(
-              tooltip: 'Envoyer un SVG',
-              onPressed: () => _uploadSvg(context, ref),
-              icon: const Icon(Icons.upload_file_rounded),
+        extendBodyBehindAppBar: true,
+        appBar: GlassHeader(
+          height: 120,
+          child: Builder(
+            builder: (context) => IconButtonTheme(
+              data: IconButtonThemeData(style: GlassAppBar.roundButtonStyle(context)),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: GlassAppBar.toolbarHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                            onPressed: () => Navigator.maybePop(context),
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Logo',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Envoyer un SVG',
+                            onPressed: () => _uploadSvg(context, ref),
+                            icon: const Icon(Icons.upload_file_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SegmentedTabs(
+                      controller: DefaultTabController.of(context),
+                      labels: const ['Bibliothèque', 'Catalogue'],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-          bottom: const TabBar(tabs: [Tab(text: 'Bibliothèque'), Tab(text: 'Catalogue')]),
+          ),
         ),
         body: TabBarView(
           children: [
@@ -100,7 +139,10 @@ Future<TechnologyIcon?> _askNameAndRun(
   ref.invalidate(technologyIconsProvider);
   try {
     final icons = await ref.read(technologyIconsProvider.future);
-    return icons.firstWhere((i) => i.slug == slug, orElse: () => TechnologyIcon(slug: slug, lightUrl: null, darkUrl: null));
+    return icons.firstWhere(
+      (i) => i.slug == slug,
+      orElse: () => TechnologyIcon(slug: slug, lightUrl: null, darkUrl: null),
+    );
   } on ApiException {
     return TechnologyIcon(slug: slug, lightUrl: null, darkUrl: null);
   }
@@ -218,7 +260,14 @@ class _LibraryTab extends ConsumerStatefulWidget {
 }
 
 class _LibraryTabState extends ConsumerState<_LibraryTab> {
+  final _filterController = TextEditingController();
   String _filter = '';
+
+  @override
+  void dispose() {
+    _filterController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -237,68 +286,82 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         ),
       ),
       data: (all) {
-        final visible = [for (final icon in all) if (icon.slug.contains(_filter.toLowerCase())) icon];
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: TextField(
-                onChanged: (value) => setState(() => _filter = value.trim()),
-                decoration: const InputDecoration(hintText: 'Filtrer la bibliothèque…', prefixIcon: Icon(Icons.search_rounded)),
+        final visible = [
+          for (final icon in all)
+            if (icon.slug.contains(_filter.toLowerCase())) icon,
+        ];
+        final insets = pageInsets(context);
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, insets.top, 16, 12),
+              sliver: SliverToBoxAdapter(
+                child: SearchPill(
+                  controller: _filterController,
+                  hintText: 'Filtrer la bibliothèque…',
+                  onChanged: (value) => setState(() => _filter = value.trim()),
+                  onSubmitted: (value) => setState(() => _filter = value.trim()),
+                ),
               ),
             ),
-            Expanded(
-              child: visible.isEmpty
-                  ? Center(
-                      child: Text(
-                        all.isEmpty ? 'La bibliothèque est vide : importez un logo depuis le catalogue.' : 'Aucun logo.',
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 110,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 0.9,
-                      ),
-                      itemCount: visible.length,
-                      itemBuilder: (context, index) {
-                        final icon = visible[index];
-                        final selected = icon.slug == widget.selectedSlug;
-                        return Card(
-                          shape: selected
-                              ? RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-                                )
-                              : null,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => Navigator.of(context).pop(icon),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  TechnologyLogo(lightUrl: icon.lightUrl, darkUrl: icon.darkUrl, size: 44),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    icon.slug,
-                                    maxLines: 2,
-                                    textAlign: TextAlign.center,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context).textTheme.labelSmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+            if (visible.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      all.isEmpty ? 'La bibliothèque est vide : importez un logo depuis le catalogue.' : 'Aucun logo.',
+                      textAlign: TextAlign.center,
                     ),
-            ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, insets.bottom),
+                sliver: SliverGrid.builder(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 110,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.9,
+                  ),
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) {
+                    final icon = visible[index];
+                    final selected = icon.slug == widget.selectedSlug;
+                    return Material(
+                      color: context.appColors.card,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: selected ? BorderSide(color: context.appColors.accent, width: 2) : BorderSide.none,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).pop(icon),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              TechnologyLogo(lightUrl: icon.lightUrl, darkUrl: icon.darkUrl, size: 44),
+                              const SizedBox(height: 6),
+                              Text(
+                                icon.slug,
+                                maxLines: 2,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
           ],
         );
       },
@@ -352,68 +415,77 @@ class _CatalogTabState extends ConsumerState<_CatalogTab> with AutomaticKeepAliv
   Widget build(BuildContext context) {
     super.build(context);
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: TextField(
-            controller: _query,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _search(),
-            decoration: InputDecoration(
-              hintText: 'Chercher un logo (2 lettres min.)…',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: IconButton(tooltip: 'Rechercher', onPressed: _search, icon: const Icon(Icons.arrow_forward_rounded)),
-            ),
-          ),
+    final insets = pageInsets(context);
+
+    Widget message(String text) => SliverFillRemaining(
+      hasScrollBody: false,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(text, textAlign: TextAlign.center),
         ),
-        Expanded(
-          child: _results == null
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      'Cherchez dans les catalogues Logos, Devicon et Simple Icons, puis importez le logo dans votre bibliothèque.',
-                      textAlign: TextAlign.center,
-                    ),
+      ),
+    );
+
+    return FutureBuilder<List<IconSearchResult>>(
+      future: _results,
+      builder: (context, snapshot) {
+        final Widget content;
+        if (_results == null) {
+          content = message(
+            'Cherchez dans les catalogues Logos, Devicon et Simple Icons, puis importez le logo dans votre bibliothèque.',
+          );
+        } else if (snapshot.connectionState != ConnectionState.done) {
+          content = const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()));
+        } else if (snapshot.hasError) {
+          final error = snapshot.error;
+          content = message(error is ApiException ? error.message : 'Erreur.');
+        } else if (snapshot.data!.isEmpty) {
+          content = message('Aucun résultat.');
+        } else {
+          final results = snapshot.data!;
+          content = SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, insets.bottom),
+            sliver: SliverList.separated(
+              itemCount: results.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final result = results[index];
+                return ListCardTile(
+                  onTap: () => _import(result),
+                  // Aperçu conseillé sur fond clair : la pastille garde les logos sombres lisibles.
+                  leading: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.all(6),
+                    child: TechnologyLogo(lightUrl: result.previewUrl, darkUrl: result.previewUrl, size: 30),
                   ),
-                )
-              : FutureBuilder<List<IconSearchResult>>(
-                  future: _results,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      final error = snapshot.error;
-                      return Center(child: Text(error is ApiException ? error.message : 'Erreur.'));
-                    }
-                    final results = snapshot.data!;
-                    if (results.isEmpty) {
-                      return const Center(child: Text('Aucun résultat.'));
-                    }
-                    return ListView.builder(
-                      itemCount: results.length,
-                      itemBuilder: (context, index) {
-                        final result = results[index];
-                        return ListTile(
-                          onTap: () => _import(result),
-                          // Aperçu conseillé sur fond clair : la pastille garde les logos sombres lisibles.
-                          leading: Container(
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.all(4),
-                            child: TechnologyLogo(lightUrl: result.previewUrl, darkUrl: result.previewUrl, size: 32),
-                          ),
-                          title: Text(result.name),
-                          subtitle: Text(result.collection),
-                          trailing: const Icon(Icons.download_rounded),
-                        );
-                      },
-                    );
-                  },
+                  title: result.name,
+                  subtitle: result.collection,
+                  badge: const Icon(Icons.download_rounded, size: 18),
+                );
+              },
+            ),
+          );
+        }
+
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, insets.top, 16, 12),
+              sliver: SliverToBoxAdapter(
+                child: SearchPill(
+                  controller: _query,
+                  hintText: 'Chercher un logo (2 lettres min.)…',
+                  onSubmitted: (_) => _search(),
                 ),
-        ),
-      ],
+              ),
+            ),
+            content,
+          ],
+        );
+      },
     );
   }
 }

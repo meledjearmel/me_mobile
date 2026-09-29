@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_exception.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../data/reference_repository.dart';
 import '../application/professional_reference_list_controller.dart';
 import '../data/professional_reference.dart';
@@ -105,7 +108,9 @@ class _ProfessionalReferenceFormScreenState extends ConsumerState<ProfessionalRe
       _validation = null;
     });
     try {
-      await ref.read(professionalReferenceRepositoryProvider).save(
+      await ref
+          .read(professionalReferenceRepositoryProvider)
+          .save(
             id: widget.id,
             name: _name.text.trim(),
             role: _role.text.trim().isEmpty ? null : _role.text.trim(),
@@ -181,8 +186,9 @@ class _ProfessionalReferenceFormScreenState extends ConsumerState<ProfessionalRe
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier la référence' : 'Nouvelle référence'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -193,6 +199,13 @@ class _ProfessionalReferenceFormScreenState extends ConsumerState<ProfessionalRe
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -214,109 +227,118 @@ class _ProfessionalReferenceFormScreenState extends ConsumerState<ProfessionalRe
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier la référence' : 'Nouvelle référence'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                TextField(
-                  controller: _name,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Nom', errorText: v?.errorFor('name')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _role,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Rôle', errorText: v?.errorFor('role')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _company,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Société', errorText: v?.errorFor('company')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'E-mail', errorText: v?.errorFor('email')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Téléphone', errorText: v?.errorFor('phone')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _relationship,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Relation', errorText: v?.errorFor('relationship')),
-                ),
-                const SizedBox(height: 12),
-                projects.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, _) => const Text('Projets indisponibles.'),
-                  data: (list) => DropdownButtonFormField<int?>(
-                    initialValue: _projectId,
-                    decoration: InputDecoration(labelText: 'Projet lié (facultatif)', errorText: v?.errorFor('project_id')),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Aucun')),
-                      for (final p in list) DropdownMenuItem(value: p.id, child: Text(p.title.display)),
-                    ],
-                    onChanged: (value) {
-                      setState(() => _projectId = value);
-                      _markDirty();
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Jointe au CV'),
-                  value: _isPublic,
-                  onChanged: (value) {
-                    setState(() => _isPublic = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 8),
-                Text('Champs affichés sur le CV', style: theme.textTheme.labelLarge),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final field in VisibleField.values)
-                      FilterChip(
-                        label: Text(field.label),
-                        selected: _visibleFields.contains(field.wireValue),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _visibleFields.add(field.wireValue);
-                            } else {
-                              _visibleFields.remove(field.wireValue);
-                            }
-                          });
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _name,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Nom', errorText: v?.errorFor('name')),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _role,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Rôle', errorText: v?.errorFor('role')),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _company,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Société', errorText: v?.errorFor('company')),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'E-mail', errorText: v?.errorFor('email')),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Téléphone', errorText: v?.errorFor('phone')),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _relationship,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Relation', errorText: v?.errorFor('relationship')),
+                      ),
+                      const SizedBox(height: 12),
+                      projects.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) => const Text('Projets indisponibles.'),
+                        data: (list) => DropdownButtonFormField<int?>(
+                          initialValue: _projectId,
+                          decoration: InputDecoration(
+                            labelText: 'Projet lié (facultatif)',
+                            errorText: v?.errorFor('project_id'),
+                          ),
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('Aucun')),
+                            for (final p in list) DropdownMenuItem(value: p.id, child: Text(p.title.display)),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _projectId = value);
+                            _markDirty();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Jointe au CV'),
+                        value: _isPublic,
+                        onChanged: (value) {
+                          setState(() => _isPublic = value);
                           _markDirty();
                         },
                       ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _notes,
-                  maxLines: 4,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Notes privées', errorText: v?.errorFor('notes')),
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
+                      const SizedBox(height: 8),
+                      Text('Champs affichés sur le CV', style: theme.textTheme.labelLarge),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          for (final field in VisibleField.values)
+                            FilterChip(
+                              label: Text(field.label),
+                              selected: _visibleFields.contains(field.wireValue),
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _visibleFields.add(field.wireValue);
+                                  } else {
+                                    _visibleFields.remove(field.wireValue);
+                                  }
+                                });
+                                _markDirty();
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _notes,
+                        maxLines: 4,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Notes privées', errorText: v?.errorFor('notes')),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );

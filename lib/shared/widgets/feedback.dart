@@ -25,7 +25,9 @@ class ErrorBanner extends StatelessWidget {
           children: [
             Icon(Icons.error_outline_rounded, color: scheme.error, size: 20),
             const SizedBox(width: 10),
-            Expanded(child: Text(message, style: TextStyle(color: scheme.error))),
+            Expanded(
+              child: Text(message, style: TextStyle(color: scheme.error)),
+            ),
           ],
         ),
       ),
@@ -33,27 +35,43 @@ class ErrorBanner extends StatelessWidget {
   }
 }
 
-/// Pastille ronde aux initiales, fond or (comme l'avatar de la maquette).
+/// Avatar rond : la photo de profil quand il y en a une, sinon les initiales
+/// sur fond or (aussi en attendant ou en cas d'échec du chargement).
 class InitialsAvatar extends StatelessWidget {
-  const InitialsAvatar(this.initials, {super.key, this.size = 44});
+  const InitialsAvatar(this.initials, {super.key, this.size = 44, this.photoUrl});
 
   final String initials;
   final double size;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return ExcludeSemantics(
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
-        child: Text(
-          initials,
-          style: TextStyle(color: colors.onAccent, fontWeight: FontWeight.w700, fontSize: size * 0.36),
-        ),
+    final fallback = Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
+      child: Text(
+        initials,
+        style: TextStyle(color: colors.onAccent, fontWeight: FontWeight.w700, fontSize: size * 0.36),
       ),
+    );
+
+    return ExcludeSemantics(
+      child: photoUrl == null
+          ? fallback
+          : ClipOval(
+              child: Image.network(
+                photoUrl!,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                    frame == null && !wasSynchronouslyLoaded ? fallback : child,
+                errorBuilder: (context, error, stackTrace) => fallback,
+              ),
+            ),
     );
   }
 }

@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/utils/relative_date.dart';
-import '../../../shared/widgets/list_skeleton.dart';
+import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../content/data/reference_repository.dart';
 import '../../content/domains/application/domain_list_controller.dart';
 import '../../content/educations/application/education_list_controller.dart';
@@ -36,29 +37,8 @@ class TrashScreen extends ConsumerStatefulWidget {
 }
 
 class _TrashScreenState extends ConsumerState<TrashScreen> {
-  final _scrollController = ScrollController();
-  final _searchController = TextEditingController();
   int? _restoringId;
   int? _destroyingId;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels > _scrollController.position.maxScrollExtent - 200) {
-      ref.read(trashListProvider.notifier).loadMore();
-    }
-  }
 
   /// Le contenu revient visible dans sa liste normale : on invalide le
   /// provider correspondant pour qu'elle se rafraîchisse à la prochaine visite.
@@ -129,9 +109,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Supprimer définitivement « ${item.title} » ?'),
-        content: const Text(
-          'Cette action est irréversible : cet élément ne pourra plus jamais être restauré.',
-        ),
+        content: const Text('Cette action est irréversible : cet élément ne pourra plus jamais être restauré.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
           TextButton(
@@ -168,131 +146,56 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Corbeille')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              onSubmitted: notifier.setSearch,
-              decoration: InputDecoration(
-                hintText: 'Titre…',
-                prefixIcon: const Icon(Icons.search_rounded),
-                isDense: true,
-                suffixIcon: _searchController.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Effacer la recherche',
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () {
-                          _searchController.clear();
-                          notifier.setSearch('');
-                        },
-                      ),
-              ),
+      extendBodyBehindAppBar: true,
+      appBar: const GlassAppBar(),
+      body: ResourceListView<TrashItem>(
+        title: 'Corbeille',
+        searchHint: 'Titre…',
+        state: state,
+        onSearch: notifier.setSearch,
+        onLoadMore: notifier.loadMore,
+        onRefresh: notifier.refresh,
+        onRetry: () => ref.invalidate(trashListProvider),
+        emptyIcon: Icons.delete_outline_rounded,
+        emptyTitle: 'La corbeille est vide',
+        emptyDescription: 'Les éléments supprimés arrivent ici : vous pourrez les restaurer ou les purger.',
+        filterChips: [
+          for (final (type, label) in trashTypes)
+            ChoiceChip(
+              label: Text(label),
+              selected: currentType == type,
+              onSelected: (_) => notifier.setFilters(currentType == type ? const {} : {'type': type}),
             ),
-          ),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: trashTypes.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final (type, label) = trashTypes[index];
-                return ChoiceChip(
-                  label: Text(label),
-                  selected: currentType == type,
-                  onSelected: (_) => notifier.setFilters(currentType == type ? const {} : {'type': type}),
-                  showCheckmark: false,
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: state.when(
-              loading: () => const ListSkeleton(),
-              error: (error, _) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Impossible de charger la corbeille.'),
-                    const SizedBox(height: 12),
-                    FilledButton(onPressed: () => ref.invalidate(trashListProvider), child: const Text('Réessayer')),
-                  ],
-                ),
-              ),
-              data: (data) {
-                if (data.items.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.delete_outline_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant),
-                          const SizedBox(height: 12),
-                          const Text('La corbeille est vide.'),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: notifier.refresh,
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.only(bottom: 24),
-                    itemCount: data.items.length + (data.isLoadingMore ? 1 : 0),
-                    separatorBuilder: (context, index) => const Divider(height: 1, indent: 20, endIndent: 20),
-                    itemBuilder: (context, index) {
-                      if (index >= data.items.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        );
-                      }
-                      final item = data.items[index];
-                      final isRestoring = _restoringId == item.id;
-                      final isDestroying = _destroyingId == item.id;
-                      return ListTile(
-                        title: Text(item.title),
-                        subtitle: Text(
-                          item.deletedAt == null
-                              ? item.label
-                              : '${item.label} · supprimé ${relativeDate(item.deletedAt!)}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Restaurer',
-                              onPressed: isRestoring || isDestroying ? null : () => _restore(item),
-                              icon: isRestoring
-                                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : const Icon(Icons.restore_rounded),
-                            ),
-                            IconButton(
-                              tooltip: 'Supprimer définitivement',
-                              onPressed: isRestoring || isDestroying ? null : () => _destroy(item),
-                              icon: isDestroying
-                                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : Icon(Icons.delete_forever_rounded, color: theme.colorScheme.error),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
         ],
+        itemBuilder: (context, item) {
+          final isRestoring = _restoringId == item.id;
+          final isDestroying = _destroyingId == item.id;
+          return ListTile(
+            title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text(
+              item.deletedAt == null ? item.label : '${item.label} · supprimé ${relativeDate(item.deletedAt!)}',
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Restaurer',
+                  onPressed: isRestoring || isDestroying ? null : () => _restore(item),
+                  icon: isRestoring
+                      ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.restore_rounded),
+                ),
+                IconButton(
+                  tooltip: 'Supprimer définitivement',
+                  onPressed: isRestoring || isDestroying ? null : () => _destroy(item),
+                  icon: isDestroying
+                      ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Icon(Icons.delete_forever_rounded, color: theme.colorScheme.error),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

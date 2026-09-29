@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../app/theme/app_palette.dart';
+import '../../../../shared/widgets/surfaces.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../application/contact_list_controller.dart';
 import '../../data/contact.dart';
 import '../../data/contact_repository.dart';
@@ -106,17 +111,65 @@ class _ContactDetailScreenState extends ConsumerState<ContactDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Message')),
-      body: FutureBuilder<Contact>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
+    return FutureBuilder<Contact>(
+      future: _future,
+      builder: (context, snapshot) {
+        final contact = snapshot.connectionState == ConnectionState.done && !snapshot.hasError ? snapshot.data : null;
+
+        return Scaffold(
+          extendBodyBehindAppBar: true,
+          extendBody: true,
+          appBar: GlassAppBar(
+            actions: [
+              if (contact != null)
+                IconButton(
+                  tooltip: 'Supprimer',
+                  onPressed: () => _delete(contact),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          bottomNavigationBar: contact == null
+              ? null
+              : BottomFade(
+                  child: SafeArea(
+                    minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Row(
+                      children: [
+                        if (contact.status != ContactStatus.replied) ...[
+                          SizedBox.square(
+                            dimension: 56,
+                            child: IconButton.filledTonal(
+                              tooltip: 'Marquer comme répondu',
+                              onPressed: _updating ? null : _markReplied,
+                              style: IconButton.styleFrom(backgroundColor: context.appColors.card),
+                              icon: _updating
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.done_all_rounded),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => _reply(contact),
+                            icon: const Icon(Icons.reply_rounded),
+                            label: const Text('Répondre'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          body: switch (snapshot) {
+            _ when snapshot.connectionState != ConnectionState.done => const Center(child: CircularProgressIndicator()),
+            _ when snapshot.hasError => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -125,71 +178,57 @@ class _ContactDetailScreenState extends ConsumerState<ContactDetailScreen> {
                   FilledButton(onPressed: () => setState(() => _future = _load()), child: const Text('Réessayer')),
                 ],
               ),
-            );
-          }
-
-          final contact = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(contact.name, style: theme.textTheme.headlineSmall),
+            ),
+            _ => PageListView(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: [
+                      InitialsTile(contact!.name, size: 52),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(contact.name, style: theme.textTheme.headlineSmall),
+                            const SizedBox(height: 2),
+                            SelectableText(contact.email, style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  StatusBadge(contact.status.label, prominent: contact.status == ContactStatus.newMessage),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(contact.email, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary)),
-              if (contact.createdAt != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  fullDate(contact.createdAt!),
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
-              ],
-              const SizedBox(height: 20),
-              if (contact.subject?.isNotEmpty == true) ...[
-                Text('Sujet', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 4),
-                Text(contact.subject!),
                 const SizedBox(height: 16),
+                KeyFacts(
+                  facts: [
+                    (value: contact.status.label, label: 'Statut'),
+                    if (contact.createdAt != null) (value: relativeDate(contact.createdAt!), label: 'Reçu'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SurfaceCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (contact.subject?.isNotEmpty == true) ...[
+                        Text(contact.subject!, style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 10),
+                      ],
+                      SelectableText(contact.message, style: theme.textTheme.bodyMedium?.copyWith(height: 1.55)),
+                      if (contact.createdAt != null) ...[
+                        const SizedBox(height: 14),
+                        Text(fullDate(contact.createdAt!), style: theme.textTheme.labelSmall?.copyWith(color: muted)),
+                      ],
+                    ],
+                  ),
+                ),
               ],
-              Text('Message', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 4),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(contact.message),
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => _reply(contact),
-                icon: const Icon(Icons.email_outlined),
-                label: const Text('Répondre'),
-              ),
-              const SizedBox(height: 12),
-              if (contact.status != ContactStatus.replied)
-                OutlinedButton.icon(
-                  onPressed: _updating ? null : _markReplied,
-                  icon: _updating
-                      ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.check_circle_outline_rounded),
-                  label: const Text('Marquer comme répondu'),
-                ),
-              const SizedBox(height: 24),
-              TextButton.icon(
-                onPressed: () => _delete(contact),
-                style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Supprimer'),
-              ),
-            ],
-          );
-        },
-      ),
+            ),
+          },
+        );
+      },
     );
   }
 }

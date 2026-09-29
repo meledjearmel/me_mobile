@@ -5,6 +5,9 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../../application/testimonial_list_controller.dart';
 import '../../data/testimonial.dart';
@@ -78,7 +81,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
       _error = null;
     });
     try {
-      final updated = await ref.read(testimonialRepositoryProvider).updateContent(
+      final updated = await ref
+          .read(testimonialRepositoryProvider)
+          .updateContent(
             widget.id,
             status: _status!,
             isFeatured: _isFeatured,
@@ -152,11 +157,19 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Avis'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             IconButton(tooltip: 'Supprimer', icon: const Icon(Icons.delete_outline_rounded), onPressed: _delete),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<Testimonial>(
           future: _future,
@@ -179,83 +192,97 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
 
             final testimonial = snapshot.data!;
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: 'Avis'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                Row(
-                  children: [
-                    Expanded(child: Text(testimonial.authorEmail, style: theme.textTheme.bodyMedium)),
-                    if (testimonial.submittedAt != null)
-                      Text(
-                        relativeDate(testimonial.submittedAt!),
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: Text(testimonial.authorEmail, style: theme.textTheme.bodyMedium)),
+                          if (testimonial.submittedAt != null)
+                            Text(
+                              relativeDate(testimonial.submittedAt!),
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                        ],
                       ),
-                  ],
-                ),
-                if (testimonial.project != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'À propos de : ${testimonial.project!.title.display}',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      if (testimonial.project != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'À propos de : ${testimonial.project!.title.display}',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      Text('Modération', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      SegmentedButton<TestimonialStatus>(
+                        segments: const [
+                          ButtonSegment(value: TestimonialStatus.pending, label: Text('En attente')),
+                          ButtonSegment(value: TestimonialStatus.approved, label: Text('Approuvé')),
+                          ButtonSegment(value: TestimonialStatus.rejected, label: Text('Rejeté')),
+                        ],
+                        selected: {_status!},
+                        onSelectionChanged: (selection) {
+                          setState(() => _status = selection.first);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('À la une'),
+                        subtitle: const Text('Trois avis au maximum peuvent être mis en avant.'),
+                        value: _isFeatured,
+                        onChanged: (value) {
+                          setState(() => _isFeatured = value);
+                          _markDirty();
+                        },
+                      ),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 20),
-                Text('Modération', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                SegmentedButton<TestimonialStatus>(
-                  segments: const [
-                    ButtonSegment(value: TestimonialStatus.pending, label: Text('En attente')),
-                    ButtonSegment(value: TestimonialStatus.approved, label: Text('Approuvé')),
-                    ButtonSegment(value: TestimonialStatus.rejected, label: Text('Rejeté')),
-                  ],
-                  selected: {_status!},
-                  onSelectionChanged: (selection) {
-                    setState(() => _status = selection.first);
-                    _markDirty();
-                  },
                 ),
                 const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('À la une'),
-                  subtitle: const Text('Trois avis au maximum peuvent être mis en avant.'),
-                  value: _isFeatured,
-                  onChanged: (value) {
-                    setState(() => _isFeatured = value);
-                    _markDirty();
-                  },
-                ),
-                const Divider(height: 32),
-                Text('Corriger le texte', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _nameController,
-                  onChanged: (_) => _markDirty(),
-                  decoration: const InputDecoration(labelText: 'Nom de l\'auteur'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _roleController,
-                  onChanged: (_) => _markDirty(),
-                  decoration: const InputDecoration(labelText: 'Rôle (facultatif)'),
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Contenu',
-                  value: _content,
-                  maxLines: 5,
-                  maxLength: 2000,
-                  onChanged: (value) {
-                    setState(() => _content = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Corriger le texte', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _nameController,
+                        onChanged: (_) => _markDirty(),
+                        decoration: const InputDecoration(labelText: 'Nom de l\'auteur'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _roleController,
+                        onChanged: (_) => _markDirty(),
+                        decoration: const InputDecoration(labelText: 'Rôle (facultatif)'),
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Contenu',
+                        value: _content,
+                        maxLines: 5,
+                        maxLength: 2000,
+                        onChanged: (value) {
+                          setState(() => _content = value);
+                          _markDirty();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );

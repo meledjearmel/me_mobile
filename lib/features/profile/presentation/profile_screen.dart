@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/full_screen_image_viewer.dart';
+import '../../../shared/widgets/glass.dart';
 import '../application/profile_providers.dart';
 import '../data/profile.dart';
 import 'profile_edit_screen.dart';
@@ -15,7 +16,9 @@ class ProfileScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      appBar: const GlassAppBar(),
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
@@ -31,17 +34,17 @@ class ProfileScreen extends ConsumerWidget {
         data: (data) => _ProfileBody(profile: data),
       ),
       floatingActionButton: profile.maybeWhen(
-        data: (data) => FloatingActionButton.extended(
+        data: (data) => GlassFab(
+          icon: Icons.edit_outlined,
+          tooltip: 'Modifier le profil',
+          bottom: MediaQuery.paddingOf(context).bottom,
           onPressed: () async {
-            final updated = await Navigator.of(context).push<Profile>(
-              MaterialPageRoute(builder: (context) => ProfileEditScreen(profile: data)),
-            );
+            final updated = await Navigator.of(context)
+                .push<Profile>(MaterialPageRoute(builder: (context) => ProfileEditScreen(profile: data)));
             if (updated != null) {
               ref.invalidate(profileProvider);
             }
           },
-          icon: const Icon(Icons.edit_outlined),
-          label: const Text('Modifier'),
         ),
         orElse: () => null,
       ),
@@ -59,7 +62,7 @@ class _ProfileBody extends StatelessWidget {
     final theme = Theme.of(context);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
+      padding: pageInsets(context, horizontal: 20, bottom: 96),
       children: [
         Center(
           child: GestureDetector(
@@ -84,7 +87,9 @@ class _ProfileBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Center(child: Text(profile.name, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center)),
+        Center(
+          child: Text(profile.name, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+        ),
         if (profile.headline.display.isNotEmpty) ...[
           const SizedBox(height: 4),
           Center(
@@ -115,7 +120,10 @@ class _ProfileBody extends StatelessWidget {
               ],
               if (profile.socialLinks.linkedin?.isNotEmpty == true) ...[
                 const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(leading: const Icon(Icons.business_center_outlined), title: Text(profile.socialLinks.linkedin!)),
+                ListTile(
+                  leading: const Icon(Icons.business_center_outlined),
+                  title: Text(profile.socialLinks.linkedin!),
+                ),
               ],
             ],
           ),

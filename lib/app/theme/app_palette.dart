@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 
-/// Palette du site public (`me/resources/css/public.css`).
+import 'app_palette_variant.dart';
+
+export 'app_palette_variant.dart';
+
+/// Palette de l'app, dérivée du site public (`me/resources/css/public.css`) :
+/// fond neutre chaud, cartes blanches, or comme accent unique, nuit quasi noire.
 abstract final class AppPalette {
   // Jour
-  static const cream = Color(0xFFFFF9F1);
+  static const cream = Color(0xFFF6F4EE);
+  static const soft = Color(0xFFEFEBE1);
   static const sand = Color(0xFFEEE8D2);
   static const ink = Color(0xFF060606);
   static const gold = Color(0xFFFFDA3F);
@@ -14,9 +20,9 @@ abstract final class AppPalette {
   static const dayBorder = Color(0xFFE7DFCD);
 
   // Nuit
-  static const night = Color(0xFF0D1328);
-  static const nightSurface = Color(0xFF111C36);
-  static const nightRaised = Color(0xFF1B2A55);
+  static const night = Color(0xFF0A0E1A);
+  static const nightSurface = Color(0xFF141A2B);
+  static const nightRaised = Color(0xFF1A2236);
   static const moon = Color(0xFFFFF9E9);
   static const nightSkyFrom = Color(0xFF1F3B6D);
   static const nightSkyTo = Color(0xFF031835);
@@ -26,7 +32,8 @@ abstract final class AppPalette {
   static const danger = Color(0xFFD9483B);
 }
 
-/// Couleurs propres à l'app, hors du [ColorScheme] Material.
+/// Couleurs propres à l'app, hors du [ColorScheme] Material, tirées de la
+/// palette choisie ([AppPaletteVariant]).
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -38,46 +45,41 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.highlight,
     required this.success,
     required this.muted,
+    required this.second,
+    required this.onSecond,
+    required this.nav,
+    required this.navIcon,
   });
 
-  static const light = AppColors(
-    card: Colors.white,
+  factory AppColors.fromTokens(PaletteTokens t, Brightness brightness) => AppColors(
+    card: t.card,
     hero: LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [AppPalette.skyFrom, AppPalette.skyTo],
+      colors: brightness == Brightness.light
+          ? const [AppPalette.skyFrom, AppPalette.skyTo]
+          : const [AppPalette.nightSkyFrom, AppPalette.nightSkyTo],
     ),
-    onHero: Colors.white,
-    accent: AppPalette.gold,
-    onAccent: AppPalette.ink,
+    onHero: brightness == Brightness.light ? Colors.white : AppPalette.moon,
+    accent: t.accent,
+    onAccent: t.onAccent,
     highlight: AppPalette.coral,
-    success: AppPalette.success,
-    muted: Color(0xFF6B665C),
+    success: t.ok,
+    muted: t.muted,
+    second: t.second,
+    onSecond: t.onSecond,
+    nav: t.nav,
+    navIcon: t.navIcon,
   );
 
-  static const dark = AppColors(
-    card: AppPalette.nightSurface,
-    hero: LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [AppPalette.nightSkyFrom, AppPalette.nightSkyTo],
-    ),
-    onHero: AppPalette.moon,
-    accent: AppPalette.gold,
-    onAccent: AppPalette.ink,
-    highlight: AppPalette.coral,
-    success: Color(0xFF4CC38A),
-    muted: Color(0xFFA8B0C8),
-  );
-
-  /// Fond des cartes (blanc sur crème, bleu nuit relevé la nuit).
+  /// Fond des cartes.
   final Color card;
 
-  /// Dégradé « ciel » du hero du site.
+  /// Dégradé « ciel » du hero du site (connexion, verrouillage).
   final Gradient hero;
   final Color onHero;
 
-  /// Or : badges, indicateur de navigation, éléments à traiter.
+  /// Accent : badges, indicateur de navigation, éléments à traiter.
   final Color accent;
   final Color onAccent;
 
@@ -85,6 +87,14 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color highlight;
   final Color success;
   final Color muted;
+
+  /// Couleur secondaire discrète des statuts.
+  final Color second;
+  final Color onSecond;
+
+  /// Barre de navigation flottante et ses icônes inactives.
+  final Color nav;
+  final Color navIcon;
 
   @override
   AppColors copyWith({
@@ -96,17 +106,24 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? highlight,
     Color? success,
     Color? muted,
-  }) =>
-      AppColors(
-        card: card ?? this.card,
-        hero: hero ?? this.hero,
-        onHero: onHero ?? this.onHero,
-        accent: accent ?? this.accent,
-        onAccent: onAccent ?? this.onAccent,
-        highlight: highlight ?? this.highlight,
-        success: success ?? this.success,
-        muted: muted ?? this.muted,
-      );
+    Color? second,
+    Color? onSecond,
+    Color? nav,
+    Color? navIcon,
+  }) => AppColors(
+    card: card ?? this.card,
+    hero: hero ?? this.hero,
+    onHero: onHero ?? this.onHero,
+    accent: accent ?? this.accent,
+    onAccent: onAccent ?? this.onAccent,
+    highlight: highlight ?? this.highlight,
+    success: success ?? this.success,
+    muted: muted ?? this.muted,
+    second: second ?? this.second,
+    onSecond: onSecond ?? this.onSecond,
+    nav: nav ?? this.nav,
+    navIcon: navIcon ?? this.navIcon,
+  );
 
   @override
   AppColors lerp(AppColors? other, double t) {
@@ -122,6 +139,10 @@ class AppColors extends ThemeExtension<AppColors> {
       highlight: Color.lerp(highlight, other.highlight, t)!,
       success: Color.lerp(success, other.success, t)!,
       muted: Color.lerp(muted, other.muted, t)!,
+      second: Color.lerp(second, other.second, t)!,
+      onSecond: Color.lerp(onSecond, other.onSecond, t)!,
+      nav: Color.lerp(nav, other.nav, t)!,
+      navIcon: Color.lerp(navIcon, other.navIcon, t)!,
     );
   }
 }

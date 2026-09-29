@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../profile/application/profile_providers.dart';
+import '../../../shared/widgets/glass.dart';
+import '../../../app/theme/app_palette.dart';
 import '../../../core/push/push_service.dart';
 import '../../../core/push/push_target.dart';
 import '../../../shared/widgets/app_logo.dart';
 import '../../../shared/widgets/feedback.dart';
+import '../../../shared/widgets/surfaces.dart';
 import '../../auth/application/session_controller.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
@@ -76,34 +81,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final user = ref.watch(sessionProvider).value;
     final dashboard = ref.watch(dashboardProvider);
     final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final now = DateTime.now();
 
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
+      extendBodyBehindAppBar: true,
+      appBar: const GlassAppBar.statusOnly(),
+      // Builder : les marges lues sous le Scaffold tiennent compte des barres flottantes.
+      body: Builder(
+        builder: (context) => RefreshIndicator(
           onRefresh: () => ref.refresh(dashboardProvider.future),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            padding: pageInsets(context, horizontal: 20, top: 12),
             children: [
               Row(
                 children: [
-                  InitialsAvatar(user?.initials ?? '?'),
+                  InitialsAvatar(user?.initials ?? '?', photoUrl: ref.watch(profileProvider).value?.photoUrl),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _greeting(),
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                        ),
+                        Text('${_greeting()},', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
                         Text(user?.firstName ?? '', style: theme.textTheme.titleMedium),
                       ],
                     ),
                   ),
-                  const AppLogo(height: 20),
+                  const AppLogo(height: 18),
                 ],
               ),
               const SizedBox(height: 24),
+              Text(
+                toBeginningOfSentenceCase(DateFormat.EEEE('fr_FR').format(now)),
+                style: theme.textTheme.headlineMedium,
+              ),
+              Text(
+                DateFormat.MMMMd('fr_FR').format(now),
+                style: theme.textTheme.headlineMedium?.copyWith(color: muted),
+              ),
+              const SizedBox(height: 20),
               dashboard.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.symmetric(vertical: 64),
@@ -164,140 +180,39 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final todo = dashboard.todo;
+    final content = dashboard.content;
+    const gap = SizedBox(height: 28);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('À traiter', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _TodoCard(
-                icon: Icons.mail_outline_rounded,
-                count: todo.contacts,
-                label: 'Messages',
-                onTap: () => onTodoTap(0),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _TodoCard(
-                icon: Icons.handshake_outlined,
-                count: todo.engagements,
-                label: 'Collaborations',
-                onTap: () => onTodoTap(1),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _TodoCard(
-                icon: Icons.reviews_outlined,
-                count: todo.testimonials,
-                label: 'Avis',
-                onTap: () => onTodoTap(2),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('${dashboard.visits.total}', style: theme.textTheme.headlineMedium),
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                'visites sur ${dashboard.visits.periodDays} jours',
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ),
-          ],
-        ),
-        Text(
-          'Aujourd\'hui : ${dashboard.visits.today} · FR ${dashboard.visits.french} · EN ${dashboard.visits.english}',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
+        _TodoCard(todo: dashboard.todo, onTap: onTodoTap),
+        gap,
+        const SectionHeader('En bref'),
         const SizedBox(height: 8),
-        VisitsChart(daily: dashboard.visits.daily),
-        if (dashboard.visits.topPages.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final page in dashboard.visits.topPages)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text('${page.path} · ${page.count}', style: theme.textTheme.bodySmall),
-                ),
-            ],
-          ),
-        ],
-        const SizedBox(height: 28),
-        Text('Contenu', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 78,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              StatTile(value: dashboard.content.projects.published, label: 'Projets publiés'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.projects.featured, label: 'Projets à la une'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.skills, label: 'Compétences'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.technologies, label: 'Technologies'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.domains, label: 'Domaines'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.experiences, label: 'Expériences'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.educations, label: 'Formations'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.referencesOnCv, label: 'Références sur CV'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.yearsOfExperience, label: 'Ans d\'expérience'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.testimonials.approved, label: 'Avis approuvés'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.engagements.cvSent, label: 'CV envoyés'),
-              const SizedBox(width: 8),
-              StatTile(value: dashboard.content.congratulations, label: 'Félicitations'),
-            ],
-          ),
+        _TileGrid(
+          children: [
+            StatTile(
+              value: content.projects.published,
+              label: 'Projets publiés',
+              caption: '${content.projects.featured} à la une',
+            ),
+            StatTile(value: content.engagements.cvSent, label: 'CV envoyés'),
+            StatTile(
+              value: content.testimonials.approved,
+              label: 'Avis approuvés',
+              caption: content.testimonials.pending > 0 ? '${content.testimonials.pending} en attente' : null,
+            ),
+            StatTile(value: content.yearsOfExperience, label: 'Ans d\'expérience'),
+          ],
         ),
-        if (dashboard.distribution.skillsByDomain.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text('Compétences par domaine', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          DomainDistributionList(items: dashboard.distribution.skillsByDomain),
-        ],
-        if (dashboard.distribution.projectsByDomain.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          Text('Projets par domaine', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          DomainDistributionList(items: dashboard.distribution.projectsByDomain),
-        ],
-        if (dashboard.distribution.technologiesByCategory.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          Text('Technologies par catégorie', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          CategoryDistributionList(items: dashboard.distribution.technologiesByCategory),
-        ],
-        const SizedBox(height: 28),
-        Text('À compléter', style: theme.textTheme.titleMedium),
         const SizedBox(height: 10),
+        _VisitsCard(visits: dashboard.visits),
+        gap,
+        const SectionHeader('À compléter'),
+        const SizedBox(height: 8),
         HealthChecklist(items: dashboard.health, onTap: onHealthTap),
-        const SizedBox(height: 28),
+        gap,
         RecentSection(
           title: 'Derniers messages',
           items: [
@@ -308,7 +223,7 @@ class _DashboardBody extends StatelessWidget {
           onSeeAll: onSeeAllContacts,
           emptyLabel: 'Aucun message pour l\'instant.',
         ),
-        const SizedBox(height: 20),
+        gap,
         RecentSection(
           title: 'Dernières demandes',
           items: [
@@ -325,7 +240,7 @@ class _DashboardBody extends StatelessWidget {
           onSeeAll: onSeeAllEngagements,
           emptyLabel: 'Aucune demande pour l\'instant.',
         ),
-        const SizedBox(height: 20),
+        gap,
         RecentSection(
           title: 'Avis en attente',
           items: [
@@ -336,48 +251,242 @@ class _DashboardBody extends StatelessWidget {
           onSeeAll: onSeeAllTestimonials,
           emptyLabel: 'Aucun avis en attente.',
         ),
+        gap,
+        _DetailsCard(dashboard: dashboard),
       ],
     );
   }
 }
 
+/// Carte or « À traiter » : total en grand, une ligne par type, chacune
+/// ouvrant l'onglet correspondant de la boîte de réception.
 class _TodoCard extends StatelessWidget {
-  const _TodoCard({required this.icon, required this.count, required this.label, required this.onTap});
+  const _TodoCard({required this.todo, required this.onTap});
 
-  final IconData icon;
-  final int count;
-  final String label;
-  final VoidCallback onTap;
+  final DashboardTodo todo;
+  final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasTodo = count > 0;
+    final colors = context.appColors;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    if (todo.total == 0) {
+      return SurfaceCard(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: colors.success),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('Rien à traiter, la boîte de réception est à jour.')),
+          ],
+        ),
+      );
+    }
+
+    final onGold = colors.onAccent;
+    final rows = [
+      (label: 'Messages non lus', count: todo.contacts, tab: 0),
+      (label: 'Demandes de collaboration', count: todo.engagements, tab: 1),
+      (label: 'Avis en attente', count: todo.testimonials, tab: 2),
+    ].where((r) => r.count > 0).toList();
+
+    return SurfaceCard(
+      color: colors.accent,
+      radius: 28,
+      padding: const EdgeInsets.all(18),
+      onTap: () => onTap(rows.first.tab),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Icon(icon, color: hasTodo ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
-              const SizedBox(height: 10),
-              Text(
-                '$count',
-                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('À traiter', style: theme.textTheme.titleMedium?.copyWith(color: onGold)),
+                    Text(
+                      'Ce qui attend ta réponse',
+                      style: theme.textTheme.bodySmall?.copyWith(color: onGold.withValues(alpha: 0.7)),
+                    ),
+                  ],
+                ),
               ),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              const ArrowBadge(),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text('${todo.total}', style: theme.textTheme.displayMedium?.copyWith(color: onGold, height: 1)),
+          const SizedBox(height: 12),
+          for (final row in rows) ...[
+            Material(
+              color: Colors.white.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => onTap(row.tab),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(row.label, style: theme.textTheme.labelLarge?.copyWith(color: onGold)),
+                      ),
+                      Text('${row.count}', style: theme.textTheme.labelLarge?.copyWith(color: onGold)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Grille à deux colonnes dont chaque ligne prend la hauteur de sa plus haute tuile.
+class _TileGrid extends StatelessWidget {
+  const _TileGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < children.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: 10),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: children[i]),
+                const SizedBox(width: 10),
+                Expanded(child: i + 1 < children.length ? children[i + 1] : const SizedBox()),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _VisitsCard extends StatelessWidget {
+  const _VisitsCard({required this.visits});
+
+  final DashboardVisits visits;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Visites · ${visits.periodDays} jours', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('${visits.total}', style: theme.textTheme.headlineMedium),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Aujourd\'hui ${visits.today} · FR ${visits.french} · EN ${visits.english}',
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.labelSmall?.copyWith(color: muted),
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          VisitsChart(daily: visits.daily),
+          if (visits.topPages.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [for (final page in visits.topPages) _Pill('${page.path} · ${page.count}')],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: theme.colorScheme.surfaceContainer, borderRadius: BorderRadius.circular(999)),
+      child: Text(label, style: theme.textTheme.labelSmall),
+    );
+  }
+}
+
+/// Statistiques détaillées, repliées par défaut pour garder l'accueil épuré.
+class _DetailsCard extends StatelessWidget {
+  const _DetailsCard({required this.dashboard});
+
+  final Dashboard dashboard;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final content = dashboard.content;
+    final distribution = dashboard.distribution;
+    final counts = [
+      ('Compétences', content.skills),
+      ('Technologies', content.technologies),
+      ('Domaines', content.domains),
+      ('Expériences', content.experiences),
+      ('Formations', content.educations),
+      ('Références sur CV', content.referencesOnCv),
+      ('Félicitations', content.congratulations),
+    ];
+
+    return SurfaceCard(
+      padding: EdgeInsets.zero,
+      child: ExpansionTile(
+        title: Text('Statistiques détaillées', style: theme.textTheme.titleSmall),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(spacing: 6, runSpacing: 6, children: [for (final (label, value) in counts) _Pill('$label · $value')]),
+          if (distribution.skillsByDomain.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('Compétences par domaine', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            DomainDistributionList(items: distribution.skillsByDomain),
+          ],
+          if (distribution.projectsByDomain.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('Projets par domaine', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            DomainDistributionList(items: distribution.projectsByDomain),
+          ],
+          if (distribution.technologiesByCategory.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('Technologies par catégorie', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            CategoryDistributionList(items: distribution.technologiesByCategory),
+          ],
+        ],
       ),
     );
   }

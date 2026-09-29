@@ -11,6 +11,8 @@ import '../../../core/models/translated.dart';
 import '../../../core/utils/hex_color.dart';
 import '../../../core/utils/slugify.dart';
 import '../../../shared/widgets/feedback.dart';
+import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/form_layout.dart';
 import '../../../shared/widgets/image_source_sheet.dart';
 import '../../../shared/widgets/multi_select_field.dart';
 import '../../../shared/widgets/translated_field.dart';
@@ -151,9 +153,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     final size = await file.length();
     if (size > _maxImageBytes) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image trop lourde (5 Mo maximum). Choisissez-en une autre.')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Image trop lourde (5 Mo maximum). Choisissez-en une autre.')));
       }
       return;
     }
@@ -186,9 +187,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     final picker = ImagePicker();
     final files = source == ImageSource.gallery
         ? await picker.pickMultiImage(maxWidth: 1920, imageQuality: 85)
-        : [
-            if (await picker.pickImage(source: source, maxWidth: 1920, imageQuality: 85) case final file?) file,
-          ];
+        : [if (await picker.pickImage(source: source, maxWidth: 1920, imageQuality: 85) case final file?) file];
     if (files.isEmpty) {
       return;
     }
@@ -205,9 +204,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
 
     setState(() => _galleryPending.addAll(accepted));
     if (rejected > 0 && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$rejected image(s) trop lourde(s) (5 Mo maximum) ignorée(s).')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$rejected image(s) trop lourde(s) (5 Mo maximum) ignorée(s).')));
     }
     if (accepted.isNotEmpty) {
       _markDirty();
@@ -243,7 +241,9 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
       _uploadProgress = null;
     });
     try {
-      await ref.read(projectRepositoryProvider).save(
+      await ref
+          .read(projectRepositoryProvider)
+          .save(
             id: widget.id,
             title: _title,
             slug: _slug.text.trim(),
@@ -261,7 +261,9 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
             jobProfiles: _jobProfileIds,
             technologies: _technologyIds,
             relatedProjects: _relatedProjectIds,
-            cover: _coverPending == null ? null : dio.MultipartFile.fromFileSync(_coverPending!.path, filename: _coverPending!.name),
+            cover: _coverPending == null
+                ? null
+                : dio.MultipartFile.fromFileSync(_coverPending!.path, filename: _coverPending!.name),
             gallery: [for (final f in _galleryPending) dio.MultipartFile.fromFileSync(f.path, filename: f.name)],
             onProgress: (sent, total) {
               if (total > 0 && mounted) {
@@ -323,7 +325,6 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final v = _validation;
 
     final domains = ref.watch(domainsRefProvider);
@@ -339,8 +340,9 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier le projet' : 'Nouveau projet'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -350,7 +352,15 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                     ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.delete_outline_rounded),
               ),
+            const SizedBox(width: 8),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving, progress: _uploadProgress)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -371,235 +381,273 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
               );
             }
 
+            bool anyError(List<String> keys) => keys.any((key) => v?.errorFor(key) != null);
+            final galleryCount = _galleryImages.length + _galleryPending.length;
+            const gap = SizedBox(height: 12);
+
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
-                if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                Text('Couverture', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                _CoverPicker(
-                  url: _coverUrl,
-                  pending: _coverPending,
-                  onPick: _pickCover,
-                  onRemove: _isEditing && _coverUrl != null && _coverPending == null ? _removeCover : null,
-                  removing: _removingCover,
-                ),
-                const SizedBox(height: 24),
-                TranslatedField(
-                  label: 'Titre',
-                  value: _title,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('title.fr'),
-                  errorEn: v?.errorFor('title.en'),
-                  onChanged: (value) {
-                    setState(() => _title = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _slug,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(
-                    labelText: 'Slug',
-                    errorText: v?.errorFor('slug'),
-                    suffixIcon: IconButton(
-                      tooltip: 'Générer depuis le titre FR',
-                      icon: const Icon(Icons.auto_fix_high_rounded),
-                      onPressed: _generateSlug,
-                    ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(
+                    title: _isEditing && _title.display.isNotEmpty ? _title.display : 'Nouveau projet',
+                    subtitle: _isEditing ? 'Projet' : 'Complète au moins le titre et le slug',
                   ),
                 ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Contexte',
-                  value: _projectContext,
-                  maxLines: 5,
-                  errorFr: v?.errorFor('context.fr'),
-                  errorEn: v?.errorFor('context.en'),
-                  onChanged: (value) {
-                    setState(() => _projectContext = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Réalisation',
-                  value: _realization,
-                  maxLines: 5,
-                  errorFr: v?.errorFor('realization.fr'),
-                  errorEn: v?.errorFor('realization.en'),
-                  onChanged: (value) {
-                    setState(() => _realization = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Résultat',
-                  value: _result,
-                  maxLines: 5,
-                  errorFr: v?.errorFor('result.fr'),
-                  errorEn: v?.errorFor('result.en'),
-                  onChanged: (value) {
-                    setState(() => _result = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 20),
-                ColorPickerField(
-                  value: _accentColor,
-                  error: v?.errorFor('accent_color'),
-                  onChanged: (value) {
-                    setState(() => _accentColor = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _repoUrl,
-                  keyboardType: TextInputType.url,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Dépôt de code (URL)', errorText: v?.errorFor('repo_url')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _demoUrl,
-                  keyboardType: TextInputType.url,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Démo (URL)', errorText: v?.errorFor('demo_url')),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _sortOrder,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Ordre d\'affichage', errorText: v?.errorFor('sort_order')),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<ProjectStatus>(
-                  segments: const [
-                    ButtonSegment(value: ProjectStatus.published, label: Text('Publié')),
-                    ButtonSegment(value: ProjectStatus.archived, label: Text('Archivé')),
+                const SizedBox(height: 16),
+                KeyFacts(
+                  facts: [
+                    (value: _status.label, label: 'Statut'),
+                    (value: '${_technologyIds.length}', label: 'Technologies'),
+                    (value: '$galleryCount', label: 'Images'),
                   ],
-                  selected: {_status},
-                  onSelectionChanged: (selection) {
-                    setState(() => _status = selection.first);
-                    _markDirty();
-                  },
                 ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('À la une'),
-                  value: _isFeatured,
-                  onChanged: (value) {
-                    setState(() => _isFeatured = value);
-                    _markDirty();
-                  },
+                const SizedBox(height: 12),
+                if (_error != null) ...[ErrorBanner(_error!), gap],
+                FormSection(
+                  title: 'Couverture',
+                  children: [
+                    _CoverPicker(
+                      url: _coverUrl,
+                      pending: _coverPending,
+                      onPick: _pickCover,
+                      onRemove: _isEditing && _coverUrl != null && _coverPending == null ? _removeCover : null,
+                      removing: _removingCover,
+                    ),
+                  ],
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Open source'),
-                  value: _isOpenSource,
-                  onChanged: (value) {
-                    setState(() => _isOpenSource = value);
-                    _markDirty();
-                  },
+                gap,
+                FormSection(
+                  title: 'Général',
+                  hasError: anyError(['title.fr', 'title.en', 'slug']),
+                  children: [
+                    TranslatedField(
+                      label: 'Titre',
+                      value: _title,
+                      maxLength: 255,
+                      errorFr: v?.errorFor('title.fr'),
+                      errorEn: v?.errorFor('title.en'),
+                      onChanged: (value) {
+                        setState(() => _title = value);
+                        _markDirty();
+                      },
+                    ),
+                    TextField(
+                      controller: _slug,
+                      onChanged: (_) => _markDirty(),
+                      decoration: InputDecoration(
+                        labelText: 'Slug',
+                        errorText: v?.errorFor('slug'),
+                        suffixIcon: IconButton(
+                          tooltip: 'Générer depuis le titre FR',
+                          icon: const Icon(Icons.auto_fix_high_rounded),
+                          onPressed: _generateSlug,
+                        ),
+                      ),
+                    ),
+                    SegmentedButton<ProjectStatus>(
+                      segments: const [
+                        ButtonSegment(value: ProjectStatus.published, label: Text('Publié')),
+                        ButtonSegment(value: ProjectStatus.archived, label: Text('Archivé')),
+                      ],
+                      selected: {_status},
+                      onSelectionChanged: (selection) {
+                        setState(() => _status = selection.first);
+                        _markDirty();
+                      },
+                    ),
+                    Column(
+                      children: [
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('À la une'),
+                          value: _isFeatured,
+                          onChanged: (value) {
+                            setState(() => _isFeatured = value);
+                            _markDirty();
+                          },
+                        ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Open source'),
+                          value: _isOpenSource,
+                          onChanged: (value) {
+                            setState(() => _isOpenSource = value);
+                            _markDirty();
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const Divider(height: 32),
-                domains.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: LinearProgressIndicator(),
-                  ),
-                  error: (error, _) => Text('Domaines indisponibles : ${error is ApiException ? error.message : error}'),
-                  data: (list) => MultiSelectField(
-                    label: 'Domaines',
-                    options: [for (final d in list) (id: d.id, label: d.label.display, color: parseHexColor(d.color))],
-                    selectedIds: _domainIds,
-                    onChanged: (ids) {
-                      setState(() => _domainIds = ids);
-                      _markDirty();
-                    },
-                  ),
+                gap,
+                FormSection(
+                  title: 'Description',
+                  hasError: anyError([
+                    'context.fr',
+                    'context.en',
+                    'realization.fr',
+                    'realization.en',
+                    'result.fr',
+                    'result.en',
+                  ]),
+                  children: [
+                    TranslatedField(
+                      label: 'Contexte',
+                      value: _projectContext,
+                      maxLines: 5,
+                      errorFr: v?.errorFor('context.fr'),
+                      errorEn: v?.errorFor('context.en'),
+                      onChanged: (value) {
+                        setState(() => _projectContext = value);
+                        _markDirty();
+                      },
+                    ),
+                    TranslatedField(
+                      label: 'Réalisation',
+                      value: _realization,
+                      maxLines: 5,
+                      errorFr: v?.errorFor('realization.fr'),
+                      errorEn: v?.errorFor('realization.en'),
+                      onChanged: (value) {
+                        setState(() => _realization = value);
+                        _markDirty();
+                      },
+                    ),
+                    TranslatedField(
+                      label: 'Résultat',
+                      value: _result,
+                      maxLines: 5,
+                      errorFr: v?.errorFor('result.fr'),
+                      errorEn: v?.errorFor('result.en'),
+                      onChanged: (value) {
+                        setState(() => _result = value);
+                        _markDirty();
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                jobProfiles.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: LinearProgressIndicator(),
-                  ),
-                  error: (error, _) => const SizedBox.shrink(),
-                  data: (list) => MultiSelectField(
-                    label: 'Profils métier',
-                    options: [for (final p in list) (id: p.id, label: p.label.display, color: null)],
-                    selectedIds: _jobProfileIds,
-                    onChanged: (ids) {
-                      setState(() => _jobProfileIds = ids);
-                      _markDirty();
-                    },
-                  ),
+                gap,
+                FormSection(
+                  title: 'Classement',
+                  summary:
+                      '${_domainIds.length + _jobProfileIds.length + _technologyIds.length + _relatedProjectIds.length}',
+                  initiallyExpanded: false,
+                  children: [
+                    domains.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (error, _) =>
+                          Text('Domaines indisponibles : ${error is ApiException ? error.message : error}'),
+                      data: (list) => MultiSelectField(
+                        label: 'Domaines',
+                        options: [
+                          for (final d in list) (id: d.id, label: d.label.display, color: parseHexColor(d.color)),
+                        ],
+                        selectedIds: _domainIds,
+                        onChanged: (ids) {
+                          setState(() => _domainIds = ids);
+                          _markDirty();
+                        },
+                      ),
+                    ),
+                    jobProfiles.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (error, _) => const SizedBox.shrink(),
+                      data: (list) => MultiSelectField(
+                        label: 'Profils métier',
+                        options: [for (final p in list) (id: p.id, label: p.label.display, color: null)],
+                        selectedIds: _jobProfileIds,
+                        onChanged: (ids) {
+                          setState(() => _jobProfileIds = ids);
+                          _markDirty();
+                        },
+                      ),
+                    ),
+                    technologies.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (error, _) => const SizedBox.shrink(),
+                      data: (list) => MultiSelectField(
+                        label: 'Technologies',
+                        options: [for (final t in list) (id: t.id, label: t.name, color: null)],
+                        selectedIds: _technologyIds,
+                        onChanged: (ids) {
+                          setState(() => _technologyIds = ids);
+                          _markDirty();
+                        },
+                      ),
+                    ),
+                    relatedProjects.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (error, _) => const SizedBox.shrink(),
+                      data: (list) => MultiSelectField(
+                        label: 'Projets liés',
+                        options: [
+                          for (final p in list)
+                            if (p.id != widget.id) (id: p.id, label: p.title.display, color: null),
+                        ],
+                        selectedIds: _relatedProjectIds,
+                        onChanged: (ids) {
+                          setState(() => _relatedProjectIds = ids);
+                          _markDirty();
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                technologies.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: LinearProgressIndicator(),
-                  ),
-                  error: (error, _) => const SizedBox.shrink(),
-                  data: (list) => MultiSelectField(
-                    label: 'Technologies',
-                    options: [for (final t in list) (id: t.id, label: t.name, color: null)],
-                    selectedIds: _technologyIds,
-                    onChanged: (ids) {
-                      setState(() => _technologyIds = ids);
-                      _markDirty();
-                    },
-                  ),
+                gap,
+                FormSection(
+                  title: 'Galerie',
+                  summary: '$galleryCount',
+                  initiallyExpanded: false,
+                  children: [
+                    GalleryGrid(
+                      images: _galleryImages,
+                      pendingFiles: _galleryPending,
+                      onAdd: _addGalleryImages,
+                      onRemove: _removeGalleryImage,
+                      onRemovePending: _removePendingGalleryImage,
+                      removingId: _removingGalleryId,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                relatedProjects.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: LinearProgressIndicator(),
-                  ),
-                  error: (error, _) => const SizedBox.shrink(),
-                  data: (list) => MultiSelectField(
-                    label: 'Projets liés',
-                    options: [
-                      for (final p in list)
-                        if (p.id != widget.id) (id: p.id, label: p.title.display, color: null),
-                    ],
-                    selectedIds: _relatedProjectIds,
-                    onChanged: (ids) {
-                      setState(() => _relatedProjectIds = ids);
-                      _markDirty();
-                    },
-                  ),
-                ),
-                const Divider(height: 32),
-                Text('Galerie', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                GalleryGrid(
-                  images: _galleryImages,
-                  pendingFiles: _galleryPending,
-                  onAdd: _addGalleryImages,
-                  onRemove: _removeGalleryImage,
-                  onRemovePending: _removePendingGalleryImage,
-                  removingId: _removingGalleryId,
-                ),
-                const SizedBox(height: 28),
-                if (_uploadProgress != null) ...[
-                  LinearProgressIndicator(value: _uploadProgress),
-                  const SizedBox(height: 12),
-                ],
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
+                gap,
+                FormSection(
+                  title: 'Liens et affichage',
+                  initiallyExpanded: false,
+                  hasError: anyError(['accent_color', 'repo_url', 'demo_url', 'sort_order']),
+                  children: [
+                    ColorPickerField(
+                      value: _accentColor,
+                      error: v?.errorFor('accent_color'),
+                      onChanged: (value) {
+                        setState(() => _accentColor = value);
+                        _markDirty();
+                      },
+                    ),
+                    TextField(
+                      controller: _repoUrl,
+                      keyboardType: TextInputType.url,
+                      onChanged: (_) => _markDirty(),
+                      decoration: InputDecoration(labelText: 'Dépôt de code (URL)', errorText: v?.errorFor('repo_url')),
+                    ),
+                    TextField(
+                      controller: _demoUrl,
+                      keyboardType: TextInputType.url,
+                      onChanged: (_) => _markDirty(),
+                      decoration: InputDecoration(labelText: 'Démo (URL)', errorText: v?.errorFor('demo_url')),
+                    ),
+                    TextField(
+                      controller: _sortOrder,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (_) => _markDirty(),
+                      decoration: InputDecoration(
+                        labelText: 'Ordre d\'affichage',
+                        errorText: v?.errorFor('sort_order'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );
@@ -635,18 +683,18 @@ class _CoverPicker extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             child: InkWell(
               onTap: onPick,
               child: pending != null
                   ? Image.file(File(pending!.path), fit: BoxFit.cover)
                   : url != null
-                      ? Image.network(
-                          url!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => _placeholder(theme),
-                        )
-                      : _placeholder(theme),
+                  ? Image.network(
+                      url!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => _placeholder(theme),
+                    )
+                  : _placeholder(theme),
             ),
           ),
           if (onRemove != null)
@@ -666,8 +714,8 @@ class _CoverPicker extends StatelessWidget {
   }
 
   Widget _placeholder(ThemeData theme) => Container(
-        color: theme.colorScheme.surfaceContainerHigh,
-        alignment: Alignment.center,
-        child: Icon(Icons.add_photo_alternate_outlined, size: 32, color: theme.colorScheme.onSurfaceVariant),
-      );
+    color: theme.colorScheme.surfaceContainerHigh,
+    alignment: Alignment.center,
+    child: Icon(Icons.add_photo_alternate_outlined, size: 32, color: theme.colorScheme.onSurfaceVariant),
+  );
 }

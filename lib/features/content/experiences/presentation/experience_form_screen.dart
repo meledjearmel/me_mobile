@@ -6,6 +6,9 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../shared/widgets/date_field.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../../../shared/widgets/feedback.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../application/experience_list_controller.dart';
@@ -152,7 +155,9 @@ class _ExperienceFormScreenState extends ConsumerState<ExperienceFormScreen> {
         for (final (index, highlight) in _highlights.indexed)
           Highlight(id: highlight.id, text: highlight.text, sortOrder: index),
       ];
-      await ref.read(experienceRepositoryProvider).save(
+      await ref
+          .read(experienceRepositoryProvider)
+          .save(
             id: widget.id,
             company: _company.text.trim(),
             role: _role,
@@ -226,8 +231,9 @@ class _ExperienceFormScreenState extends ConsumerState<ExperienceFormScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier l\'expérience' : 'Nouvelle expérience'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -238,6 +244,13 @@ class _ExperienceFormScreenState extends ConsumerState<ExperienceFormScreen> {
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -259,148 +272,153 @@ class _ExperienceFormScreenState extends ConsumerState<ExperienceFormScreen> {
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier l\'expérience' : 'Nouvelle expérience'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                TextField(
-                  controller: _company,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Société', errorText: v?.errorFor('company')),
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Rôle',
-                  value: _role,
-                  maxLength: 255,
-                  errorFr: v?.errorFor('role.fr'),
-                  errorEn: v?.errorFor('role.en'),
-                  onChanged: (value) {
-                    setState(() => _role = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _location,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Lieu (facultatif)', errorText: v?.errorFor('location')),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: DateField(
-                        label: 'Début',
-                        value: _startDate,
-                        error: v?.errorFor('start_date'),
-                        onChanged: (date) {
-                          setState(() => _startDate = date);
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _company,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Société', errorText: v?.errorFor('company')),
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Rôle',
+                        value: _role,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('role.fr'),
+                        errorEn: v?.errorFor('role.en'),
+                        onChanged: (value) {
+                          setState(() => _role = value);
                           _markDirty();
                         },
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DateField(
-                        label: 'Fin',
-                        value: _endDate,
-                        error: v?.errorFor('end_date'),
-                        allowClear: true,
-                        emptyLabel: 'En cours',
-                        firstDate: _startDate,
-                        onChanged: (date) {
-                          setState(() => _endDate = date);
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _location,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Lieu (facultatif)', errorText: v?.errorFor('location')),
+                      ),
+                      const SizedBox(height: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DateField(
+                            label: 'Début',
+                            value: _startDate,
+                            error: v?.errorFor('start_date'),
+                            onChanged: (date) {
+                              setState(() => _startDate = date);
+                              _markDirty();
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          DateField(
+                            label: 'Fin',
+                            value: _endDate,
+                            error: v?.errorFor('end_date'),
+                            allowClear: true,
+                            emptyLabel: 'En cours',
+                            firstDate: _startDate,
+                            onChanged: (date) {
+                              setState(() => _endDate = date);
+                              _markDirty();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Description',
+                        value: _description,
+                        maxLines: 4,
+                        errorFr: v?.errorFor('description.fr'),
+                        errorEn: v?.errorFor('description.en'),
+                        onChanged: (value) {
+                          setState(() => _description = value);
                           _markDirty();
                         },
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Description',
-                  value: _description,
-                  maxLines: 4,
-                  errorFr: v?.errorFor('description.fr'),
-                  errorEn: v?.errorFor('description.en'),
-                  onChanged: (value) {
-                    setState(() => _description = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 20),
-                Text('Points marquants', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                if (_highlights.isEmpty)
-                  Text(
-                    'Aucun point marquant pour l\'instant.',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  )
-                else
-                  ReorderableListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _highlights.length,
-                    onReorderItem: (oldIndex, newIndex) {
-                      setState(() {
-                        final item = _highlights.removeAt(oldIndex);
-                        _highlights.insert(newIndex, item);
-                      });
-                      _markDirty();
-                    },
-                    itemBuilder: (context, index) {
-                      final highlight = _highlights[index];
-                      return ListTile(
-                        key: ValueKey(highlight.id ?? 'new-$index-${highlight.hashCode}'),
-                        dense: true,
-                        leading: const Icon(Icons.drag_indicator_rounded),
-                        title: Text(
-                          highlight.text.display.isEmpty ? '(vide)' : highlight.text.display,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 20),
+                      Text('Points marquants', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      if (_highlights.isEmpty)
+                        Text(
+                          'Aucun point marquant pour l\'instant.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        )
+                      else
+                        ReorderableListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _highlights.length,
+                          onReorderItem: (oldIndex, newIndex) {
+                            setState(() {
+                              final item = _highlights.removeAt(oldIndex);
+                              _highlights.insert(newIndex, item);
+                            });
+                            _markDirty();
+                          },
+                          itemBuilder: (context, index) {
+                            final highlight = _highlights[index];
+                            return ListTile(
+                              key: ValueKey(highlight.id ?? 'new-$index-${highlight.hashCode}'),
+                              dense: true,
+                              leading: const Icon(Icons.drag_indicator_rounded),
+                              title: Text(
+                                highlight.text.display.isEmpty ? '(vide)' : highlight.text.display,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () => _editHighlight(index),
+                              trailing: IconButton(
+                                tooltip: 'Retirer ce point marquant',
+                                icon: const Icon(Icons.delete_outline_rounded),
+                                onPressed: () => _removeHighlight(index),
+                              ),
+                            );
+                          },
                         ),
-                        onTap: () => _editHighlight(index),
-                        trailing: IconButton(
-                          tooltip: 'Retirer ce point marquant',
-                          icon: const Icon(Icons.delete_outline_rounded),
-                          onPressed: () => _removeHighlight(index),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => _editHighlight(_highlights.length),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Ajouter un point marquant'),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _sortOrder,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Ordre d\'affichage',
+                          errorText: v?.errorFor('sort_order'),
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<PublicationStatus>(
+                        segments: const [
+                          ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
+                          ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
+                        ],
+                        selected: {_status},
+                        onSelectionChanged: (selection) {
+                          setState(() => _status = selection.first);
+                          _markDirty();
+                        },
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _editHighlight(_highlights.length),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Ajouter un point marquant'),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: _sortOrder,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Ordre d\'affichage', errorText: v?.errorFor('sort_order')),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<PublicationStatus>(
-                  segments: const [
-                    ButtonSegment(value: PublicationStatus.draft, label: Text('Brouillon')),
-                    ButtonSegment(value: PublicationStatus.published, label: Text('Publié')),
-                  ],
-                  selected: {_status},
-                  onSelectionChanged: (selection) {
-                    setState(() => _status = selection.first);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
                 ),
               ],
             );

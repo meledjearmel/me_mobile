@@ -5,6 +5,9 @@ import '../../../../core/ai/ai_assist_repository.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/translated.dart';
 import '../../../../shared/widgets/feedback.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/form_layout.dart';
+import '../../../../shared/widgets/surfaces.dart';
 import '../../../../shared/widgets/translated_field.dart';
 import '../../data/reference_repository.dart';
 import '../application/technology_list_controller.dart';
@@ -75,9 +78,8 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
   }
 
   Future<void> _pickIcon() async {
-    final picked = await Navigator.of(context).push<TechnologyIcon>(
-      MaterialPageRoute(builder: (context) => TechnologyIconPickerScreen(selectedSlug: _icon)),
-    );
+    final picked = await Navigator.of(context)
+        .push<TechnologyIcon>(MaterialPageRoute(builder: (context) => TechnologyIconPickerScreen(selectedSlug: _icon)));
     if (picked == null) {
       return;
     }
@@ -90,11 +92,11 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
   }
 
   void _clearIcon() => setState(() {
-        _icon = null;
-        _iconLightUrl = null;
-        _iconDarkUrl = null;
-        _dirty = true;
-      });
+    _icon = null;
+    _iconLightUrl = null;
+    _iconDarkUrl = null;
+    _dirty = true;
+  });
 
   Future<bool> _confirmDiscard() async {
     if (!_dirty) {
@@ -122,9 +124,11 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
 
   Future<void> _save() async {
     if (_categoryId == null) {
-      setState(() => _validation = const ValidationException('Choisissez une catégorie.', {
-            'category_id': ['Choisissez une catégorie.'],
-          }));
+      setState(
+        () => _validation = const ValidationException('Choisissez une catégorie.', {
+          'category_id': ['Choisissez une catégorie.'],
+        }),
+      );
       return;
     }
     setState(() {
@@ -133,7 +137,9 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
       _validation = null;
     });
     try {
-      await ref.read(technologyRepositoryProvider).save(
+      await ref
+          .read(technologyRepositoryProvider)
+          .save(
             id: widget.id,
             name: _name.text.trim(),
             categoryId: _categoryId!,
@@ -203,8 +209,9 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Modifier la technologie' : 'Nouvelle technologie'),
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: GlassAppBar(
           actions: [
             if (_isEditing)
               IconButton(
@@ -215,6 +222,13 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
                     : const Icon(Icons.delete_outline_rounded),
               ),
           ],
+        ),
+        bottomNavigationBar: FutureBuilder<void>(
+          future: _future,
+          // Pas d'enregistrement tant que le formulaire n'est pas chargé.
+          builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+              ? SaveBar(onPressed: _save, saving: _saving)
+              : const SizedBox.shrink(),
         ),
         body: FutureBuilder<void>(
           future: _future,
@@ -236,52 +250,58 @@ class _TechnologyFormScreenState extends ConsumerState<TechnologyFormScreen> {
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: pageInsets(context),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FormHeader(title: _isEditing ? 'Modifier la technologie' : 'Nouvelle technologie'),
+                ),
+                const SizedBox(height: 16),
                 if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
-                TextField(
-                  controller: _name,
-                  onChanged: (_) => _markDirty(),
-                  decoration: InputDecoration(labelText: 'Nom', errorText: v?.errorFor('name')),
-                ),
-                const SizedBox(height: 12),
-                _CategoryField(
-                  value: _categoryId,
-                  error: v?.errorFor('category_id'),
-                  onChanged: (value) {
-                    setState(() => _categoryId = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                TranslatedField(
-                  label: 'Description (infobulle, facultatif)',
-                  value: _description,
-                  maxLength: 150,
-                  maxLines: 2,
-                  errorFr: v?.errorFor('description.fr'),
-                  errorEn: v?.errorFor('description.en'),
-                  generate: _generateDescription,
-                  onChanged: (value) {
-                    setState(() => _description = value);
-                    _markDirty();
-                  },
-                ),
-                const SizedBox(height: 12),
-                _IconTile(
-                  slug: _icon,
-                  lightUrl: _iconLightUrl,
-                  darkUrl: _iconDarkUrl,
-                  error: v?.errorFor('icon'),
-                  onPick: _pickIcon,
-                  onClear: _clearIcon,
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                      : const Text('Enregistrer'),
+                SurfaceCard(
+                  radius: 22,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _name,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Nom', errorText: v?.errorFor('name')),
+                      ),
+                      const SizedBox(height: 12),
+                      _CategoryField(
+                        value: _categoryId,
+                        error: v?.errorFor('category_id'),
+                        onChanged: (value) {
+                          setState(() => _categoryId = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Description (infobulle, facultatif)',
+                        value: _description,
+                        maxLength: 150,
+                        maxLines: 2,
+                        errorFr: v?.errorFor('description.fr'),
+                        errorEn: v?.errorFor('description.en'),
+                        generate: _generateDescription,
+                        onChanged: (value) {
+                          setState(() => _description = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _IconTile(
+                        slug: _icon,
+                        lightUrl: _iconLightUrl,
+                        darkUrl: _iconDarkUrl,
+                        error: v?.errorFor('icon'),
+                        onPick: _pickIcon,
+                        onClear: _clearIcon,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
@@ -338,7 +358,8 @@ class _IconTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (slug != null) IconButton(tooltip: 'Retirer le logo', onPressed: onClear, icon: const Icon(Icons.close_rounded)),
+            if (slug != null)
+              IconButton(tooltip: 'Retirer le logo', onPressed: onClear, icon: const Icon(Icons.close_rounded)),
             TextButton(onPressed: onPick, child: Text(slug == null ? 'Choisir' : 'Changer')),
           ],
         ),
@@ -382,7 +403,9 @@ class _CategoryField extends ConsumerWidget {
         decoration: InputDecoration(
           labelText: 'Catégorie',
           errorText: error,
-          helperText: all.isEmpty ? 'Aucune catégorie : créez-en une depuis Contenu › Catégories de technologies.' : null,
+          helperText: all.isEmpty
+              ? 'Aucune catégorie : créez-en une depuis Contenu › Catégories de technologies.'
+              : null,
           helperMaxLines: 2,
         ),
         items: [for (final category in all) DropdownMenuItem(value: category.id, child: Text(category.label.display))],

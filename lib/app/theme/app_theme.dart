@@ -3,8 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_palette.dart';
 
-/// Thèmes jour / nuit, repris du site public : fond crème ou bleu nuit,
-/// cartes arrondies sans ombre, accent or, titres en DM Serif Display.
+/// Thèmes jour / nuit épurés construits depuis une palette ([AppPaletteVariant]) :
+/// cartes arrondies sans bordure ni ombre, un accent unique,
+/// tout en Plus Jakarta Sans (titres en 800 serré).
 abstract final class AppTheme {
   /// Police à chiffres tabulaires pour le code 2FA et les montants (`Track`, prix…).
   static TextStyle get fontMono => GoogleFonts.jetBrainsMono();
@@ -12,77 +13,66 @@ abstract final class AppTheme {
   static const radius = 24.0;
   static const fieldRadius = 16.0;
 
-  static final light = _build(
-    const ColorScheme(
-      brightness: Brightness.light,
-      primary: AppPalette.ink,
-      onPrimary: AppPalette.cream,
-      primaryContainer: AppPalette.gold,
-      onPrimaryContainer: AppPalette.ink,
-      secondary: AppPalette.gold,
-      onSecondary: AppPalette.ink,
-      tertiary: AppPalette.coral,
-      onTertiary: AppPalette.ink,
-      error: AppPalette.danger,
-      onError: Colors.white,
-      surface: AppPalette.cream,
-      onSurface: AppPalette.ink,
-      onSurfaceVariant: Color(0xFF6B665C),
-      surfaceContainerLowest: Colors.white,
-      surfaceContainerLow: Color(0xFFFBF4E8),
-      surfaceContainer: Color(0xFFF5EFDF),
-      surfaceContainerHigh: AppPalette.sand,
-      surfaceContainerHighest: Color(0xFFE6DFC6),
-      outline: Color(0xFFCFC6AE),
-      outlineVariant: AppPalette.dayBorder,
-    ),
-    AppColors.light,
-  );
+  /// Palette par défaut (tests, écrans hors préférence).
+  static final light = build(AppPaletteVariant.fallback, Brightness.light);
+  static final dark = build(AppPaletteVariant.fallback, Brightness.dark);
 
-  static final dark = _build(
-    const ColorScheme(
-      brightness: Brightness.dark,
-      primary: AppPalette.moon,
-      onPrimary: AppPalette.night,
-      primaryContainer: AppPalette.gold,
-      onPrimaryContainer: AppPalette.ink,
-      secondary: AppPalette.gold,
-      onSecondary: AppPalette.ink,
-      tertiary: AppPalette.coral,
-      onTertiary: AppPalette.ink,
-      error: Color(0xFFFF8A7A),
-      onError: AppPalette.night,
-      surface: AppPalette.night,
-      onSurface: AppPalette.moon,
-      onSurfaceVariant: Color(0xFFA8B0C8),
-      surfaceContainerLowest: Color(0xFF0A0F20),
-      surfaceContainerLow: Color(0xFF0F1830),
-      surfaceContainer: AppPalette.nightSurface,
-      surfaceContainerHigh: Color(0xFF16223F),
-      surfaceContainerHighest: AppPalette.nightRaised,
-      outline: Color(0xFF34436E),
-      outlineVariant: Color(0xFF1E2B4D),
-    ),
-    AppColors.dark,
-  );
+  static final _cache = <(AppPaletteVariant, Brightness), ThemeData>{};
+
+  /// Thème complet d'une palette pour une luminosité donnée.
+  static ThemeData build(AppPaletteVariant variant, Brightness brightness) =>
+      _cache.putIfAbsent((variant, brightness), () {
+        final t = variant.tokens(brightness);
+        final isLight = brightness == Brightness.light;
+        final scheme = ColorScheme(
+          brightness: brightness,
+          // Bouton principal : encre le jour, accent la nuit.
+          primary: isLight ? t.fg : t.accent,
+          onPrimary: isLight ? t.bg : t.onAccent,
+          primaryContainer: t.accent,
+          onPrimaryContainer: t.onAccent,
+          secondary: t.accent,
+          onSecondary: t.onAccent,
+          secondaryContainer: t.second,
+          onSecondaryContainer: t.onSecond,
+          tertiary: AppPalette.coral,
+          onTertiary: t.fg,
+          error: isLight ? AppPalette.danger : const Color(0xFFFF8A7A),
+          onError: isLight ? Colors.white : t.bg,
+          surface: t.bg,
+          onSurface: t.fg,
+          onSurfaceVariant: t.muted,
+          surfaceContainerLowest: isLight ? Colors.white : Color.lerp(t.bg, Colors.black, 0.3)!,
+          surfaceContainerLow: isLight ? Color.lerp(t.bg, Colors.white, 0.5)! : t.card,
+          surfaceContainer: t.soft,
+          surfaceContainerHigh: t.softHigh,
+          surfaceContainerHighest: Color.lerp(t.softHigh, t.fg, 0.06)!,
+          outline: Color.lerp(t.outline, t.fg, 0.12)!,
+          outlineVariant: t.outline,
+        );
+        return _build(scheme, AppColors.fromTokens(t, brightness));
+      });
 
   static ThemeData _build(ColorScheme scheme, AppColors colors) {
     final base = ThemeData(useMaterial3: true, colorScheme: scheme);
-    final body = GoogleFonts.spaceGroteskTextTheme(base.textTheme);
+    final body = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
+    TextStyle? heading(TextStyle? style) =>
+        style?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8, height: 1.1);
     final text = body.copyWith(
-      displayLarge: GoogleFonts.dmSerifDisplay(textStyle: body.displayLarge),
-      displayMedium: GoogleFonts.dmSerifDisplay(textStyle: body.displayMedium),
-      displaySmall: GoogleFonts.dmSerifDisplay(textStyle: body.displaySmall),
-      headlineLarge: GoogleFonts.dmSerifDisplay(textStyle: body.headlineLarge),
-      headlineMedium: GoogleFonts.dmSerifDisplay(textStyle: body.headlineMedium),
-      headlineSmall: GoogleFonts.dmSerifDisplay(textStyle: body.headlineSmall),
-      titleLarge: body.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-      titleMedium: body.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-      labelLarge: body.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      displayLarge: heading(body.displayLarge),
+      displayMedium: heading(body.displayMedium),
+      displaySmall: heading(body.displaySmall),
+      headlineLarge: heading(body.headlineLarge),
+      headlineMedium: heading(body.headlineMedium),
+      headlineSmall: heading(body.headlineSmall),
+      titleLarge: body.titleLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.3),
+      titleMedium: body.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+      titleSmall: body.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      labelLarge: body.labelLarge?.copyWith(fontWeight: FontWeight.w700),
     );
     final fieldBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(fieldRadius),
-      borderSide: BorderSide(color: scheme.outlineVariant),
+      borderSide: BorderSide.none,
     );
 
     return base.copyWith(
@@ -103,18 +93,15 @@ abstract final class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colors.card,
+        fillColor: scheme.surfaceContainer,
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: fieldBorder,
         enabledBorder: fieldBorder,
-        focusedBorder: fieldBorder.copyWith(borderSide: BorderSide(color: scheme.primary, width: 1.5)),
+        focusedBorder: fieldBorder.copyWith(borderSide: BorderSide(color: colors.accent, width: 1.5)),
         errorBorder: fieldBorder.copyWith(borderSide: BorderSide(color: scheme.error)),
         focusedErrorBorder: fieldBorder.copyWith(borderSide: BorderSide(color: scheme.error, width: 1.5)),
         errorMaxLines: 3,
@@ -130,7 +117,8 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(54),
           shape: const StadiumBorder(),
-          side: BorderSide(color: scheme.outline),
+          side: BorderSide.none,
+          backgroundColor: colors.card,
           textStyle: text.labelLarge?.copyWith(fontSize: 16),
         ),
       ),
@@ -149,10 +137,49 @@ abstract final class AppTheme {
           ),
         ),
         iconTheme: WidgetStateProperty.resolveWith(
-          (states) => IconThemeData(
-            color: states.contains(WidgetState.selected) ? colors.onAccent : scheme.onSurfaceVariant,
+          (states) =>
+              IconThemeData(color: states.contains(WidgetState.selected) ? colors.onAccent : scheme.onSurfaceVariant),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          backgroundColor: scheme.surfaceContainer,
+          foregroundColor: scheme.onSurfaceVariant,
+          selectedBackgroundColor: colors.accent,
+          selectedForegroundColor: colors.onAccent,
+          side: BorderSide.none,
+          shape: const StadiumBorder(),
+          minimumSize: const Size(0, 44),
+          textStyle: text.labelLarge,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? AppPalette.ink : scheme.onSurfaceVariant,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? colors.accent : scheme.surfaceContainerHigh,
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: colors.card,
+        selectedColor: colors.accent,
+        side: BorderSide.none,
+        shape: const StadiumBorder(),
+        showCheckmark: false,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        // Or sélectionné : le libellé passe à l'encre, y compris en mode nuit.
+        labelStyle: text.labelLarge?.copyWith(
+          color: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? colors.onAccent : scheme.onSurface,
           ),
         ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colors.accent,
+        foregroundColor: colors.onAccent,
+        shape: const CircleBorder(),
       ),
       listTileTheme: ListTileThemeData(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),

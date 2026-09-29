@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../pagination/paginated_list_controller.dart';
 import 'feedback.dart';
+import 'glass.dart';
 import 'list_skeleton.dart';
+import 'surfaces.dart';
 
 /// Coque commune à toutes les listes de contenu (§5) : recherche, puces de
 /// filtre fournies par l'appelant, défilement infini, tirer pour rafraîchir,
@@ -12,7 +14,7 @@ import 'list_skeleton.dart';
 /// Chaque écran ne fournit que ce qui lui est propre : le titre, l'état
 /// (`ref.watch` du provider concerné), comment dessiner un élément, et les
 /// puces de filtre (déjà construites, car elles connaissent le provider).
-class ResourceListScaffold<T> extends StatefulWidget {
+class ResourceListScaffold<T> extends StatelessWidget {
   const ResourceListScaffold({
     super.key,
     required this.title,
@@ -49,14 +51,86 @@ class ResourceListScaffold<T> extends StatefulWidget {
   /// Puces déjà construites par l'appelant (elles connaissent leur provider).
   final List<Widget> filterChips;
 
-  /// Actions de l'AppBar (accès à une sous-table, par exemple).
+  /// Actions de la barre du haut (accès à une sous-table, par exemple).
   final List<Widget> actions;
 
   @override
-  State<ResourceListScaffold<T>> createState() => _ResourceListScaffoldState<T>();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: GlassAppBar(actions: actions),
+      floatingActionButton: onCreate == null
+          ? null
+          : GlassFab(
+              icon: Icons.add_rounded,
+              tooltip: 'Ajouter',
+              onPressed: onCreate!,
+              bottom: MediaQuery.paddingOf(context).bottom,
+            ),
+      body: ResourceListView<T>(
+        title: title,
+        searchHint: searchHint,
+        state: state,
+        itemBuilder: itemBuilder,
+        emptyIcon: emptyIcon,
+        emptyTitle: emptyTitle,
+        emptyDescription: emptyDescription,
+        onSearch: onSearch,
+        onLoadMore: onLoadMore,
+        onRefresh: onRefresh,
+        onRetry: onRetry,
+        filterChips: filterChips,
+        extraBottom: onCreate == null ? 0 : 72,
+      ),
+    );
+  }
 }
 
-class _ResourceListScaffoldState<T> extends State<ResourceListScaffold<T>> {
+/// Corps de liste sans Scaffold : titre facultatif, recherche et puces qui
+/// défilent avec la page (sous les barres flottantes), puis les éléments en cartes.
+class ResourceListView<T> extends StatefulWidget {
+  const ResourceListView({
+    super.key,
+    this.title,
+    required this.searchHint,
+    required this.state,
+    required this.itemBuilder,
+    required this.emptyIcon,
+    required this.emptyTitle,
+    required this.emptyDescription,
+    required this.onSearch,
+    required this.onLoadMore,
+    required this.onRefresh,
+    required this.onRetry,
+    this.filterChips = const [],
+    this.wrapInCard = true,
+    this.extraBottom = 0,
+  });
+
+  final String? title;
+  final String searchHint;
+  final AsyncValue<ListState<T>> state;
+  final Widget Function(BuildContext context, T item) itemBuilder;
+  final IconData emptyIcon;
+  final String emptyTitle;
+  final String emptyDescription;
+  final ValueChanged<String> onSearch;
+  final VoidCallback onLoadMore;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onRetry;
+  final List<Widget> filterChips;
+
+  /// `false` quand l'appelant dessine déjà sa propre carte (glisser pour modérer…).
+  final bool wrapInCard;
+
+  /// Place réservée en bas en plus des barres flottantes (bouton +).
+  final double extraBottom;
+
+  @override
+  State<ResourceListView<T>> createState() => _ResourceListViewState<T>();
+}
+
+class _ResourceListViewState<T> extends State<ResourceListView<T>> {
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
 
@@ -81,93 +155,90 @@ class _ResourceListScaffoldState<T> extends State<ResourceListScaffold<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title), actions: widget.actions),
-      floatingActionButton: widget.onCreate == null
-          ? null
-          : FloatingActionButton(onPressed: widget.onCreate, child: const Icon(Icons.add_rounded)),
-      body: Column(
+    final theme = Theme.of(context);
+    final insets = pageInsets(context, bottom: 24 + widget.extraBottom);
+
+    final header = SliverPadding(
+      padding: EdgeInsets.only(top: insets.top),
+      sliver: SliverList.list(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              onSubmitted: widget.onSearch,
-              decoration: InputDecoration(
-                hintText: widget.searchHint,
-                prefixIcon: const Icon(Icons.search_rounded),
-                isDense: true,
-                suffixIcon: _searchController.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Effacer la recherche',
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () {
-                          _searchController.clear();
-                          widget.onSearch('');
-                        },
-                      ),
-              ),
+          if (widget.title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(widget.title!, style: theme.textTheme.headlineMedium),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: SearchPill(controller: _searchController, hintText: widget.searchHint, onSubmitted: widget.onSearch),
           ),
           if (widget.filterChips.isNotEmpty)
             SizedBox(
-              height: 40,
+              height: 42,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: widget.filterChips.length,
                 separatorBuilder: (context, index) => const SizedBox(width: 8),
-                itemBuilder: (context, index) => widget.filterChips[index],
+                itemBuilder: (context, index) => Center(child: widget.filterChips[index]),
               ),
             ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: widget.state.when(
-              loading: () => const ListSkeleton(),
-              error: (error, _) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Impossible de charger la liste.'),
-                    const SizedBox(height: 12),
-                    FilledButton(onPressed: widget.onRetry, child: const Text('Réessayer')),
-                  ],
-                ),
-              ),
-              data: (data) {
-                if (data.items.isEmpty) {
-                  return Center(
-                    child: ComingSoon(
-                      icon: widget.emptyIcon,
-                      title: widget.emptyTitle,
-                      description: widget.emptyDescription,
-                    ),
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: widget.onRefresh,
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.only(bottom: 88),
-                    itemCount: data.items.length + (data.isLoadingMore ? 1 : 0),
-                    separatorBuilder: (context, index) => const Divider(height: 1, indent: 20, endIndent: 20),
-                    itemBuilder: (context, index) {
-                      if (index >= data.items.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        );
-                      }
-                      return widget.itemBuilder(context, data.items[index]);
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
+          const SizedBox(height: 10),
         ],
+      ),
+    );
+
+    final content = widget.state.when(
+      loading: () => const SliverFillRemaining(child: ListSkeleton()),
+      error: (error, _) => SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Impossible de charger la liste.'),
+              const SizedBox(height: 12),
+              FilledButton(onPressed: widget.onRetry, child: const Text('Réessayer')),
+            ],
+          ),
+        ),
+      ),
+      data: (data) {
+        if (data.items.isEmpty) {
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: ComingSoon(icon: widget.emptyIcon, title: widget.emptyTitle, description: widget.emptyDescription),
+            ),
+          );
+        }
+        return SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, insets.bottom),
+          sliver: SliverList.separated(
+            itemCount: data.items.length + (data.isLoadingMore ? 1 : 0),
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              if (index >= data.items.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                );
+              }
+              final item = widget.itemBuilder(context, data.items[index]);
+              // Chaque élément devient une carte ; l'appelant ne dessine que son contenu.
+              return widget.wrapInCard ? SurfaceCard(radius: 20, padding: EdgeInsets.zero, child: item) : item;
+            },
+          ),
+        );
+      },
+    );
+
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      edgeOffset: insets.top,
+      child: CustomScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [header, content],
       ),
     );
   }
