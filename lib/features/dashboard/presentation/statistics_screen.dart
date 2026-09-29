@@ -1,0 +1,356 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../app/theme/app_palette.dart';
+import '../../../shared/widgets/form_layout.dart';
+import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/surfaces.dart';
+import '../data/dashboard.dart';
+import '../data/dashboard_repository.dart';
+import 'widgets/distribution_list.dart';
+import 'widgets/stat_tile.dart';
+import 'widgets/visits_chart.dart';
+
+/// Statistiques détaillées du site (visites, contenu, relations, répartitions),
+/// ouvertes depuis « Tout voir » de l'accueil. Même source que l'accueil.
+class StatisticsScreen extends ConsumerWidget {
+  const StatisticsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboard = ref.watch(dashboardProvider);
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      appBar: const GlassAppBar(),
+      body: dashboard.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Impossible de charger les statistiques.'),
+              const SizedBox(height: 12),
+              FilledButton(onPressed: () => ref.invalidate(dashboardProvider), child: const Text('Réessayer')),
+            ],
+          ),
+        ),
+        data: (data) => RefreshIndicator(
+          onRefresh: () => ref.refresh(dashboardProvider.future),
+          edgeOffset: MediaQuery.paddingOf(context).top,
+          child: _StatisticsBody(dashboard: data),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatisticsBody extends StatelessWidget {
+  const _StatisticsBody({required this.dashboard});
+
+  final Dashboard dashboard;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = dashboard.content;
+    final distribution = dashboard.distribution;
+    const gap = SizedBox(height: 28);
+    const small = SizedBox(height: 8);
+
+    return PageListView(
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: FormHeader(title: 'Statistiques', subtitle: 'Visites, contenu et relations du site'),
+        ),
+        const SizedBox(height: 20),
+        const SectionHeader('Visites'),
+        small,
+        _VisitsCard(visits: dashboard.visits),
+        if (dashboard.visits.topPages.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _TopPagesCard(pages: dashboard.visits.topPages),
+        ],
+        gap,
+        const SectionHeader('Contenu'),
+        small,
+        _Grid(
+          children: [
+            StatTile(
+              value: content.projects.published,
+              label: 'Projets publiés',
+              caption: '${content.projects.featured} à la une',
+            ),
+            StatTile(
+              value: content.projects.openSource,
+              label: 'Open source',
+              caption: '${content.projects.archived} archivés',
+            ),
+            StatTile(value: content.skills, label: 'Compétences'),
+            StatTile(value: content.technologies, label: 'Technologies'),
+            StatTile(value: content.domains, label: 'Domaines'),
+            StatTile(value: content.yearsOfExperience, label: 'Ans d\'expérience'),
+            StatTile(value: content.experiences, label: 'Expériences'),
+            StatTile(value: content.educations, label: 'Formations'),
+            StatTile(value: content.referencesOnCv, label: 'Références sur CV'),
+          ],
+        ),
+        gap,
+        const SectionHeader('Relations'),
+        small,
+        _Grid(
+          children: [
+            StatTile(
+              value: content.testimonials.approved,
+              label: 'Avis approuvés',
+              caption: '${content.testimonials.featured} à la une',
+            ),
+            StatTile(
+              value: content.testimonials.pending,
+              label: 'Avis en attente',
+              caption: '${content.testimonials.rejected} rejetés',
+            ),
+            StatTile(value: content.engagements.freelance, label: 'Demandes freelance'),
+            StatTile(value: content.engagements.hiring, label: 'Demandes d\'embauche'),
+            StatTile(value: content.engagements.cvSent, label: 'CV envoyés'),
+            StatTile(value: content.contacts, label: 'Messages reçus'),
+          ],
+        ),
+        const SizedBox(height: 10),
+        CongratulationsCard(count: content.congratulations),
+        if (distribution.skillsByDomain.isNotEmpty ||
+            distribution.projectsByDomain.isNotEmpty ||
+            distribution.technologiesByCategory.isNotEmpty) ...[
+          gap,
+          const SectionHeader('Répartition'),
+          small,
+          if (distribution.projectsByDomain.isNotEmpty)
+            _DistributionCard(
+              title: 'Projets par domaine',
+              child: DomainDistributionList(items: distribution.projectsByDomain),
+            ),
+          if (distribution.skillsByDomain.isNotEmpty)
+            _DistributionCard(
+              title: 'Compétences par domaine',
+              child: DomainDistributionList(items: distribution.skillsByDomain),
+            ),
+          if (distribution.technologiesByCategory.isNotEmpty)
+            _DistributionCard(
+              title: 'Technologies par catégorie',
+              child: CategoryDistributionList(items: distribution.technologiesByCategory),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _VisitsCard extends StatelessWidget {
+  const _VisitsCard({required this.visits});
+
+  final DashboardVisits visits;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${visits.periodDays} derniers jours', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+          const SizedBox(height: 4),
+          Text(
+            '${visits.total}',
+            style: theme.textTheme.displaySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+          ),
+          Text('visites', style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+          const SizedBox(height: 16),
+          VisitsChart(daily: visits.daily),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _MiniFact(value: visits.today, label: 'Aujourd\'hui'),
+              _MiniFact(value: visits.french, label: 'En français'),
+              _MiniFact(value: visits.english, label: 'En anglais'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniFact extends StatelessWidget {
+  const _MiniFact({required this.value, required this.label});
+
+  final int value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$value', style: theme.textTheme.titleMedium),
+          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pages les plus vues, avec une barre proportionnelle à la plus visitée.
+class _TopPagesCard extends StatelessWidget {
+  const _TopPagesCard({required this.pages});
+
+  final List<TopPage> pages;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final max = pages.map((p) => p.count).fold<int>(1, (a, b) => a > b ? a : b);
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Pages les plus vues', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 12),
+          for (final (index, page) in pages.indexed) ...[
+            if (index > 0) const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    page.path,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('${page.count}', style: theme.textTheme.labelLarge),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: page.count / max,
+                minHeight: 6,
+                color: colors.accent,
+                backgroundColor: theme.colorScheme.surfaceContainer,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DistributionCard extends StatelessWidget {
+  const _DistributionCard({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: SurfaceCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 10),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Grille à deux colonnes dont chaque ligne prend la hauteur de sa plus haute tuile.
+class _Grid extends StatelessWidget {
+  const _Grid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < children.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: 10),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: children[i]),
+                const SizedBox(width: 10),
+                Expanded(child: i + 1 < children.length ? children[i + 1] : const SizedBox()),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Carte pleine largeur des félicitations reçues, avec un trophée.
+class CongratulationsCard extends StatelessWidget {
+  const CongratulationsCard({super.key, required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+
+    return SurfaceCard(
+      radius: 22,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Félicitations', style: theme.textTheme.bodySmall?.copyWith(color: colors.muted)),
+                const SizedBox(height: 4),
+                Text(
+                  '$count',
+                  style: theme.textTheme.headlineSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'reçues sur le site',
+                  style: theme.textTheme.labelSmall?.copyWith(color: colors.muted, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+          ExcludeSemantics(
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
+              child: Icon(Icons.emoji_events_rounded, size: 32, color: colors.onAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

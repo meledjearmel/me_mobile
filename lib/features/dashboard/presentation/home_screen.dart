@@ -15,11 +15,10 @@ import '../../auth/application/session_controller.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
 import '../data/health_labels.dart';
-import 'widgets/distribution_list.dart';
 import 'widgets/health_checklist.dart';
 import 'widgets/recent_section.dart';
+import 'statistics_screen.dart';
 import 'widgets/stat_tile.dart';
-import 'widgets/visits_chart.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -188,7 +187,11 @@ class _DashboardBody extends StatelessWidget {
       children: [
         _TodoCard(todo: dashboard.todo, onTap: onTodoTap),
         gap,
-        const SectionHeader('En bref'),
+        SectionHeader(
+          'En bref',
+          actionLabel: 'Tout voir',
+          onAction: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const StatisticsScreen())),
+        ),
         const SizedBox(height: 8),
         _TileGrid(
           children: [
@@ -207,7 +210,7 @@ class _DashboardBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        _VisitsCard(visits: dashboard.visits),
+        CongratulationsCard(count: content.congratulations),
         gap,
         const SectionHeader('À compléter'),
         const SizedBox(height: 8),
@@ -251,8 +254,6 @@ class _DashboardBody extends StatelessWidget {
           onSeeAll: onSeeAllTestimonials,
           emptyLabel: 'Aucun avis en attente.',
         ),
-        gap,
-        _DetailsCard(dashboard: dashboard),
       ],
     );
   }
@@ -371,123 +372,6 @@ class _TileGrid extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _VisitsCard extends StatelessWidget {
-  const _VisitsCard({required this.visits});
-
-  final DashboardVisits visits;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
-
-    return SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Visites · ${visits.periodDays} jours', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('${visits.total}', style: theme.textTheme.headlineMedium),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Aujourd\'hui ${visits.today} · FR ${visits.french} · EN ${visits.english}',
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.labelSmall?.copyWith(color: muted),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          VisitsChart(daily: visits.daily),
-          if (visits.topPages.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [for (final page in visits.topPages) _Pill('${page.path} · ${page.count}')],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: theme.colorScheme.surfaceContainer, borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: theme.textTheme.labelSmall),
-    );
-  }
-}
-
-/// Statistiques détaillées, repliées par défaut pour garder l'accueil épuré.
-class _DetailsCard extends StatelessWidget {
-  const _DetailsCard({required this.dashboard});
-
-  final Dashboard dashboard;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final content = dashboard.content;
-    final distribution = dashboard.distribution;
-    final counts = [
-      ('Compétences', content.skills),
-      ('Technologies', content.technologies),
-      ('Domaines', content.domains),
-      ('Expériences', content.experiences),
-      ('Formations', content.educations),
-      ('Références sur CV', content.referencesOnCv),
-      ('Félicitations', content.congratulations),
-    ];
-
-    return SurfaceCard(
-      padding: EdgeInsets.zero,
-      child: ExpansionTile(
-        title: Text('Statistiques détaillées', style: theme.textTheme.titleSmall),
-        shape: const Border(),
-        collapsedShape: const Border(),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(spacing: 6, runSpacing: 6, children: [for (final (label, value) in counts) _Pill('$label · $value')]),
-          if (distribution.skillsByDomain.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text('Compétences par domaine', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            DomainDistributionList(items: distribution.skillsByDomain),
-          ],
-          if (distribution.projectsByDomain.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text('Projets par domaine', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            DomainDistributionList(items: distribution.projectsByDomain),
-          ],
-          if (distribution.technologiesByCategory.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text('Technologies par catégorie', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            CategoryDistributionList(items: distribution.technologiesByCategory),
-          ],
-        ],
-      ),
     );
   }
 }
