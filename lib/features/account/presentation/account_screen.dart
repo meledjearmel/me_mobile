@@ -8,10 +8,12 @@ import '../../../app/env.dart';
 import '../../../app/theme/theme_preferences.dart';
 import '../../../core/biometrics/biometric_authenticator.dart';
 import '../../../core/biometrics/biometric_lock_controller.dart';
+import '../../../core/api/api_exception.dart';
 import '../../../core/biometrics/biometric_preferences.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../auth/application/session_controller.dart';
+import '../../profile/data/profile_repository.dart';
 import '../../trash/presentation/trash_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -25,6 +27,58 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   bool _loggingOut = false;
   bool _updatingBiometric = false;
   bool _updatingTheme = false;
+  bool _updatingNotifyDelay = false;
+
+  static const _notifyDelays = [0, 5, 10, 30, 60, 180, 1440];
+
+  static String _notifyDelayLabel(int minutes) => switch (minutes) {
+    0 => 'À chaque envoi',
+    1440 => 'Au plus une par jour',
+    _ when minutes >= 60 && minutes % 60 == 0 => 'Au plus une toutes les ${minutes ~/ 60} h',
+    _ => 'Au plus une toutes les $minutes min',
+  };
+
+  /// Délai minimal entre deux notifications de félicitations d'un même motif
+  /// (réglage global, porté par le profil).
+  Future<void> _pickNotifyDelay(int current) async {
+    final minutes = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: RadioGroup<int>(
+          groupValue: current,
+          onChanged: (value) => Navigator.pop(context, value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final delay in _notifyDelays)
+                RadioListTile<int>(value: delay, title: Text(_notifyDelayLabel(delay))),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (minutes == null || minutes == current) {
+      return;
+    }
+    final profile = ref.read(profileProvider).value;
+    if (profile == null) {
+      return;
+    }
+    setState(() => _updatingNotifyDelay = true);
+    try {
+      await ref.read(profileRepositoryProvider).updateCongratulationNotifyMinutes(profile, minutes);
+      ref.invalidate(profileProvider);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _updatingNotifyDelay = false);
+      }
+    }
+  }
 
   Future<void> _setThemeMode(ThemeMode mode) async {
     setState(() => _updatingTheme = true);
@@ -209,6 +263,26 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const SectionHeader('Notifications'),
+            const SizedBox(height: 8),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Builder(
+                builder: (context) {
+                  final minutes = ref.watch(profileProvider).value?.congratulationNotifyMinutes;
+                  return ListTile(
+                    leading: const Icon(Icons.emoji_events_outlined),
+                    title: const Text('Félicitations'),
+                    subtitle: Text(minutes == null ? 'Chargement…' : '${_notifyDelayLabel(minutes)}, par surprise'),
+                    trailing: _updatingNotifyDelay
+                        ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.chevron_right_rounded),
+                    onTap: minutes == null || _updatingNotifyDelay ? null : () => _pickNotifyDelay(minutes),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 28),

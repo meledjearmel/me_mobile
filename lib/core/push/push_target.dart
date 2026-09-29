@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Les trois éléments qui déclenchent une notification push (§4.6) : nouveau
-/// message, nouvelle demande de collaboration, nouvel avis déposé.
+/// Les éléments qui déclenchent une notification push (§4.6) : nouveau
+/// message, nouvelle demande de collaboration, nouvel avis déposé, nouvelles
+/// félicitations reçues sur le site.
 enum PushResourceType {
   contact('contact', 'message', 'Nouveau message', 0),
   engagement('engagement', 'demande de collaboration', 'Nouvelle demande de collaboration', 1),
-  testimonial('testimonial', 'avis', 'Nouvel avis déposé', 2);
+  testimonial('testimonial', 'avis', 'Nouvel avis déposé', 2),
+  congratulation('congratulation', 'félicitations', 'Nouvelles félicitations 🎉', null);
 
   const PushResourceType(this.wireValue, this.label, this.notificationTitle, this.inboxTabIndex);
 
@@ -18,8 +20,12 @@ enum PushResourceType {
   /// affichées manuellement en avant-plan comme en arrière-plan.
   final String notificationTitle;
 
-  /// Onglet de la boîte de réception à ouvrir.
-  final int inboxTabIndex;
+  /// Onglet de la boîte de réception à ouvrir ; `null` pour les félicitations,
+  /// qui s'ouvrent depuis l'accueil.
+  final int? inboxTabIndex;
+
+  /// Onglet de l'app qui consomme la cible.
+  String get location => inboxTabIndex == null ? '/home' : '/inbox';
 
   static PushResourceType? fromWire(String? value) {
     for (final type in values) {
@@ -52,7 +58,8 @@ class PushTarget {
 /// Cible en attente d'ouverture, posée par [PushService] au tap sur une
 /// notification (ou par le tableau de bord, pour un élément « récent ») et
 /// consommée par l'écran de la boîte de réception, qui ouvre directement le
-/// détail visé.
+/// détail visé — ou, pour des félicitations, par l'accueil, qui ouvre leur
+/// historique.
 final pendingPushTargetProvider = StateProvider<PushTarget?>((ref) => null);
 
 /// Onglet à ouvrir sans viser un élément précis (ex. depuis la ligne « à

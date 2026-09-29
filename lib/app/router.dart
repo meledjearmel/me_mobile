@@ -40,9 +40,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return state.matchedLocation == '/lock' ? null : '/lock';
       }
       if (onAuthRoute || state.matchedLocation == '/' || state.matchedLocation == '/lock') {
-        // Une notification tapée avant la connexion (app relancée) ouvre la
-        // boîte de réception plutôt que l'accueil.
-        return ref.read(pendingPushTargetProvider) != null ? '/inbox' : '/home';
+        // Une notification tapée avant la connexion (app relancée) ouvre
+        // l'onglet qui la consomme (boîte de réception ou accueil).
+        return ref.read(pendingPushTargetProvider)?.type.location ?? '/home';
       }
       return null;
     },

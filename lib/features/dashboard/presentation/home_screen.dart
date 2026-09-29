@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_logo.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../auth/application/session_controller.dart';
+import '../../celebrations/presentation/congratulations_screen.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
 import '../data/health_labels.dart';
@@ -36,8 +37,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(pushServiceProvider).registerForCurrentSession(context);
+        _openPendingCongratulation(ref.read(pendingPushTargetProvider));
       }
     });
+  }
+
+  /// Notification « Nouvelles félicitations » tapée : ouvre leur historique
+  /// en marquant l'envoi visé, puis consomme la cible.
+  void _openPendingCongratulation(PushTarget? target) {
+    if (target == null || target.type != PushResourceType.congratulation) {
+      return;
+    }
+    ref.read(pendingPushTargetProvider.notifier).state = null;
+    ref.invalidate(dashboardProvider);
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => CongratulationsScreen(highlightId: target.id)),
+    );
   }
 
   String _greeting() {
@@ -77,6 +92,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Accueil déjà monté (app en arrière-plan) : la cible arrive après coup.
+    ref.listen(pendingPushTargetProvider, (_, target) => _openPendingCongratulation(target));
     final user = ref.watch(sessionProvider).value;
     final dashboard = ref.watch(dashboardProvider);
     final theme = Theme.of(context);
@@ -210,7 +227,11 @@ class _DashboardBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        CongratulationsCard(count: content.congratulations),
+        CongratulationsCard(
+          count: content.congratulations,
+          onTap: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CongratulationsScreen())),
+        ),
         gap,
         const SectionHeader('À compléter'),
         const SizedBox(height: 8),

@@ -31,8 +31,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
     // Une notification tapée pose une cible en attente (§4.6) : on ouvre son
     // onglet (et directement son détail) puis on la consomme.
     final target = ref.read(pendingPushTargetProvider);
-    if (target != null) {
-      _controller.index = target.type.inboxTabIndex;
+    final tabIndex = target?.type.inboxTabIndex;
+    if (target != null && tabIndex != null) {
+      _controller.index = tabIndex;
       switch (target.type) {
         case PushResourceType.contact:
           _autoOpenContactId = target.id;
@@ -40,14 +41,17 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
           _autoOpenEngagementId = target.id;
         case PushResourceType.testimonial:
           _autoOpenTestimonialId = target.id;
+        case PushResourceType.congratulation:
+          // Consommée par l'accueil.
+          break;
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(pendingPushTargetProvider.notifier).state = null;
       });
     } else {
-      final tabIndex = ref.read(initialInboxTabProvider);
-      if (tabIndex != null) {
-        _controller.index = tabIndex;
+      final initialTab = ref.read(initialInboxTabProvider);
+      if (initialTab != null) {
+        _controller.index = initialTab;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.read(initialInboxTabProvider.notifier).state = null;
         });

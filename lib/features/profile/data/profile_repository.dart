@@ -39,6 +39,7 @@ class ProfileRepository {
     MultipartFile? photo,
     MultipartFile? cvPhoto,
     MultipartFile? music,
+    int? congratulationNotifyMinutes,
     void Function(int sent, int total)? onProgress,
   }) async {
     final form = buildFormData({
@@ -55,11 +56,28 @@ class ProfileRepository {
       if (photo != null) 'photo': photo,
       if (cvPhoto != null) 'cv_photo': cvPhoto,
       if (music != null) 'music': music,
+      if (congratulationNotifyMinutes != null) 'congratulation_notify_minutes': congratulationNotifyMinutes,
     }, method: 'PATCH');
 
     final json = await _api.upload('/v1/profile', form, onProgress: onProgress);
     return Profile.fromJson(json as Map<String, dynamic>);
   }
+
+  /// Change seulement le délai des notifications de félicitations : le reste
+  /// du profil est renvoyé tel quel (formulaire complet, §3.5).
+  Future<Profile> updateCongratulationNotifyMinutes(Profile profile, int minutes) => update(
+    name: profile.name,
+    cvLastName: profile.cvLastName,
+    cvFirstName: profile.cvFirstName,
+    headline: profile.headline,
+    bioShort: profile.bioShort,
+    bioFull: profile.bioFull,
+    email: profile.email,
+    phone: profile.phone,
+    location: profile.location,
+    socialLinks: profile.socialLinks,
+    congratulationNotifyMinutes: minutes,
+  );
 
   Future<void> deleteMusic() => _api.delete('/v1/profile/music');
 }

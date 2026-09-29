@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/glass.dart';
+import '../../celebrations/presentation/celebrations_list_screen.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -17,7 +18,7 @@ import '../skills/presentation/skills_list_screen.dart';
 import '../technologies/presentation/technologies_list_screen.dart';
 
 /// Sommaire des sections de contenu (§4.3), groupées comme le menu
-/// d'administration du site : Parcours, Réalisations, Référentiels, Musique.
+/// d'administration du site : Parcours, Réalisations, Référentiels, Musique, Site.
 /// Les catégories de technologies s'ouvrent depuis l'écran Technologies.
 class ContentScreen extends ConsumerWidget {
   const ContentScreen({super.key});
@@ -51,6 +52,10 @@ class ContentScreen extends ConsumerWidget {
       label: 'Musique',
       sections: [(icon: Icons.music_note_outlined, label: 'Pistes et registres', builder: _musicScreen)],
     ),
+    (
+      label: 'Site',
+      sections: [(icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen)],
+    ),
   ];
 
   static Widget _profileScreen(BuildContext context) => const ProfileScreen();
@@ -63,6 +68,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _jobProfilesScreen(BuildContext context) => const JobProfilesListScreen();
   static Widget _referencesScreen(BuildContext context) => const ProfessionalReferencesListScreen();
   static Widget _musicScreen(BuildContext context) => const MusicScreen();
+  static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
 
   /// Nombre d'éléments par section, tiré du tableau de bord (absent si non fourni).
   static int? _countFor(String label, DashboardContent? content) => switch (label) {

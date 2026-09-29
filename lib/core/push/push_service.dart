@@ -92,7 +92,7 @@ class PushService {
           title: const Text('Recevoir des notifications'),
           content: const Text(
             'Me Admin peut vous prévenir dès qu\'un nouveau message, une demande de '
-            'collaboration ou un avis arrive sur votre portfolio.',
+            'collaboration, un avis ou des félicitations arrivent sur votre portfolio.',
           ),
           actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Continuer'))],
         ),
@@ -164,13 +164,14 @@ class PushService {
     _handleTap(jsonDecode(payload) as Map<String, dynamic>);
   }
 
-  /// Ouvre directement le détail de l'élément visé dans la boîte de réception.
+  /// Ouvre directement le détail de l'élément visé dans la boîte de réception,
+  /// ou l'historique des félicitations depuis l'accueil.
   void _handleTap(Map<String, dynamic> data) {
     final target = PushTarget.fromData(data);
     if (target == null) {
       return;
     }
     _ref.read(pendingPushTargetProvider.notifier).state = target;
-    _ref.read(routerProvider).go('/inbox');
+    _ref.read(routerProvider).go(target.type.location);
   }
 }

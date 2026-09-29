@@ -5,6 +5,7 @@ import '../../../app/theme/app_palette.dart';
 import '../../../shared/widgets/form_layout.dart';
 import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/surfaces.dart';
+import '../../celebrations/presentation/congratulations_screen.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
 import 'widgets/distribution_list.dart';
@@ -118,7 +119,11 @@ class _StatisticsBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        CongratulationsCard(count: content.congratulations),
+        CongratulationsCard(
+          count: content.congratulations,
+          onTap: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CongratulationsScreen())),
+        ),
         if (distribution.skillsByDomain.isNotEmpty ||
             distribution.projectsByDomain.isNotEmpty ||
             distribution.technologiesByCategory.isNotEmpty) ...[
@@ -309,9 +314,12 @@ class _Grid extends StatelessWidget {
 
 /// Carte pleine largeur des félicitations reçues, avec un trophée.
 class CongratulationsCard extends StatelessWidget {
-  const CongratulationsCard({super.key, required this.count});
+  const CongratulationsCard({super.key, required this.count, this.onTap});
 
   final int count;
+
+  /// Ouvre l'historique des félicitations.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -321,6 +329,7 @@ class CongratulationsCard extends StatelessWidget {
     return SurfaceCard(
       radius: 22,
       padding: const EdgeInsets.all(14),
+      onTap: onTap,
       child: Row(
         children: [
           Expanded(

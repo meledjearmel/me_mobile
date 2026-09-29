@@ -33,23 +33,25 @@ class Profile {
     required this.photoUrl,
     required this.cvPhotoUrl,
     required this.music,
+    required this.congratulationNotifyMinutes,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
-        name: json['name'] as String,
-        cvLastName: json['cv_last_name'] as String?,
-        cvFirstName: json['cv_first_name'] as String?,
-        headline: Translated.fromJson(json['headline']),
-        bioShort: Translated.fromJson(json['bio_short']),
-        bioFull: Translated.fromJson(json['bio_full']),
-        email: json['email'] as String,
-        phone: json['phone'] as String?,
-        location: json['location'] as String?,
-        socialLinks: SocialLinks.fromJson(json['social_links'] as Map<String, dynamic>?),
-        photoUrl: json['photo_url'] as String?,
-        cvPhotoUrl: json['cv_photo_url'] as String?,
-        music: UploadedFile.fromJson(json['music'] as Map<String, dynamic>?),
-      );
+    name: json['name'] as String,
+    cvLastName: json['cv_last_name'] as String?,
+    cvFirstName: json['cv_first_name'] as String?,
+    headline: Translated.fromJson(json['headline']),
+    bioShort: Translated.fromJson(json['bio_short']),
+    bioFull: Translated.fromJson(json['bio_full']),
+    email: json['email'] as String,
+    phone: json['phone'] as String?,
+    location: json['location'] as String?,
+    socialLinks: SocialLinks.fromJson(json['social_links'] as Map<String, dynamic>?),
+    photoUrl: json['photo_url'] as String?,
+    cvPhotoUrl: json['cv_photo_url'] as String?,
+    music: UploadedFile.fromJson(json['music'] as Map<String, dynamic>?),
+    congratulationNotifyMinutes: json['congratulation_notify_minutes'] as int? ?? 10,
+  );
 
   final String name;
   final String? cvLastName;
@@ -66,4 +68,8 @@ class Profile {
 
   /// `null` : le site joue une piste par défaut.
   final UploadedFile? music;
+
+  /// Au plus une notification push de félicitations par motif sur ce nombre
+  /// de minutes (0 = à chaque envoi).
+  final int congratulationNotifyMinutes;
 }
