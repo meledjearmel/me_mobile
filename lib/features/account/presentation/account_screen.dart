@@ -44,16 +44,20 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final minutes = await showModalBottomSheet<int>(
       context: context,
       showDragHandle: true,
+      // Sept choix dépassent la hauteur par défaut d'une feuille (9/16 de l'écran).
+      isScrollControlled: true,
       builder: (context) => SafeArea(
         child: RadioGroup<int>(
           groupValue: current,
           onChanged: (value) => Navigator.pop(context, value),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final delay in _notifyDelays)
-                RadioListTile<int>(value: delay, title: Text(_notifyDelayLabel(delay))),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final delay in _notifyDelays)
+                  RadioListTile<int>(value: delay, title: Text(_notifyDelayLabel(delay))),
+              ],
+            ),
           ),
         ),
       ),
