@@ -6,6 +6,7 @@ import '../../../shared/widgets/form_layout.dart';
 import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../celebrations/presentation/congratulations_screen.dart';
+import '../../cv_downloads/presentation/cv_downloads_screen.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
 import 'widgets/distribution_list.dart';
@@ -51,6 +52,9 @@ class _StatisticsBody extends StatelessWidget {
   const _StatisticsBody({required this.dashboard});
 
   final Dashboard dashboard;
+
+  void _openCvDownloads(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CvDownloadsScreen()));
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +128,10 @@ class _StatisticsBody extends StatelessWidget {
           onTap: () =>
               Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CongratulationsScreen())),
         ),
+        gap,
+        SectionHeader('CV téléchargés', actionLabel: 'Tout voir', onAction: () => _openCvDownloads(context)),
+        small,
+        CvDownloadsCard(summary: dashboard.cvDownloads, onTap: () => _openCvDownloads(context)),
         if (distribution.skillsByDomain.isNotEmpty ||
             distribution.projectsByDomain.isNotEmpty ||
             distribution.technologiesByCategory.isNotEmpty) ...[

@@ -31,6 +31,8 @@ class ResourceListScaffold<T> extends StatelessWidget {
     this.onCreate,
     this.filterChips = const [],
     this.actions = const [],
+    this.header,
+    this.searchController,
   });
 
   final String title;
@@ -53,6 +55,12 @@ class ResourceListScaffold<T> extends StatelessWidget {
 
   /// Actions de la barre du haut (accès à une sous-table, par exemple).
   final List<Widget> actions;
+
+  /// Bloc affiché entre le titre et la recherche (synthèse chiffrée…).
+  final Widget? header;
+
+  /// Pour remplir la recherche depuis l'écran ; sinon le champ gère le sien.
+  final TextEditingController? searchController;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +88,8 @@ class ResourceListScaffold<T> extends StatelessWidget {
         onRefresh: onRefresh,
         onRetry: onRetry,
         filterChips: filterChips,
+        header: header,
+        searchController: searchController,
         extraBottom: onCreate == null ? 0 : 72,
       ),
     );
@@ -105,6 +115,8 @@ class ResourceListView<T> extends StatefulWidget {
     this.filterChips = const [],
     this.wrapInCard = true,
     this.extraBottom = 0,
+    this.header,
+    this.searchController,
   });
 
   final String? title;
@@ -126,13 +138,21 @@ class ResourceListView<T> extends StatefulWidget {
   /// Place réservée en bas en plus des barres flottantes (bouton +).
   final double extraBottom;
 
+  /// Bloc affiché entre le titre et la recherche.
+  final Widget? header;
+
+  /// Contrôleur de recherche fourni par l'appelant (non libéré ici).
+  final TextEditingController? searchController;
+
   @override
   State<ResourceListView<T>> createState() => _ResourceListViewState<T>();
 }
 
 class _ResourceListViewState<T> extends State<ResourceListView<T>> {
   final _scrollController = ScrollController();
-  final _searchController = TextEditingController();
+  final _ownSearchController = TextEditingController();
+
+  TextEditingController get _searchController => widget.searchController ?? _ownSearchController;
 
   @override
   void initState() {
@@ -143,7 +163,7 @@ class _ResourceListViewState<T> extends State<ResourceListView<T>> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _searchController.dispose();
+    _ownSearchController.dispose();
     super.dispose();
   }
 
@@ -167,6 +187,7 @@ class _ResourceListViewState<T> extends State<ResourceListView<T>> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: Text(widget.title!, style: theme.textTheme.headlineMedium),
             ),
+          if (widget.header != null) Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: widget.header),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: SearchPill(controller: _searchController, hintText: widget.searchHint, onSubmitted: widget.onSearch),
