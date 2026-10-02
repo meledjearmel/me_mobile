@@ -28,15 +28,43 @@ class GalleryImage {
   final String url;
 }
 
+/// Chiffre clé de l'étude de cas : valeur courte (`« 3× »`, `« 40 % »`) et
+/// libellé bilingue. 4 au plus par projet, dans l'ordre d'affichage.
+@immutable
+class KeyFigure {
+  const KeyFigure({required this.value, required this.label});
+
+  factory KeyFigure.fromJson(Map<String, dynamic> json) =>
+      KeyFigure(value: json['value']?.toString() ?? '', label: Translated.fromJson(json['label']));
+
+  static const maxCount = 4;
+
+  final String value;
+  final Translated label;
+
+  Map<String, Object> toJson() => {'value': value, 'label': label};
+
+  @override
+  bool operator ==(Object other) => other is KeyFigure && other.value == value && other.label == label;
+
+  @override
+  int get hashCode => Object.hash(value, label);
+}
+
 @immutable
 class Project {
   const Project({
     required this.id,
     required this.slug,
     required this.title,
+    this.tagline = const Translated(),
+    this.role = const Translated(),
+    this.client = const Translated(),
+    this.platform = const Translated(),
     required this.context,
     required this.realization,
     required this.result,
+    this.keyFigures = const [],
     required this.accentColor,
     required this.repoUrl,
     required this.demoUrl,
@@ -53,48 +81,65 @@ class Project {
   });
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
-        id: json['id'] as int,
-        slug: json['slug'] as String,
-        title: Translated.fromJson(json['title']),
-        context: Translated.fromJson(json['context']),
-        realization: Translated.fromJson(json['realization']),
-        result: Translated.fromJson(json['result']),
-        accentColor: json['accent_color'] as String?,
-        repoUrl: json['repo_url'] as String?,
-        demoUrl: json['demo_url'] as String?,
-        isFeatured: json['is_featured'] as bool? ?? false,
-        isOpenSource: json['is_open_source'] as bool? ?? false,
-        status: ProjectStatus.fromWire(json['status'] as String?),
-        sortOrder: json['sort_order'] as int? ?? 0,
-        coverUrl: json['cover_url'] as String?,
-        gallery: [
-          for (final item in (json['gallery'] as List<dynamic>? ?? const []))
-            GalleryImage.fromJson(item as Map<String, dynamic>),
-        ],
-        domains: [
-          for (final item in (json['domains'] as List<dynamic>? ?? const [])) DomainRef.fromJson(item as Map<String, dynamic>),
-        ],
-        jobProfiles: [
-          for (final item in (json['job_profiles'] as List<dynamic>? ?? const []))
-            JobProfileFullRef.fromJson(item as Map<String, dynamic>),
-        ],
-        technologies: [
-          for (final item in (json['technologies'] as List<dynamic>? ?? const []))
-            TechnologyRef.fromJson(item as Map<String, dynamic>),
-        ],
-        // Absent des réponses de liste (§4.3) : liste vide dans ce cas, sans conséquence
-        // puisqu'on ne l'utilise que dans le formulaire, rechargé depuis le détail.
-        relatedProjectIds: [
-          for (final item in (json['related_project_ids'] as List<dynamic>? ?? const [])) item as int,
-        ],
-      );
+    id: json['id'] as int,
+    slug: json['slug'] as String,
+    title: Translated.fromJson(json['title']),
+    // Étude de cas : `null` quand le champ est vide, lu comme texte vide.
+    tagline: Translated.fromJson(json['tagline']),
+    role: Translated.fromJson(json['role']),
+    client: Translated.fromJson(json['client']),
+    platform: Translated.fromJson(json['platform']),
+    context: Translated.fromJson(json['context']),
+    realization: Translated.fromJson(json['realization']),
+    result: Translated.fromJson(json['result']),
+    keyFigures: [
+      for (final item in (json['key_figures'] as List<dynamic>? ?? const []))
+        if (item is Map<String, dynamic>) KeyFigure.fromJson(item),
+    ],
+    accentColor: json['accent_color'] as String?,
+    repoUrl: json['repo_url'] as String?,
+    demoUrl: json['demo_url'] as String?,
+    isFeatured: json['is_featured'] as bool? ?? false,
+    isOpenSource: json['is_open_source'] as bool? ?? false,
+    status: ProjectStatus.fromWire(json['status'] as String?),
+    sortOrder: json['sort_order'] as int? ?? 0,
+    coverUrl: json['cover_url'] as String?,
+    gallery: [
+      for (final item in (json['gallery'] as List<dynamic>? ?? const []))
+        GalleryImage.fromJson(item as Map<String, dynamic>),
+    ],
+    domains: [
+      for (final item in (json['domains'] as List<dynamic>? ?? const []))
+        DomainRef.fromJson(item as Map<String, dynamic>),
+    ],
+    jobProfiles: [
+      for (final item in (json['job_profiles'] as List<dynamic>? ?? const []))
+        JobProfileFullRef.fromJson(item as Map<String, dynamic>),
+    ],
+    technologies: [
+      for (final item in (json['technologies'] as List<dynamic>? ?? const []))
+        TechnologyRef.fromJson(item as Map<String, dynamic>),
+    ],
+    // Absent des réponses de liste (§4.3) : liste vide dans ce cas, sans conséquence
+    // puisqu'on ne l'utilise que dans le formulaire, rechargé depuis le détail.
+    relatedProjectIds: [for (final item in (json['related_project_ids'] as List<dynamic>? ?? const [])) item as int],
+  );
 
   final int id;
   final String slug;
   final Translated title;
+
+  /// Accroche du bandeau (vide : le site reprend la 1re phrase du contexte).
+  final Translated tagline;
+
+  /// Rôle tenu, client (anonymisé) et plateforme : fiche d'identité du projet.
+  final Translated role;
+  final Translated client;
+  final Translated platform;
   final Translated context;
   final Translated realization;
   final Translated result;
+  final List<KeyFigure> keyFigures;
   final String? accentColor;
   final String? repoUrl;
   final String? demoUrl;

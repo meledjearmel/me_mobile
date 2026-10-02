@@ -40,6 +40,9 @@ class ProfileRepository {
     MultipartFile? cvPhoto,
     MultipartFile? music,
     int? congratulationNotifyMinutes,
+    CvSource? cvSource,
+    int? cvJobProfileId,
+    bool clearCvJobProfile = false,
     void Function(int sent, int total)? onProgress,
   }) async {
     final form = buildFormData({
@@ -57,6 +60,9 @@ class ProfileRepository {
       if (cvPhoto != null) 'cv_photo': cvPhoto,
       if (music != null) 'music': music,
       if (congratulationNotifyMinutes != null) 'congratulation_notify_minutes': congratulationNotifyMinutes,
+      // Facultatifs (`sometimes`) : absents, l'API garde la valeur actuelle.
+      if (cvSource != null) 'cv_source': cvSource.wireValue,
+      if (cvJobProfileId != null || clearCvJobProfile) 'cv_job_profile_id': cvJobProfileId,
     }, method: 'PATCH');
 
     final json = await _api.upload('/v1/profile', form, onProgress: onProgress);

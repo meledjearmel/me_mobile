@@ -48,4 +48,44 @@ void main() {
     expect(profile.music, isNull);
     expect(profile.socialLinks.github, isNull);
   });
+
+  Map<String, dynamic> apiProfile(Map<String, dynamic> overrides) => {
+    'id': 1,
+    'name': 'Armel Meledje',
+    'cv_last_name': null,
+    'cv_first_name': null,
+    'headline': {'fr': 'Développeur', 'en': 'Developer'},
+    'bio_short': <String, dynamic>{},
+    'bio_full': <String, dynamic>{},
+    'email': 'armel@example.com',
+    'phone': null,
+    'location': null,
+    'social_links': null,
+    'congratulation_notify_minutes': 10,
+    'cv_job_profile_id': null,
+    'cv_source': 'generated',
+    'photo_url': null,
+    'cv_photo_url': null,
+    'music': null,
+    ...overrides,
+  };
+
+  test('lit la source prioritaire du CV et le profil métier par défaut', () {
+    final profile = Profile.fromJson(apiProfile({'cv_source': 'uploaded', 'cv_job_profile_id': 3}));
+
+    expect(profile.cvSource, CvSource.uploaded);
+    expect(profile.cvJobProfileId, 3);
+  });
+
+  test('cv_source absent ou inconnu : CV généré', () {
+    expect(Profile.fromJson(apiProfile({'cv_source': null})).cvSource, CvSource.generated);
+    expect(Profile.fromJson(apiProfile({'cv_source': 'autre'})).cvSource, CvSource.generated);
+  });
+
+  test('social_links en tableau PHP vide [] et textes vides {} ne plantent pas', () {
+    final profile = Profile.fromJson(apiProfile({'social_links': <dynamic>[]}));
+
+    expect(profile.socialLinks.github, isNull);
+    expect(profile.bioShort.isEmpty, isTrue);
+  });
 }

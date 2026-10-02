@@ -44,14 +44,20 @@ class ProjectRepository {
   /// [id] = `null` : création (`POST`). Sinon modification (`_method=PUT`, §3.4).
   ///
   /// Toujours renvoyer la ressource complète (§3.5) : `domains`, `job_profiles`,
-  /// `technologies` et `related_projects` absents videraient ces relations.
+  /// `technologies`, `related_projects` et `key_figures` absents videraient
+  /// ces listes côté serveur.
   Future<Project> save({
     int? id,
     required Translated title,
     required String slug,
+    required Translated tagline,
+    required Translated role,
+    required Translated client,
+    required Translated platform,
     required Translated context,
     required Translated realization,
     required Translated result,
+    required List<KeyFigure> keyFigures,
     required String? accentColor,
     required String? repoUrl,
     required String? demoUrl,
@@ -70,9 +76,14 @@ class ProjectRepository {
     final form = buildFormData({
       'title': title,
       'slug': slug,
+      'tagline': tagline,
+      'role': role,
+      'client': client,
+      'platform': platform,
       'context': context,
       'realization': realization,
       'result': result,
+      'key_figures': [for (final figure in keyFigures) figure.toJson()],
       'accent_color': accentColor,
       'repo_url': repoUrl,
       'demo_url': demoUrl,

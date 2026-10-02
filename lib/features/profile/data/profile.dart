@@ -7,14 +7,30 @@ import '../../../core/models/uploaded_file.dart';
 class SocialLinks {
   const SocialLinks({this.github, this.linkedin});
 
-  factory SocialLinks.fromJson(Map<String, dynamic>? json) =>
-      SocialLinks(github: json?['github'] as String?, linkedin: json?['linkedin'] as String?);
+  /// Tolère `null` et `[]` (tableau PHP vide) en plus de l'objet attendu.
+  factory SocialLinks.fromJson(Object? json) => json is Map
+      ? SocialLinks(github: json['github'] as String?, linkedin: json['linkedin'] as String?)
+      : const SocialLinks();
 
   final String? github;
   final String? linkedin;
 
   SocialLinks copyWith({String? github, String? linkedin}) =>
       SocialLinks(github: github ?? this.github, linkedin: linkedin ?? this.linkedin);
+}
+
+/// Source du CV servi par le site : le PDF importé sur le profil métier, ou
+/// le CV généré à partir du contenu.
+enum CvSource {
+  uploaded('uploaded', 'CV importé'),
+  generated('generated', 'CV généré');
+
+  const CvSource(this.wireValue, this.label);
+
+  final String wireValue;
+  final String label;
+
+  static CvSource fromWire(String? value) => value == uploaded.wireValue ? uploaded : generated;
 }
 
 @immutable
@@ -34,6 +50,8 @@ class Profile {
     required this.cvPhotoUrl,
     required this.music,
     required this.congratulationNotifyMinutes,
+    this.cvJobProfileId,
+    this.cvSource = CvSource.generated,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -46,11 +64,13 @@ class Profile {
     email: json['email'] as String,
     phone: json['phone'] as String?,
     location: json['location'] as String?,
-    socialLinks: SocialLinks.fromJson(json['social_links'] as Map<String, dynamic>?),
+    socialLinks: SocialLinks.fromJson(json['social_links']),
     photoUrl: json['photo_url'] as String?,
     cvPhotoUrl: json['cv_photo_url'] as String?,
-    music: UploadedFile.fromJson(json['music'] as Map<String, dynamic>?),
+    music: json['music'] is Map<String, dynamic> ? UploadedFile.fromJson(json['music'] as Map<String, dynamic>) : null,
     congratulationNotifyMinutes: json['congratulation_notify_minutes'] as int? ?? 10,
+    cvJobProfileId: json['cv_job_profile_id'] as int?,
+    cvSource: CvSource.fromWire(json['cv_source'] as String?),
   );
 
   final String name;
@@ -72,4 +92,10 @@ class Profile {
   /// Au plus une notification push de félicitations par motif sur ce nombre
   /// de minutes (0 = à chaque envoi).
   final int congratulationNotifyMinutes;
+
+  /// Profil métier dont le CV est proposé par défaut (`null` : aucun).
+  final int? cvJobProfileId;
+
+  /// Source prioritaire du CV, pour tout le site.
+  final CvSource cvSource;
 }

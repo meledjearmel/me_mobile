@@ -43,25 +43,30 @@ void main() {
     );
   });
 
-  Future<void> saveArgs({int? id}) => repository.save(
-        id: id,
-        title: const Translated(fr: 'Mon projet', en: 'My project'),
-        slug: 'mon-projet',
-        context: const Translated(),
-        realization: const Translated(),
-        result: const Translated(),
-        accentColor: null,
-        repoUrl: null,
-        demoUrl: null,
-        isFeatured: true,
-        isOpenSource: false,
-        status: ProjectStatus.published,
-        sortOrder: 2,
-        domains: [1, 2],
-        jobProfiles: [3],
-        technologies: [4, 5],
-        relatedProjects: [6],
-      );
+  Future<void> saveArgs({int? id, List<KeyFigure> keyFigures = const []}) => repository.save(
+    id: id,
+    title: const Translated(fr: 'Mon projet', en: 'My project'),
+    slug: 'mon-projet',
+    tagline: const Translated(fr: 'Accroche', en: 'Tagline'),
+    role: const Translated(fr: 'Lead'),
+    client: const Translated(),
+    platform: const Translated(fr: 'Web', en: 'Web'),
+    context: const Translated(),
+    realization: const Translated(),
+    result: const Translated(),
+    keyFigures: keyFigures,
+    accentColor: null,
+    repoUrl: null,
+    demoUrl: null,
+    isFeatured: true,
+    isOpenSource: false,
+    status: ProjectStatus.published,
+    sortOrder: 2,
+    domains: [1, 2],
+    jobProfiles: [3],
+    technologies: [4, 5],
+    relatedProjects: [6],
+  );
 
   test('list envoie les 3 filtres et la recherche', () async {
     adapter.whenRequest(
@@ -140,5 +145,32 @@ void main() {
     final updated = await repository.deleteGalleryImage(1, 'a1');
 
     expect(updated.gallery.single.id, 'a2');
+  });
+
+  test("save envoie l'étude de cas et les chiffres clés (texte vide → chaîne vide, lue null par Laravel)", () async {
+    adapter.whenRequest('POST', '/v1/projects/1', statusCode: 200, body: _projectJson);
+
+    await saveArgs(
+      id: 1,
+      keyFigures: const [
+        KeyFigure(
+          value: '3×',
+          label: Translated(fr: 'plus rapide', en: 'faster'),
+        ),
+        KeyFigure(
+          value: '40 %',
+          label: Translated(fr: 'de coûts en moins', en: 'lower costs'),
+        ),
+      ],
+    );
+
+    final fields = _fieldMap(adapter.requests.single.data as FormData);
+    expect(fields['tagline[fr]'], 'Accroche');
+    expect(fields['role[en]'], '');
+    expect(fields['client[fr]'], '');
+    expect(fields['platform[en]'], 'Web');
+    expect(fields['key_figures[0][value]'], '3×');
+    expect(fields['key_figures[0][label][fr]'], 'plus rapide');
+    expect(fields['key_figures[1][label][en]'], 'lower costs');
   });
 }

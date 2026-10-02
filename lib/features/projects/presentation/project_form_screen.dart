@@ -44,6 +44,13 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   Translated _projectContext = const Translated();
   Translated _realization = const Translated();
   Translated _result = const Translated();
+  // Étude de cas : pas encore éditable ici, mais renvoyée telle quelle pour
+  // ne pas être vidée à l'enregistrement.
+  Translated _tagline = const Translated();
+  Translated _role = const Translated();
+  Translated _client = const Translated();
+  Translated _platform = const Translated();
+  List<KeyFigure> _keyFigures = const [];
   late final _slug = TextEditingController();
   late final _repoUrl = TextEditingController();
   late final _demoUrl = TextEditingController();
@@ -82,6 +89,11 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     _projectContext = project.context;
     _realization = project.realization;
     _result = project.result;
+    _tagline = project.tagline;
+    _role = project.role;
+    _client = project.client;
+    _platform = project.platform;
+    _keyFigures = project.keyFigures;
     _slug.text = project.slug;
     _repoUrl.text = project.repoUrl ?? '';
     _demoUrl.text = project.demoUrl ?? '';
@@ -250,6 +262,11 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
             context: _projectContext,
             realization: _realization,
             result: _result,
+            tagline: _tagline,
+            role: _role,
+            client: _client,
+            platform: _platform,
+            keyFigures: _keyFigures,
             accentColor: _accentColor?.isEmpty ?? true ? null : _accentColor,
             repoUrl: _repoUrl.text.trim().isEmpty ? null : _repoUrl.text.trim(),
             demoUrl: _demoUrl.text.trim().isEmpty ? null : _demoUrl.text.trim(),

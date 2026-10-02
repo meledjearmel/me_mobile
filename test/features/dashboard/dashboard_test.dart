@@ -102,4 +102,34 @@ void main() {
     expect(byKey['cv_photo']!.ok, isFalse);
     expect(byKey['cv_identity']!.ok, isTrue);
   });
+
+  test("cv_downloads : parse le bloc de l'API, et reste à zéro s'il est absent", () {
+    final dashboard = Dashboard.fromJson({
+      ...json,
+      'cv_downloads': {
+        'total': 42,
+        'period_days': 30,
+        'period': 12,
+        'with_email': 5,
+        'by_country': [
+          {'label': "Côte d'Ivoire", 'count': 7},
+          {'label': 'France', 'count': 3},
+        ],
+        'by_origin': [
+          {'label': 'linkedin.com', 'count': 6},
+          {'label': 'direct', 'count': 4},
+        ],
+      },
+    });
+
+    expect(dashboard.cvDownloads.total, 42);
+    expect(dashboard.cvDownloads.period, 12);
+    expect(dashboard.cvDownloads.withEmail, 5);
+    expect(dashboard.cvDownloads.byCountry.first.label, "Côte d'Ivoire");
+    expect(dashboard.cvDownloads.byOrigin.last.count, 4);
+
+    final withoutBlock = Dashboard.fromJson(json);
+    expect(withoutBlock.cvDownloads.total, 0);
+    expect(withoutBlock.cvDownloads.byCountry, isEmpty);
+  });
 }

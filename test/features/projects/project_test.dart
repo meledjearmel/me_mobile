@@ -21,7 +21,15 @@ const _fullJson = {
     {'id': 'a2', 'url': 'https://me.armeldev.xyz/gallery/2.jpg'},
   ],
   'domains': [
-    {'id': 1, 'key': 'web', 'label': {'fr': 'Web', 'en': 'Web'}, 'color': '#3b82f6', 'icon': 'globe', 'sort_order': 1, 'status': 'published'},
+    {
+      'id': 1,
+      'key': 'web',
+      'label': {'fr': 'Web', 'en': 'Web'},
+      'color': '#3b82f6',
+      'icon': 'globe',
+      'sort_order': 1,
+      'status': 'published',
+    },
   ],
   'job_profiles': [
     {
@@ -80,5 +88,61 @@ void main() {
 
   test('statut inconnu retombe sur "published" plutôt que de planter', () {
     expect(ProjectStatus.fromWire('autre'), ProjectStatus.published);
+  });
+
+  group('étude de cas', () {
+    test('champs vides : null (étude de cas) et {} (texte facultatif) donnent des textes vides', () {
+      final project = Project.fromJson({
+        ..._fullJson,
+        'tagline': null,
+        'role': null,
+        'client': null,
+        'platform': null,
+        'context': <String, dynamic>{},
+        'key_figures': <dynamic>[],
+      });
+
+      expect(project.tagline.isEmpty, isTrue);
+      expect(project.role.isEmpty, isTrue);
+      expect(project.client.isEmpty, isTrue);
+      expect(project.platform.isEmpty, isTrue);
+      expect(project.context.isEmpty, isTrue);
+      expect(project.keyFigures, isEmpty);
+    });
+
+    test('champs renseignés, dont un dans une seule langue', () {
+      final project = Project.fromJson({
+        ..._fullJson,
+        'tagline': {'fr': 'Une accroche', 'en': 'A tagline'},
+        'role': {'fr': 'Lead développeur'},
+        'client': {'fr': 'Organisme public', 'en': 'Public body'},
+        'platform': {'fr': 'Web · API REST', 'en': 'Web · REST API'},
+        'key_figures': [
+          {
+            'value': '3×',
+            'label': {'fr': 'plus rapide', 'en': 'faster'},
+          },
+          {
+            'value': '40 %',
+            'label': {'fr': 'de coûts en moins', 'en': 'lower costs'},
+          },
+        ],
+      });
+
+      expect(project.tagline.en, 'A tagline');
+      expect(project.role.fr, 'Lead développeur');
+      expect(project.role.en, '');
+      expect(project.platform.display, 'Web · API REST');
+      expect(project.keyFigures, hasLength(2));
+      expect(project.keyFigures.first.value, '3×');
+      expect(project.keyFigures.last.label.en, 'lower costs');
+    });
+
+    test('champs absents (ancienne réponse) : valeurs vides', () {
+      final project = Project.fromJson(_fullJson);
+
+      expect(project.tagline.isEmpty, isTrue);
+      expect(project.keyFigures, isEmpty);
+    });
   });
 }
