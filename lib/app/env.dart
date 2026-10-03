@@ -5,7 +5,7 @@
 abstract final class Env {
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://me.armeldev.xyz/api',
+    defaultValue: 'https://armeldev.xyz/api',
   );
 
   /// Racine du site public (sans `/api`), pour les liens « Voir le site ».

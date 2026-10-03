@@ -20,7 +20,7 @@ const _jobProfileJson = {
   'sort_order': 1,
   'status': 'published',
   'cv_files': {
-    'fr': {'file_name': 'cv-fr.pdf', 'url': 'https://me.armeldev.xyz/cv/cv-fr.pdf'},
+    'fr': {'file_name': 'cv-fr.pdf', 'url': 'https://armeldev.xyz/cv/cv-fr.pdf'},
     'en': null,
   },
 };
@@ -42,7 +42,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     repository = JobProfileRepository(
-      ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
+      ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
     );
   });
 

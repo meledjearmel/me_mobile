@@ -33,7 +33,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     tokens = _MemoryTokenStorage();
-    final client = ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: tokens, adapter: adapter);
+    final client = ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: tokens, adapter: adapter);
     container = ProviderContainer(
       overrides: [
         tokenStorageProvider.overrideWithValue(tokens),

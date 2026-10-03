@@ -62,7 +62,7 @@ void main() {
 
   setUp(() {
     adapter = FakeDioAdapter();
-    api = ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter);
+    api = ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter);
   });
 
   group('TechnologyRepository', () {

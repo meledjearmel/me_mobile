@@ -15,9 +15,9 @@ void main() {
       'phone': '+225 00 00 00 00',
       'location': 'Abidjan',
       'social_links': {'github': 'https://github.com/armel', 'linkedin': null},
-      'photo_url': 'https://me.armeldev.xyz/photo.jpg',
+      'photo_url': 'https://armeldev.xyz/photo.jpg',
       'cv_photo_url': null,
-      'music': {'file_name': 'ambient.mp3', 'url': 'https://me.armeldev.xyz/music/ambient.mp3'},
+      'music': {'file_name': 'ambient.mp3', 'url': 'https://armeldev.xyz/music/ambient.mp3'},
     });
 
     expect(profile.name, 'Armel Meledje');

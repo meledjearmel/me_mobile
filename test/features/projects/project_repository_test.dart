@@ -39,7 +39,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     repository = ProjectRepository(
-      ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
+      ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
     );
   });
 
@@ -137,7 +137,7 @@ void main() {
       body: {
         ..._projectJson,
         'gallery': [
-          {'id': 'a2', 'url': 'https://me.armeldev.xyz/gallery/2.jpg'},
+          {'id': 'a2', 'url': 'https://armeldev.xyz/gallery/2.jpg'},
         ],
       },
     );

@@ -18,7 +18,7 @@ ProviderContainer _buildContainer({
   required FakeDioAdapter adapter,
   required FakeBiometricPreferences biometrics,
 }) {
-  final client = ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: tokens, adapter: adapter);
+  final client = ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: tokens, adapter: adapter);
   return ProviderContainer(
     overrides: [
       tokenStorageProvider.overrideWithValue(tokens),

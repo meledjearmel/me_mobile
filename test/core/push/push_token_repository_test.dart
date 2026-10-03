@@ -12,7 +12,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     final client = ApiClient(
-      baseUrl: 'https://me.armeldev.xyz/api',
+      baseUrl: 'https://armeldev.xyz/api',
       tokens: MemoryTokenStorage(),
       adapter: adapter,
     );

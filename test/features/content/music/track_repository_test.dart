@@ -13,7 +13,7 @@ const _trackJson = {
   'title': 'Calme',
   'artist': null,
   'sort_order': 1,
-  'audio_url': 'https://me.armeldev.xyz/music/calme.mp3',
+  'audio_url': 'https://armeldev.xyz/music/calme.mp3',
 };
 
 Map<String, String> _fieldMap(FormData form) => {for (final e in form.fields) e.key: e.value};
@@ -32,7 +32,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     repository = TrackRepository(
-      ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
+      ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
     );
   });
 

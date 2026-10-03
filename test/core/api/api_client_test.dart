@@ -30,7 +30,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     tokens = _MemoryTokenStorage();
-    client = ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: tokens, adapter: adapter);
+    client = ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: tokens, adapter: adapter);
   });
 
   test('ajoute Accept: application/json à chaque requête', () async {
@@ -117,7 +117,7 @@ void main() {
 
   test('une absence de réponse (hors ligne) devient NetworkException', () async {
     final offline = ApiClient(
-      baseUrl: 'https://me.armeldev.xyz/api',
+      baseUrl: 'https://armeldev.xyz/api',
       tokens: tokens,
       adapter: _ThrowingAdapter(),
     );

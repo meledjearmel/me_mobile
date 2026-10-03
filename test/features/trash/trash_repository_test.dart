@@ -48,7 +48,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     repository = TrashRepository(
-      ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
+      ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
     );
   });
 

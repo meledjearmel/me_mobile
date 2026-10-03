@@ -18,7 +18,7 @@ void main() {
 
     setUp(() {
       adapter = FakeDioAdapter();
-      final client = ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter);
+      final client = ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter);
       container = ProviderContainer(overrides: [apiClientProvider.overrideWithValue(client)]);
       addTearDown(container.dispose);
     });

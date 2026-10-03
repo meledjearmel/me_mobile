@@ -14,7 +14,7 @@ void main() {
   setUp(() {
     adapter = FakeDioAdapter();
     repository = TechnologyIconRepository(
-      ApiClient(baseUrl: 'https://me.armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
+      ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
     );
   });
 

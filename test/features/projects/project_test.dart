@@ -15,10 +15,10 @@ const _fullJson = {
   'is_open_source': true,
   'status': 'published',
   'sort_order': 3,
-  'cover_url': 'https://me.armeldev.xyz/covers/1.jpg',
+  'cover_url': 'https://armeldev.xyz/covers/1.jpg',
   'gallery': [
-    {'id': 'a1', 'url': 'https://me.armeldev.xyz/gallery/1.jpg'},
-    {'id': 'a2', 'url': 'https://me.armeldev.xyz/gallery/2.jpg'},
+    {'id': 'a1', 'url': 'https://armeldev.xyz/gallery/1.jpg'},
+    {'id': 'a2', 'url': 'https://armeldev.xyz/gallery/2.jpg'},
   ],
   'domains': [
     {
