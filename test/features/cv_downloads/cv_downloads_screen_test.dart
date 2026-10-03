@@ -112,16 +112,25 @@ void main() {
     expect(find.text("Abidjan, Côte d'Ivoire"), findsNothing);
   });
 
-  testWidgets('la carte des Statistiques montre la période, le total et le premier pays', (tester) async {
+  testWidgets("la carte (accueil, Statistiques) montre la période, le total et le premier pays, et s'ouvre", (
+    tester,
+  ) async {
+    var opened = false;
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.build(AppPaletteVariant.values.first, Brightness.dark),
-        home: const Scaffold(body: CvDownloadsCard(summary: _summary)),
+        home: Scaffold(
+          body: CvDownloadsCard(summary: _summary, onTap: () => opened = true),
+        ),
       ),
     );
 
     expect(find.text('12'), findsOneWidget);
+    expect(find.text('CV téléchargés'), findsOneWidget);
     expect(find.textContaining("42 au total · 5 avec email · Côte d'Ivoire"), findsOneWidget);
+
+    await tester.tap(find.byType(CvDownloadsCard));
+    expect(opened, isTrue);
   });
 
   test('flagEmoji convertit un code ISO et ignore le reste', () {

@@ -476,6 +476,7 @@ class CvDownloadsCard extends StatelessWidget {
                   '${summary.period}',
                   style: theme.textTheme.headlineSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
                 ),
+                Text('CV téléchargés', style: theme.textTheme.bodySmall),
                 const SizedBox(height: 2),
                 Text(
                   ['${summary.total} au total', '${summary.withEmail} avec email', ?topCountry].join(' · '),

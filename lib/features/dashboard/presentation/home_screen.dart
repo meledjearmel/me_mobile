@@ -13,6 +13,7 @@ import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../auth/application/session_controller.dart';
 import '../../celebrations/presentation/congratulations_screen.dart';
+import '../../cv_downloads/presentation/cv_downloads_screen.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
 import '../data/health_labels.dart';
@@ -231,6 +232,11 @@ class _DashboardBody extends StatelessWidget {
           count: content.congratulations,
           onTap: () =>
               Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CongratulationsScreen())),
+        ),
+        const SizedBox(height: 10),
+        CvDownloadsCard(
+          summary: dashboard.cvDownloads,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CvDownloadsScreen())),
         ),
         gap,
         const SectionHeader('À compléter'),
