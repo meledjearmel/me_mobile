@@ -53,6 +53,7 @@ class Profile {
     required this.congratulationNotifyMinutes,
     this.cvJobProfileId,
     this.cvSource = CvSource.uploaded,
+    this.testimonialVideoEnabled = false,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -72,6 +73,7 @@ class Profile {
     congratulationNotifyMinutes: json['congratulation_notify_minutes'] as int? ?? 10,
     cvJobProfileId: json['cv_job_profile_id'] as int?,
     cvSource: CvSource.fromWire(json['cv_source'] as String?),
+    testimonialVideoEnabled: json['testimonial_video_enabled'] as bool? ?? false,
   );
 
   final String name;
@@ -99,4 +101,7 @@ class Profile {
 
   /// Source prioritaire du CV, pour tout le site.
   final CvSource cvSource;
+
+  /// Les visiteurs peuvent joindre ou filmer une vidéo avec leur avis.
+  final bool testimonialVideoEnabled;
 }

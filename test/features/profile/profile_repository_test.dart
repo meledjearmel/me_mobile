@@ -120,5 +120,6 @@ void main() {
     expect(fields['congratulation_notify_minutes'], '30');
     expect(fields.containsKey('cv_source'), isFalse);
     expect(fields.containsKey('cv_job_profile_id'), isFalse);
+    expect(fields.containsKey('testimonial_video_enabled'), isFalse);
   });
 }

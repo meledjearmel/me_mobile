@@ -92,5 +92,40 @@ void main() {
       expect(testimonial.project!.slug, 'mon-projet');
       expect(testimonial.project!.title.en, 'My project');
     });
+
+    test('accroche, transcription et vidéo sont parsées', () {
+      final testimonial = Testimonial.fromJson({
+        'id': 1,
+        'author_name': 'Alice',
+        'author_email': 'a@example.com',
+        'author_role': null,
+        'content': {'fr': 'Bien', 'en': 'Good'},
+        'highlight': {'fr': 'Top', 'en': 'Great'},
+        'video_transcript': [],
+        'video': {
+          'url': 'https://armeldev.xyz/v.mp4',
+          'poster_url': null,
+          'duration': 65,
+          'width': 720,
+          'height': 1280,
+          'uploaded_at': '2026-10-03T10:00:00Z',
+        },
+        'status': 'pending',
+        'project': null,
+        'submitted_at': '2026-09-25T10:00:00Z',
+      });
+
+      expect(testimonial.highlight.en, 'Great');
+      expect(testimonial.videoTranscript.isEmpty, isTrue);
+      expect(testimonial.video!.durationLabel, '1:05');
+      expect(testimonial.video!.aspectRatio, 720 / 1280);
+    });
+
+    test('une vidéo non traitée garde un format 16:9 et pas de durée', () {
+      const video = TestimonialVideo(url: 'https://armeldev.xyz/v.mp4');
+
+      expect(video.durationLabel, isNull);
+      expect(video.aspectRatio, 16 / 9);
+    });
   });
 }

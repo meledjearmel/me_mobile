@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:me_mobile/core/api/api_client.dart';
 import 'package:me_mobile/core/api/api_exception.dart';
@@ -32,7 +33,12 @@ void main() {
   });
 
   test('updateStatus (modération rapide) n\'envoie que le statut', () async {
-    adapter.whenRequest('PUT', '/v1/testimonials/9', statusCode: 200, body: {..._testimonialJson, 'status': 'approved'});
+    adapter.whenRequest(
+      'PUT',
+      '/v1/testimonials/9',
+      statusCode: 200,
+      body: {..._testimonialJson, 'status': 'approved'},
+    );
 
     final updated = await repository.updateStatus(9, TestimonialStatus.approved);
 
@@ -41,8 +47,8 @@ void main() {
     expect(body, {'status': 'approved'});
   });
 
-  test('updateContent envoie la modération et la correction de texte ensemble', () async {
-    adapter.whenRequest('PUT', '/v1/testimonials/9', statusCode: 200, body: _testimonialJson);
+  test('updateContent envoie modération, texte, accroche et transcription en multipart', () async {
+    adapter.whenRequest('POST', '/v1/testimonials/9', statusCode: 200, body: _testimonialJson);
 
     await repository.updateContent(
       9,
@@ -51,13 +57,29 @@ void main() {
       authorName: 'Alice B.',
       authorRole: null,
       content: const Translated(fr: 'Corrigé', en: 'Fixed'),
+      highlight: const Translated(fr: 'Top'),
+      videoTranscript: const Translated(en: 'Hello'),
     );
 
-    final body = adapter.requests.single.data as Map;
-    expect(body['author_name'], 'Alice B.');
-    expect(body['author_role'], isNull);
-    expect(body['content'], {'fr': 'Corrigé', 'en': 'Fixed'});
-    expect(body['is_featured'], isTrue);
+    final form = adapter.requests.single.data as FormData;
+    final fields = {for (final f in form.fields) f.key: f.value};
+    expect(fields['_method'], 'PUT');
+    expect(fields['author_name'], 'Alice B.');
+    expect(fields['author_role'], '');
+    expect(fields['content[fr]'], 'Corrigé');
+    expect(fields['content[en]'], 'Fixed');
+    expect(fields['highlight[fr]'], 'Top');
+    expect(fields['video_transcript[en]'], 'Hello');
+    expect(fields['is_featured'], '1');
+    expect(form.files, isEmpty);
+  });
+
+  test('deleteVideo retire la vidéo et renvoie l\'avis texte', () async {
+    adapter.whenRequest('DELETE', '/v1/testimonials/9/video', statusCode: 200, body: _testimonialJson);
+
+    final updated = await repository.deleteVideo(9);
+
+    expect(updated.video, isNull);
   });
 
   test('un 422 sur is_featured est réécrit avec le message des trois avis maximum', () async {
@@ -87,7 +109,7 @@ void main() {
 
   test('un 422 sur un autre champ garde le message d\'origine', () async {
     adapter.whenRequest(
-      'PUT',
+      'POST',
       '/v1/testimonials/9',
       statusCode: 422,
       body: {

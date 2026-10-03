@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/models/translated.dart';
@@ -12,6 +14,7 @@ import '../../../../shared/widgets/translated_field.dart';
 import '../../application/testimonial_list_controller.dart';
 import '../../data/testimonial.dart';
 import '../../data/testimonial_repository.dart';
+import 'testimonial_video_card.dart';
 
 /// Modération et correction de texte d'un avis, dans la même requête `PUT` (§4.2).
 class TestimonialEditScreen extends ConsumerStatefulWidget {
@@ -32,8 +35,13 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
   late final _nameController = TextEditingController();
   late final _roleController = TextEditingController();
   Translated _content = const Translated();
+  Translated _highlight = const Translated();
+  Translated _videoTranscript = const Translated();
+  XFile? _videoPending;
 
   bool _saving = false;
+  bool _removingVideo = false;
+  double? _uploadProgress;
   bool _dirty = false;
   String? _error;
 
@@ -45,6 +53,8 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
     _nameController.text = testimonial.authorName;
     _roleController.text = testimonial.authorRole ?? '';
     _content = testimonial.content;
+    _highlight = testimonial.highlight;
+    _videoTranscript = testimonial.videoTranscript;
     return testimonial;
   }
 
@@ -79,7 +89,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
     setState(() {
       _saving = true;
       _error = null;
+      _uploadProgress = null;
     });
+    final pending = _videoPending;
     try {
       final updated = await ref
           .read(testimonialRepositoryProvider)
@@ -90,6 +102,16 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
             authorName: _nameController.text.trim(),
             authorRole: _roleController.text.trim().isEmpty ? null : _roleController.text.trim(),
             content: _content,
+            highlight: _highlight,
+            videoTranscript: _videoTranscript,
+            video: pending == null ? null : await dio.MultipartFile.fromFile(pending.path, filename: pending.name),
+            onProgress: pending == null
+                ? null
+                : (sent, total) {
+                    if (total > 0 && mounted) {
+                      setState(() => _uploadProgress = sent / total);
+                    }
+                  },
           );
       ref.read(testimonialListProvider.notifier).updateItem((t) => t.id == widget.id, (t) => updated);
       _dirty = false;
@@ -102,7 +124,45 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
       setState(() => _error = e.message);
     } finally {
       if (mounted) {
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          _uploadProgress = null;
+        });
+      }
+    }
+  }
+
+  /// Immédiat, hors enregistrement : seul le reste du formulaire reste à valider.
+  Future<void> _removeVideo() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Retirer la vidéo ?'),
+        content: const Text('La vidéo et son aperçu sont supprimés : l\'avis redevient un avis texte.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Retirer')),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    setState(() => _removingVideo = true);
+    try {
+      final updated = await ref.read(testimonialRepositoryProvider).deleteVideo(widget.id);
+      ref.read(testimonialListProvider.notifier).updateItem((t) => t.id == widget.id, (t) => updated);
+      setState(() {
+        _testimonial = updated;
+        _future = Future.value(updated);
+      });
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _removingVideo = false);
       }
     }
   }
@@ -168,7 +228,7 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
           future: _future,
           // Pas d'enregistrement tant que le formulaire n'est pas chargé.
           builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && !snapshot.hasError
-              ? SaveBar(onPressed: _save, saving: _saving)
+              ? SaveBar(onPressed: _save, saving: _saving, progress: _uploadProgress)
               : const SizedBox.shrink(),
         ),
         body: FutureBuilder<Testimonial>(
@@ -281,9 +341,48 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
                           _markDirty();
                         },
                       ),
+                      const SizedBox(height: 12),
+                      TranslatedField(
+                        label: 'Accroche (facultative)',
+                        value: _highlight,
+                        maxLines: 2,
+                        maxLength: 280,
+                        onChanged: (value) {
+                          setState(() => _highlight = value);
+                          _markDirty();
+                        },
+                      ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 12),
+                TestimonialVideoCard(
+                  video: testimonial.video,
+                  pendingFile: _videoPending,
+                  removing: _removingVideo,
+                  onPicked: (file) {
+                    setState(() => _videoPending = file);
+                    _markDirty();
+                  },
+                  onCancelPending: () => setState(() => _videoPending = null),
+                  onRemove: _removeVideo,
+                ),
+                if (testimonial.video != null || _videoPending != null) ...[
+                  const SizedBox(height: 12),
+                  SurfaceCard(
+                    radius: 22,
+                    child: TranslatedField(
+                      label: 'Transcription (facultative)',
+                      value: _videoTranscript,
+                      maxLines: 6,
+                      maxLength: 10000,
+                      onChanged: (value) {
+                        setState(() => _videoTranscript = value);
+                        _markDirty();
+                      },
+                    ),
+                  ),
+                ],
               ],
             );
           },

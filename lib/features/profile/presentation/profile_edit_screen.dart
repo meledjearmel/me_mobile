@@ -45,6 +45,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late Translated _bioFull = widget.profile.bioFull;
   late int? _cvJobProfileId = widget.profile.cvJobProfileId;
   late CvSource _cvSource = widget.profile.cvSource;
+  late bool _testimonialVideoEnabled = widget.profile.testimonialVideoEnabled;
 
   XFile? _photo;
   XFile? _cvPhoto;
@@ -171,6 +172,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             cvSource: _cvSource,
             cvJobProfileId: _cvJobProfileId,
             clearCvJobProfile: _cvJobProfileId == null,
+            testimonialVideoEnabled: _testimonialVideoEnabled,
             music: _music == null ? null : dio.MultipartFile.fromFileSync(_music!.path!, filename: _music!.name),
             onProgress: (sent, total) {
               if (total > 0 && mounted) {
@@ -361,6 +363,23 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 setState(() => _cvSource = source);
                 _markDirty();
               },
+            ),
+            const SizedBox(height: 12),
+            SurfaceCard(
+              radius: 22,
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Avis vidéo des visiteurs'),
+                subtitle: Text(
+                  v?.errorFor('testimonial_video_enabled') ??
+                      'Les visiteurs peuvent joindre ou filmer une vidéo avec leur avis.',
+                ),
+                value: _testimonialVideoEnabled,
+                onChanged: (value) {
+                  setState(() => _testimonialVideoEnabled = value);
+                  _markDirty();
+                },
+              ),
             ),
             const SizedBox(height: 12),
             SurfaceCard(

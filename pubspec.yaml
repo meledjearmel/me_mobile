@@ -55,6 +55,7 @@ dependencies:
   # incompatible avec flutter_plugin_android_lifecycle qui exige 36+.
   file_picker: ^13.1.0
   flutter_svg: ^2.3.0
+  video_player: ^2.14.1
 
 dev_dependencies:
   flutter_test:

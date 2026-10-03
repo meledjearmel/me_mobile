@@ -166,6 +166,16 @@ class _TestimonialCard extends StatelessWidget {
               InitialsTile(testimonial.authorName, size: 36),
               const SizedBox(width: 10),
               Expanded(child: Text(testimonial.authorName, style: theme.textTheme.titleSmall)),
+              if (testimonial.video != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Icons.videocam_outlined,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    semanticLabel: 'Avis vidéo',
+                  ),
+                ),
               if (testimonial.isFeatured)
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
@@ -182,6 +192,15 @@ class _TestimonialCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 10),
+          if (!testimonial.highlight.isEmpty) ...[
+            Text(
+              '« ${testimonial.highlight.display} »',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+          ],
           Text(
             testimonial.content.display,
             maxLines: 3,

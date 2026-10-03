@@ -43,6 +43,7 @@ class ProfileRepository {
     CvSource? cvSource,
     int? cvJobProfileId,
     bool clearCvJobProfile = false,
+    bool? testimonialVideoEnabled,
     void Function(int sent, int total)? onProgress,
   }) async {
     final form = buildFormData({
@@ -63,6 +64,7 @@ class ProfileRepository {
       // Facultatifs (`sometimes`) : absents, l'API garde la valeur actuelle.
       if (cvSource != null) 'cv_source': cvSource.wireValue,
       if (cvJobProfileId != null || clearCvJobProfile) 'cv_job_profile_id': cvJobProfileId,
+      if (testimonialVideoEnabled != null) 'testimonial_video_enabled': testimonialVideoEnabled,
     }, method: 'PATCH');
 
     final json = await _api.upload('/v1/profile', form, onProgress: onProgress);
