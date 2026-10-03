@@ -24,6 +24,7 @@ class TranslatedField extends ConsumerStatefulWidget {
     this.maxLines = 1,
     this.maxLength,
     this.generate,
+    this.optional = false,
   });
 
   final String label;
@@ -38,6 +39,10 @@ class TranslatedField extends ConsumerStatefulWidget {
   /// Quand il est fourni, « Générer » remplace « Améliorer » dans le menu IA et
   /// reste disponible sur un champ vide.
   final Future<Translated> Function()? generate;
+
+  /// Champ facultatif : vide dans les deux langues, il n'est pas signalé. Une
+  /// seule langue remplie fait toujours signaler l'autre.
+  final bool optional;
 
   @override
   ConsumerState<TranslatedField> createState() => _TranslatedFieldState();
@@ -67,6 +72,8 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
     }
   }
 
+  bool _isMissing(String locale) => widget.value[locale].trim().isEmpty && !(widget.optional && widget.value.isEmpty);
+
   @override
   void dispose() {
     for (final controller in _controllers.values) {
@@ -77,7 +84,7 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
 
   bool _hasWarning(String locale) {
     final error = locale == 'en' ? widget.errorEn : widget.errorFr;
-    return error != null || widget.value[locale].trim().isEmpty;
+    return error != null || _isMissing(locale);
   }
 
   Future<void> _openAiMenu() async {
@@ -157,11 +164,9 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
     final target = _otherLocale;
     setState(() => _assisting = true);
     try {
-      final result = await ref.read(aiAssistRepositoryProvider).translate(
-            text: source,
-            sourceLocale: _locale,
-            targetLocale: target,
-          );
+      final result = await ref
+          .read(aiAssistRepositoryProvider)
+          .translate(text: source, sourceLocale: _locale, targetLocale: target);
       if (!mounted) {
         return;
       }
@@ -195,12 +200,9 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
     final locale = _locale;
     setState(() => _assisting = true);
     try {
-      final result = await ref.read(aiAssistRepositoryProvider).improve(
-            text: widget.value[locale],
-            locale: locale,
-            tone: options.tone,
-            instructions: options.instructions,
-          );
+      final result = await ref
+          .read(aiAssistRepositoryProvider)
+          .improve(text: widget.value[locale], locale: locale, tone: options.tone, instructions: options.instructions);
       if (!mounted) {
         return;
       }
@@ -263,9 +265,7 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
                   ButtonSegment(
                     value: locale,
                     label: Text(locale.toUpperCase()),
-                    icon: _hasWarning(locale)
-                        ? Icon(Icons.circle, size: 8, color: theme.colorScheme.error)
-                        : null,
+                    icon: _hasWarning(locale) ? Icon(Icons.circle, size: 8, color: theme.colorScheme.error) : null,
                   ),
               ],
               selected: {_locale},
@@ -289,7 +289,7 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
               ),
             ),
           ),
-        if (error == null && widget.value[_locale].trim().isEmpty)
+        if (error == null && _isMissing(_locale))
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Text(
@@ -326,12 +326,7 @@ class _ImproveOptionsSheetState extends State<_ImproveOptionsSheet> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../app/theme/app_palette.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/models/translated.dart';
 import '../../../core/utils/hex_color.dart';
@@ -19,6 +20,7 @@ import '../../../shared/widgets/translated_field.dart';
 import '../../content/data/reference_repository.dart';
 import '../application/project_list_controller.dart';
 import '../data/project.dart';
+import 'widgets/key_figures_editor.dart';
 import '../data/project_repository.dart';
 import '../../../shared/widgets/color_picker_field.dart';
 import 'widgets/gallery_grid.dart';
@@ -44,8 +46,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   Translated _projectContext = const Translated();
   Translated _realization = const Translated();
   Translated _result = const Translated();
-  // Étude de cas : pas encore éditable ici, mais renvoyée telle quelle pour
-  // ne pas être vidée à l'enregistrement.
+  // Étude de cas : toujours renvoyée, l'API vide les chiffres clés absents.
   Translated _tagline = const Translated();
   Translated _role = const Translated();
   Translated _client = const Translated();
@@ -500,6 +501,81 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                 ),
                 gap,
                 FormSection(
+                  title: 'Étude de cas',
+                  summary: _keyFigures.isEmpty
+                      ? null
+                      : '${_keyFigures.length} chiffre${_keyFigures.length > 1 ? 's' : ''}',
+                  hasError:
+                      anyError([
+                        for (final field in ['tagline', 'role', 'client', 'platform']) ...['$field.fr', '$field.en'],
+                      ]) ||
+                      (v?.errors.keys.any((key) => key.startsWith('key_figures')) ?? false),
+                  children: [
+                    TranslatedField(
+                      label: 'Accroche',
+                      optional: true,
+                      value: _tagline,
+                      maxLines: 2,
+                      maxLength: 160,
+                      errorFr: v?.errorFor('tagline.fr'),
+                      errorEn: v?.errorFor('tagline.en'),
+                      onChanged: (value) {
+                        setState(() => _tagline = value);
+                        _markDirty();
+                      },
+                    ),
+                    const _FieldHint('Vide : le site reprend la première phrase du contexte.'),
+                    const _SubHeading("Fiche d'identité"),
+                    TranslatedField(
+                      label: 'Rôle',
+                      optional: true,
+                      value: _role,
+                      maxLength: 120,
+                      errorFr: v?.errorFor('role.fr'),
+                      errorEn: v?.errorFor('role.en'),
+                      onChanged: (value) {
+                        setState(() => _role = value);
+                        _markDirty();
+                      },
+                    ),
+                    TranslatedField(
+                      label: 'Client',
+                      optional: true,
+                      value: _client,
+                      maxLength: 120,
+                      errorFr: v?.errorFor('client.fr'),
+                      errorEn: v?.errorFor('client.en'),
+                      onChanged: (value) {
+                        setState(() => _client = value);
+                        _markDirty();
+                      },
+                    ),
+                    const _FieldHint('Anonymisé : « Organisme public », « Projet personnel »…'),
+                    TranslatedField(
+                      label: 'Plateforme',
+                      optional: true,
+                      value: _platform,
+                      maxLength: 120,
+                      errorFr: v?.errorFor('platform.fr'),
+                      errorEn: v?.errorFor('platform.en'),
+                      onChanged: (value) {
+                        setState(() => _platform = value);
+                        _markDirty();
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    KeyFiguresEditor(
+                      value: _keyFigures,
+                      errorFor: (key) => v?.errorFor(key),
+                      onChanged: (figures) {
+                        setState(() => _keyFigures = figures);
+                        _markDirty();
+                      },
+                    ),
+                  ],
+                ),
+                gap,
+                FormSection(
                   title: 'Description',
                   hasError: anyError([
                     'context.fr',
@@ -735,4 +811,34 @@ class _CoverPicker extends StatelessWidget {
     alignment: Alignment.center,
     child: Icon(Icons.add_photo_alternate_outlined, size: 32, color: theme.colorScheme.onSurfaceVariant),
   );
+}
+
+/// Aide grise sous un champ.
+class _FieldHint extends StatelessWidget {
+  const _FieldHint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 4),
+      child: Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.appColors.muted)),
+    );
+  }
+}
+
+/// Sous-titre discret à l'intérieur d'une section.
+class _SubHeading extends StatelessWidget {
+  const _SubHeading(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+    );
+  }
 }
