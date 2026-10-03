@@ -30,7 +30,8 @@ enum CvSource {
   final String wireValue;
   final String label;
 
-  static CvSource fromWire(String? value) => value == uploaded.wireValue ? uploaded : generated;
+  /// Défaut côté serveur : `uploaded` (le CV généré sert alors de repli).
+  static CvSource fromWire(String? value) => value == generated.wireValue ? generated : uploaded;
 }
 
 @immutable
@@ -51,7 +52,7 @@ class Profile {
     required this.music,
     required this.congratulationNotifyMinutes,
     this.cvJobProfileId,
-    this.cvSource = CvSource.generated,
+    this.cvSource = CvSource.uploaded,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(

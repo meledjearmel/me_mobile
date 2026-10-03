@@ -15,6 +15,7 @@ import '../../../shared/widgets/translated_field.dart';
 import '../application/profile_providers.dart';
 import '../data/profile.dart';
 import '../data/profile_repository.dart';
+import 'widgets/cv_settings_card.dart';
 import 'widgets/photo_picker_tile.dart';
 
 const _maxPhotoBytes = 5 * 1024 * 1024;
@@ -42,6 +43,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late Translated _headline = widget.profile.headline;
   late Translated _bioShort = widget.profile.bioShort;
   late Translated _bioFull = widget.profile.bioFull;
+  late int? _cvJobProfileId = widget.profile.cvJobProfileId;
+  late CvSource _cvSource = widget.profile.cvSource;
 
   XFile? _photo;
   XFile? _cvPhoto;
@@ -165,6 +168,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ),
             photo: _photoMultipart(_photo),
             cvPhoto: _photoMultipart(_cvPhoto),
+            cvSource: _cvSource,
+            cvJobProfileId: _cvJobProfileId,
+            clearCvJobProfile: _cvJobProfileId == null,
             music: _music == null ? null : dio.MultipartFile.fromFileSync(_music!.path!, filename: _music!.name),
             onProgress: (sent, total) {
               if (total > 0 && mounted) {
@@ -342,6 +348,21 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            CvSettingsCard(
+              jobProfileId: _cvJobProfileId,
+              source: _cvSource,
+              jobProfileError: v?.errorFor('cv_job_profile_id'),
+              sourceError: v?.errorFor('cv_source'),
+              onJobProfileChanged: (id) {
+                setState(() => _cvJobProfileId = id);
+                _markDirty();
+              },
+              onSourceChanged: (source) {
+                setState(() => _cvSource = source);
+                _markDirty();
+              },
+            ),
+            const SizedBox(height: 12),
             SurfaceCard(
               radius: 22,
               child: Column(
@@ -350,8 +371,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   Text('Musique du site', style: theme.textTheme.labelLarge),
                   const SizedBox(height: 4),
                   Text(
-                    'Sans musique uploadée, le site joue une piste par défaut. Le CV se gère '
-                    'désormais par profil métier (Contenu → Profils métier).',
+                    'Sans musique uploadée, le site joue une piste par défaut.',
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 12),

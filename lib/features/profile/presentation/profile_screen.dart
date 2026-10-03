@@ -52,14 +52,18 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _ProfileBody extends StatelessWidget {
+class _ProfileBody extends ConsumerWidget {
   const _ProfileBody({required this.profile});
 
   final Profile profile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // Même règle que le site : le profil choisi s'il est publié, sinon le premier publié.
+    final published = ref.watch(publishedJobProfilesProvider).asData?.value ?? const [];
+    final cvJobProfileLabel =
+        (published.where((p) => p.id == profile.cvJobProfileId).firstOrNull ?? published.firstOrNull)?.label.display;
 
     return ListView(
       padding: pageInsets(context, horizontal: 20, bottom: 96),
@@ -141,12 +145,18 @@ class _ProfileBody extends StatelessWidget {
           Text(profile.bioFull.display),
         ],
         const SizedBox(height: 20),
-        Text('Musique', style: theme.textTheme.labelLarge),
-        const SizedBox(height: 4),
-        Text(
-          'Le CV se gère par profil métier (Contenu → Profils métier).',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        Text('CV du site', style: theme.textTheme.labelLarge),
+        const SizedBox(height: 8),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: Text(cvJobProfileLabel ?? 'Premier profil publié'),
+            subtitle: Text(profile.cvSource.label),
+          ),
         ),
+        const SizedBox(height: 20),
+        Text('Musique', style: theme.textTheme.labelLarge),
         const SizedBox(height: 8),
         Card(
           clipBehavior: Clip.antiAlias,

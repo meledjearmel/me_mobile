@@ -77,9 +77,10 @@ void main() {
     expect(profile.cvJobProfileId, 3);
   });
 
-  test('cv_source absent ou inconnu : CV généré', () {
-    expect(Profile.fromJson(apiProfile({'cv_source': null})).cvSource, CvSource.generated);
-    expect(Profile.fromJson(apiProfile({'cv_source': 'autre'})).cvSource, CvSource.generated);
+  test('cv_source absent ou inconnu : CV importé (défaut du serveur)', () {
+    expect(Profile.fromJson(apiProfile({'cv_source': null})).cvSource, CvSource.uploaded);
+    expect(Profile.fromJson(apiProfile({'cv_source': 'autre'})).cvSource, CvSource.uploaded);
+    expect(Profile.fromJson(apiProfile({'cv_source': 'generated'})).cvSource, CvSource.generated);
   });
 
   test('social_links en tableau PHP vide [] et textes vides {} ne plantent pas', () {
