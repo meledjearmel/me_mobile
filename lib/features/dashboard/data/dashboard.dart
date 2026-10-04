@@ -14,6 +14,7 @@ class Dashboard {
     required this.health,
     required this.recent,
     this.cvDownloads = const DashboardCvDownloads(),
+    this.conversions = const DashboardConversions(),
   });
 
   factory Dashboard.fromJson(Map<String, dynamic> json) => Dashboard(
@@ -26,6 +27,9 @@ class Dashboard {
     cvDownloads: json['cv_downloads'] is Map<String, dynamic>
         ? DashboardCvDownloads.fromJson(json['cv_downloads'] as Map<String, dynamic>)
         : const DashboardCvDownloads(),
+    conversions: json['conversions'] is Map<String, dynamic>
+        ? DashboardConversions.fromJson(json['conversions'] as Map<String, dynamic>)
+        : const DashboardConversions(),
   );
 
   final DashboardTodo todo;
@@ -35,6 +39,52 @@ class Dashboard {
   final List<HealthItem> health;
   final DashboardRecent recent;
   final DashboardCvDownloads cvDownloads;
+  final DashboardConversions conversions;
+}
+
+/// Objectifs atteints sur la période, rapportés aux visiteurs uniques.
+@immutable
+class DashboardConversions {
+  const DashboardConversions({this.periodDays = 30, this.visitors = 0, this.goals = const []});
+
+  factory DashboardConversions.fromJson(Map<String, dynamic> json) => DashboardConversions(
+    periodDays: json['period_days'] as int? ?? 30,
+    visitors: json['visitors'] as int? ?? 0,
+    goals: [
+      for (final item in json['goals'] as List<dynamic>? ?? const [])
+        ConversionGoal.fromJson(item as Map<String, dynamic>),
+    ],
+  );
+
+  final int periodDays;
+  final int visitors;
+  final List<ConversionGoal> goals;
+}
+
+/// `cv_downloads`, `contacts`, `engagements` ou `appointments`.
+@immutable
+class ConversionGoal {
+  const ConversionGoal({required this.key, required this.count, required this.rate});
+
+  factory ConversionGoal.fromJson(Map<String, dynamic> json) => ConversionGoal(
+    key: json['key'] as String,
+    count: json['count'] as int? ?? 0,
+    rate: (json['rate'] as num?)?.toDouble() ?? 0,
+  );
+
+  final String key;
+  final int count;
+
+  /// Pourcentage des visiteurs uniques, à une décimale.
+  final double rate;
+
+  String get label => switch (key) {
+    'cv_downloads' => 'CV téléchargés',
+    'contacts' => 'Messages',
+    'engagements' => 'Demandes de collaboration',
+    'appointments' => 'Rendez-vous',
+    _ => key,
+  };
 }
 
 /// Téléchargements du CV : total, sur la période, avec email laissé, et
@@ -123,6 +173,9 @@ class DashboardVisits {
     required this.english,
     required this.daily,
     required this.topPages,
+    this.visitors = 0,
+    this.bySource = const [],
+    this.byDevice = const [],
   });
 
   factory DashboardVisits.fromJson(Map<String, dynamic> json) => DashboardVisits(
@@ -134,6 +187,15 @@ class DashboardVisits {
     english: json['english'] as int? ?? 0,
     daily: [for (final item in json['daily'] as List<dynamic>) DailyVisit.fromJson(item as Map<String, dynamic>)],
     topPages: [for (final item in json['top_pages'] as List<dynamic>) TopPage.fromJson(item as Map<String, dynamic>)],
+    visitors: json['visitors'] as int? ?? 0,
+    bySource: [
+      for (final item in json['by_source'] as List<dynamic>? ?? const [])
+        CategoryCount.fromJson(item as Map<String, dynamic>),
+    ],
+    byDevice: [
+      for (final item in json['by_device'] as List<dynamic>? ?? const [])
+        CategoryCount.fromJson(item as Map<String, dynamic>),
+    ],
   );
 
   final int total;
@@ -144,6 +206,15 @@ class DashboardVisits {
   final int english;
   final List<DailyVisit> daily;
   final List<TopPage> topPages;
+
+  /// Visiteurs uniques sur la période (empreinte anonyme du jour, sans cookie).
+  final int visitors;
+
+  /// Visiteurs uniques par provenance : campagne, site d'origine ou `direct`.
+  final List<CategoryCount> bySource;
+
+  /// Visiteurs uniques par appareil : `desktop`, `mobile`, `tablet`.
+  final List<CategoryCount> byDevice;
 }
 
 @immutable

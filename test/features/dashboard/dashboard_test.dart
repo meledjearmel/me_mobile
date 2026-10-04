@@ -132,4 +132,43 @@ void main() {
     expect(withoutBlock.cvDownloads.total, 0);
     expect(withoutBlock.cvDownloads.byCountry, isEmpty);
   });
+
+  test('audience : visiteurs uniques, provenances, appareils et conversions', () {
+    final dashboard = Dashboard.fromJson({
+      ...json,
+      'visits': {
+        ...json['visits']! as Map<String, dynamic>,
+        'visitors': 180,
+        'by_source': [
+          {'label': 'linkedin.com', 'count': 90},
+          {'label': 'direct', 'count': 60},
+        ],
+        'by_device': [
+          {'label': 'mobile', 'count': 120},
+          {'label': 'desktop', 'count': 60},
+        ],
+      },
+      'conversions': {
+        'period_days': 30,
+        'visitors': 180,
+        'goals': [
+          {'key': 'cv_downloads', 'count': 9, 'rate': 5},
+          {'key': 'appointments', 'count': 2, 'rate': 1.1},
+        ],
+      },
+    });
+
+    expect(dashboard.visits.visitors, 180);
+    expect(dashboard.visits.bySource.first.label, 'linkedin.com');
+    expect(dashboard.visits.byDevice.first.count, 120);
+    expect(dashboard.conversions.visitors, 180);
+    expect(dashboard.conversions.goals.first.rate, 5.0);
+    expect(dashboard.conversions.goals.last.label, 'Rendez-vous');
+
+    // Ancien serveur, sans ces champs : rien ne casse.
+    final legacy = Dashboard.fromJson(json);
+    expect(legacy.visits.visitors, 0);
+    expect(legacy.visits.bySource, isEmpty);
+    expect(legacy.conversions.goals, isEmpty);
+  });
 }

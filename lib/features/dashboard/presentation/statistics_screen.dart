@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_palette.dart';
@@ -75,7 +76,39 @@ class _StatisticsBody extends StatelessWidget {
         _VisitsCard(visits: dashboard.visits),
         if (dashboard.visits.topPages.isNotEmpty) ...[
           const SizedBox(height: 10),
-          _TopPagesCard(pages: dashboard.visits.topPages),
+          _BarListCard(
+            title: 'Pages les plus vues',
+            items: [for (final page in dashboard.visits.topPages) (label: page.path, count: page.count)],
+          ),
+        ],
+        if (dashboard.visits.bySource.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _BarListCard(
+            title: 'Provenance des visiteurs',
+            items: [
+              for (final source in dashboard.visits.bySource) (label: _sourceLabel(source.label), count: source.count),
+            ],
+          ),
+        ],
+        if (dashboard.visits.byDevice.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _BarListCard(
+            title: 'Appareils',
+            items: [
+              for (final device in dashboard.visits.byDevice) (label: _deviceLabel(device.label), count: device.count),
+            ],
+          ),
+        ],
+        if (dashboard.conversions.goals.isNotEmpty) ...[
+          gap,
+          const SectionHeader('Conversions'),
+          small,
+          _Grid(
+            children: [
+              for (final goal in dashboard.conversions.goals)
+                StatTile(value: goal.count, label: goal.label, caption: '${_percent(goal.rate)} des visiteurs'),
+            ],
+          ),
         ],
         gap,
         const SectionHeader('Contenu'),
@@ -159,6 +192,18 @@ class _StatisticsBody extends StatelessWidget {
   }
 }
 
+String _sourceLabel(String source) => source == 'direct' ? 'Accès direct' : source;
+
+String _deviceLabel(String device) => switch (device) {
+  'desktop' => 'Ordinateur',
+  'mobile' => 'Mobile',
+  'tablet' => 'Tablette',
+  _ => device,
+};
+
+/// « 2,5 % », à la française.
+String _percent(double rate) => '${NumberFormat('#,##0.#', 'fr_FR').format(rate)} %';
+
 class _VisitsCard extends StatelessWidget {
   const _VisitsCard({required this.visits});
 
@@ -179,7 +224,11 @@ class _VisitsCard extends StatelessWidget {
             '${visits.total}',
             style: theme.textTheme.displaySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
           ),
-          Text('visites', style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+          Text(
+            '${visits.total == 1 ? 'visite' : 'visites'} · ${visits.visitors} '
+            '${visits.visitors == 1 ? 'visiteur unique' : 'visiteurs uniques'}',
+            style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+          ),
           const SizedBox(height: 16),
           VisitsChart(daily: visits.daily),
           const SizedBox(height: 16),
@@ -217,45 +266,47 @@ class _MiniFact extends StatelessWidget {
   }
 }
 
-/// Pages les plus vues, avec une barre proportionnelle à la plus visitée.
-class _TopPagesCard extends StatelessWidget {
-  const _TopPagesCard({required this.pages});
+/// Liste classée (pages, provenances, appareils), chaque barre
+/// proportionnelle à la plus grande valeur.
+class _BarListCard extends StatelessWidget {
+  const _BarListCard({required this.title, required this.items});
 
-  final List<TopPage> pages;
+  final String title;
+  final List<({String label, int count})> items;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
-    final max = pages.map((p) => p.count).fold<int>(1, (a, b) => a > b ? a : b);
+    final max = items.map((i) => i.count).fold<int>(1, (a, b) => a > b ? a : b);
 
     return SurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pages les plus vues', style: theme.textTheme.titleSmall),
+          Text(title, style: theme.textTheme.titleSmall),
           const SizedBox(height: 12),
-          for (final (index, page) in pages.indexed) ...[
+          for (final (index, item) in items.indexed) ...[
             if (index > 0) const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    page.path,
+                    item.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('${page.count}', style: theme.textTheme.labelLarge),
+                Text('${item.count}', style: theme.textTheme.labelLarge),
               ],
             ),
             const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: page.count / max,
+                value: item.count / max,
                 minHeight: 6,
                 color: colors.accent,
                 backgroundColor: theme.colorScheme.surfaceContainer,
