@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/glass.dart';
+import '../../blog/presentation/posts_list_screen.dart';
 import '../../booking/presentation/appointment_types_list_screen.dart';
 import '../../booking/presentation/availability_screen.dart';
 import '../../celebrations/presentation/celebrations_list_screen.dart';
@@ -64,7 +65,10 @@ class ContentScreen extends ConsumerWidget {
     ),
     (
       label: 'Site',
-      sections: [(icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen)],
+      sections: [
+        (icon: Icons.article_outlined, label: 'Blog', builder: _postsScreen),
+        (icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen),
+      ],
     ),
   ];
 
@@ -79,6 +83,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _referencesScreen(BuildContext context) => const ProfessionalReferencesListScreen();
   static Widget _musicScreen(BuildContext context) => const MusicScreen();
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
+  static Widget _postsScreen(BuildContext context) => const PostsListScreen();
   static Widget _appointmentTypesScreen(BuildContext context) => const AppointmentTypesListScreen();
   static Widget _availabilityScreen(BuildContext context) => const AvailabilityScreen();
 
