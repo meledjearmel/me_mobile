@@ -78,48 +78,4 @@ void main() {
 
     expect(adapter.requests.single.path, '/v1/profile/music');
   });
-
-  Future<Map<String, String>> updateWith({CvSource? cvSource, int? cvJobProfileId, bool clear = false}) async {
-    adapter.whenRequest('POST', '/v1/profile', statusCode: 200, body: _profileJson);
-    await repository.update(
-      name: 'Armel Meledje',
-      cvLastName: null,
-      cvFirstName: null,
-      headline: const Translated(fr: 'Développeur', en: 'Developer'),
-      bioShort: const Translated(),
-      bioFull: const Translated(),
-      email: 'armel@example.com',
-      phone: null,
-      location: null,
-      socialLinks: const SocialLinks(),
-      cvSource: cvSource,
-      cvJobProfileId: cvJobProfileId,
-      clearCvJobProfile: clear,
-    );
-    return _fieldMap(adapter.requests.last.data as FormData);
-  }
-
-  test('update envoie la source du CV et le profil métier proposé', () async {
-    final fields = await updateWith(cvSource: CvSource.generated, cvJobProfileId: 3);
-
-    expect(fields['cv_source'], 'generated');
-    expect(fields['cv_job_profile_id'], '3');
-  });
-
-  test('« Automatique » envoie cv_job_profile_id vide (null pour Laravel)', () async {
-    final fields = await updateWith(cvSource: CvSource.uploaded, clear: true);
-
-    expect(fields['cv_job_profile_id'], '');
-  });
-
-  test('sans réglage du CV (délai des notifications), les deux champs ne partent pas', () async {
-    adapter.whenRequest('POST', '/v1/profile', statusCode: 200, body: _profileJson);
-    await repository.updateCongratulationNotifyMinutes(Profile.fromJson(_profileJson), 30);
-
-    final fields = _fieldMap(adapter.requests.last.data as FormData);
-    expect(fields['congratulation_notify_minutes'], '30');
-    expect(fields.containsKey('cv_source'), isFalse);
-    expect(fields.containsKey('cv_job_profile_id'), isFalse);
-    expect(fields.containsKey('testimonial_video_enabled'), isFalse);
-  });
 }

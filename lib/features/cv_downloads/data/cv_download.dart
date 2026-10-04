@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/models/translated.dart';
-import '../../profile/data/profile.dart';
+import '../../site_settings/data/site_settings.dart';
 
 /// Appareil du visiteur, d'après son navigateur.
 enum CvDownloadDevice {

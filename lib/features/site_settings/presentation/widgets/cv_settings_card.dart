@@ -6,8 +6,8 @@ import '../../../../core/models/uploaded_file.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../../content/job_profiles/data/job_profile.dart';
 import '../../../content/job_profiles/presentation/job_profile_form_screen.dart';
-import '../../application/profile_providers.dart';
-import '../../data/profile.dart';
+import '../../../profile/application/profile_providers.dart';
+import '../../data/site_settings.dart';
 
 /// Explication de la source choisie, telle que le site l'applique.
 String cvSourceExplanation(CvSource source) => switch (source) {

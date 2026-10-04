@@ -61,27 +61,11 @@ void main() {
     'phone': null,
     'location': null,
     'social_links': null,
-    'congratulation_notify_minutes': 10,
-    'cv_job_profile_id': null,
-    'cv_source': 'generated',
     'photo_url': null,
     'cv_photo_url': null,
     'music': null,
     ...overrides,
   };
-
-  test('lit la source prioritaire du CV et le profil métier par défaut', () {
-    final profile = Profile.fromJson(apiProfile({'cv_source': 'uploaded', 'cv_job_profile_id': 3}));
-
-    expect(profile.cvSource, CvSource.uploaded);
-    expect(profile.cvJobProfileId, 3);
-  });
-
-  test('cv_source absent ou inconnu : CV importé (défaut du serveur)', () {
-    expect(Profile.fromJson(apiProfile({'cv_source': null})).cvSource, CvSource.uploaded);
-    expect(Profile.fromJson(apiProfile({'cv_source': 'autre'})).cvSource, CvSource.uploaded);
-    expect(Profile.fromJson(apiProfile({'cv_source': 'generated'})).cvSource, CvSource.generated);
-  });
 
   test('social_links en tableau PHP vide [] et textes vides {} ne plantent pas', () {
     final profile = Profile.fromJson(apiProfile({'social_links': <dynamic>[]}));

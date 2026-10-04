@@ -15,7 +15,6 @@ import '../../../shared/widgets/translated_field.dart';
 import '../application/profile_providers.dart';
 import '../data/profile.dart';
 import '../data/profile_repository.dart';
-import 'widgets/cv_settings_card.dart';
 import 'widgets/photo_picker_tile.dart';
 
 const _maxPhotoBytes = 5 * 1024 * 1024;
@@ -43,9 +42,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late Translated _headline = widget.profile.headline;
   late Translated _bioShort = widget.profile.bioShort;
   late Translated _bioFull = widget.profile.bioFull;
-  late int? _cvJobProfileId = widget.profile.cvJobProfileId;
-  late CvSource _cvSource = widget.profile.cvSource;
-  late bool _testimonialVideoEnabled = widget.profile.testimonialVideoEnabled;
 
   XFile? _photo;
   XFile? _cvPhoto;
@@ -169,10 +165,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ),
             photo: _photoMultipart(_photo),
             cvPhoto: _photoMultipart(_cvPhoto),
-            cvSource: _cvSource,
-            cvJobProfileId: _cvJobProfileId,
-            clearCvJobProfile: _cvJobProfileId == null,
-            testimonialVideoEnabled: _testimonialVideoEnabled,
             music: _music == null ? null : dio.MultipartFile.fromFileSync(_music!.path!, filename: _music!.name),
             onProgress: (sent, total) {
               if (total > 0 && mounted) {
@@ -347,38 +339,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            CvSettingsCard(
-              jobProfileId: _cvJobProfileId,
-              source: _cvSource,
-              jobProfileError: v?.errorFor('cv_job_profile_id'),
-              sourceError: v?.errorFor('cv_source'),
-              onJobProfileChanged: (id) {
-                setState(() => _cvJobProfileId = id);
-                _markDirty();
-              },
-              onSourceChanged: (source) {
-                setState(() => _cvSource = source);
-                _markDirty();
-              },
-            ),
-            const SizedBox(height: 12),
-            SurfaceCard(
-              radius: 22,
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Avis vidéo des visiteurs'),
-                subtitle: Text(
-                  v?.errorFor('testimonial_video_enabled') ??
-                      'Les visiteurs peuvent joindre ou filmer une vidéo avec leur avis.',
-                ),
-                value: _testimonialVideoEnabled,
-                onChanged: (value) {
-                  setState(() => _testimonialVideoEnabled = value);
-                  _markDirty();
-                },
               ),
             ),
             const SizedBox(height: 12),

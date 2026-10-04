@@ -13,7 +13,8 @@ import '../../../core/biometrics/biometric_preferences.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../auth/application/session_controller.dart';
-import '../../profile/data/profile_repository.dart';
+import '../../site_settings/data/site_settings_repository.dart';
+import '../../site_settings/presentation/site_settings_screen.dart';
 import '../../trash/presentation/trash_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -29,17 +30,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   bool _updatingTheme = false;
   bool _updatingNotifyDelay = false;
 
-  static const _notifyDelays = [0, 5, 10, 30, 60, 180, 1440];
-
-  static String _notifyDelayLabel(int minutes) => switch (minutes) {
-    0 => 'À chaque envoi',
-    1440 => 'Au plus une par jour',
-    _ when minutes >= 60 && minutes % 60 == 0 => 'Au plus une toutes les ${minutes ~/ 60} h',
-    _ => 'Au plus une toutes les $minutes min',
-  };
-
   /// Délai minimal entre deux notifications de félicitations d'un même motif
-  /// (réglage global, porté par le profil).
+  /// (réglage global du site).
   Future<void> _pickNotifyDelay(int current) async {
     final minutes = await showModalBottomSheet<int>(
       context: context,
@@ -54,8 +46,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                for (final delay in _notifyDelays)
-                  RadioListTile<int>(value: delay, title: Text(_notifyDelayLabel(delay))),
+                for (final delay in congratulationNotifyDelays)
+                  RadioListTile<int>(value: delay, title: Text(congratulationNotifyDelayLabel(delay))),
               ],
             ),
           ),
@@ -65,14 +57,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (minutes == null || minutes == current) {
       return;
     }
-    final profile = ref.read(profileProvider).value;
-    if (profile == null) {
-      return;
-    }
     setState(() => _updatingNotifyDelay = true);
     try {
-      await ref.read(profileRepositoryProvider).updateCongratulationNotifyMinutes(profile, minutes);
-      ref.invalidate(profileProvider);
+      await ref.read(siteSettingsRepositoryProvider).patch({'congratulation_notify_minutes': minutes});
+      ref.invalidate(siteSettingsProvider);
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -276,11 +264,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               clipBehavior: Clip.antiAlias,
               child: Builder(
                 builder: (context) {
-                  final minutes = ref.watch(profileProvider).value?.congratulationNotifyMinutes;
+                  final minutes = ref.watch(siteSettingsProvider).value?.congratulationNotifyMinutes;
                   return ListTile(
                     leading: const Icon(Icons.emoji_events_outlined),
                     title: const Text('Félicitations'),
-                    subtitle: Text(minutes == null ? 'Chargement…' : '${_notifyDelayLabel(minutes)}, par surprise'),
+                    subtitle: Text(minutes == null ? 'Chargement…' : '${congratulationNotifyDelayLabel(minutes)}, par surprise'),
                     trailing: _updatingNotifyDelay
                         ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.chevron_right_rounded),
@@ -296,6 +284,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.tune_rounded),
+                    title: const Text('Réglages du site'),
+                    subtitle: const Text('Affichage, avis, CV, notifications et rendez-vous'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (context) => const SiteSettingsScreen())),
+                  ),
+                  const Divider(indent: 20, endIndent: 20),
                   ListTile(
                     leading: const Icon(Icons.delete_outline_rounded),
                     title: const Text('Corbeille'),

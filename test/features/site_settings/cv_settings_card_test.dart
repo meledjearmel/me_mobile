@@ -8,8 +8,8 @@ import 'package:me_mobile/core/models/translated.dart';
 import 'package:me_mobile/core/models/uploaded_file.dart';
 import 'package:me_mobile/features/content/job_profiles/data/job_profile.dart';
 import 'package:me_mobile/features/profile/application/profile_providers.dart';
-import 'package:me_mobile/features/profile/data/profile.dart';
-import 'package:me_mobile/features/profile/presentation/widgets/cv_settings_card.dart';
+import 'package:me_mobile/features/site_settings/data/site_settings.dart';
+import 'package:me_mobile/features/site_settings/presentation/widgets/cv_settings_card.dart';
 
 JobProfile _jobProfile(int id, String label, {CvFiles cvFiles = const CvFiles(), int sortOrder = 0}) => JobProfile(
   id: id,

@@ -9,7 +9,7 @@ import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard.dart';
 import '../../dashboard/data/dashboard_repository.dart';
-import '../../profile/data/profile.dart';
+import '../../site_settings/data/site_settings.dart';
 import '../application/cv_download_list_controller.dart';
 import '../data/cv_download.dart';
 import '../data/cv_download_repository.dart';

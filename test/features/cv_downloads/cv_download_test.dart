@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:me_mobile/core/api/api_client.dart';
 import 'package:me_mobile/features/cv_downloads/data/cv_download.dart';
 import 'package:me_mobile/features/cv_downloads/data/cv_download_repository.dart';
-import 'package:me_mobile/features/profile/data/profile.dart';
+import 'package:me_mobile/features/site_settings/data/site_settings.dart';
 
 import '../../helpers/fake_dio_adapter.dart';
 import '../../helpers/memory_token_storage.dart';
