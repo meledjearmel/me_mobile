@@ -25,6 +25,25 @@ class PostTag {
   final int postsCount;
 }
 
+/// Série d'articles : nom bilingue (créée depuis un article, avec le même nom
+/// dans les deux langues) et nombre d'articles.
+@immutable
+class PostSeries {
+  const PostSeries({required this.id, required this.slug, required this.name, required this.postsCount});
+
+  factory PostSeries.fromJson(Map<String, dynamic> json) => PostSeries(
+    id: json['id'] as int,
+    slug: json['slug'] as String,
+    name: Translated.fromJson(json['name']),
+    postsCount: json['posts_count'] as int? ?? 0,
+  );
+
+  final int id;
+  final String slug;
+  final Translated name;
+  final int postsCount;
+}
+
 enum SubscriberStatus {
   active('active', 'Actif'),
   pending('pending', 'En attente'),
@@ -99,8 +118,8 @@ final subscriberSummaryProvider = FutureProvider.autoDispose<SubscriberSummary>(
   (ref) => ref.watch(blogAdminRepositoryProvider).subscriberSummary(),
 );
 
-/// `GET|PUT|DELETE /v1/post-tags` (les tags se créent avec les articles) et
-/// `GET|DELETE /v1/subscribers`.
+/// `GET|PUT|DELETE /v1/post-tags` et `/v1/post-series` (tags et séries se
+/// créent avec les articles) et `GET|DELETE /v1/subscribers`.
 class BlogAdminRepository {
   const BlogAdminRepository(this._api);
 
@@ -120,6 +139,21 @@ class BlogAdminRepository {
 
   /// Définitif : le tag est retiré des articles qui le portent.
   Future<void> deleteTag(int id) => _api.delete('/v1/post-tags/$id');
+
+  Future<Paginated<PostSeries>> series({required int page, String search = ''}) async {
+    final json = await _api.get(
+      '/v1/post-series',
+      query: {'page': page, 'per_page': 50, 'search': search},
+    ) as Map<String, dynamic>;
+    return Paginated.fromJson(json, (item) => PostSeries.fromJson(item));
+  }
+
+  /// Les deux langues sont exigées (80 caractères chacune).
+  Future<PostSeries> updateSeries(int id, Translated name) async =>
+      PostSeries.fromJson(await _api.put('/v1/post-series/$id', data: {'name': name.toJson()}) as Map<String, dynamic>);
+
+  /// Définitif : ses articles restent, hors série.
+  Future<void> deleteSeries(int id) => _api.delete('/v1/post-series/$id');
 
   Future<Paginated<Subscriber>> subscribers({
     required int page,

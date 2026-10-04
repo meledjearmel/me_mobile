@@ -26,7 +26,15 @@ void main() {
       'name': {'fr': 'IA', 'en': 'AI'},
       'posts_count': 3,
     };
-    adapter.whenRequest('GET', '/v1/post-tags', statusCode: 200, body: {'data': [tagJson], 'meta': _meta});
+    adapter.whenRequest(
+      'GET',
+      '/v1/post-tags',
+      statusCode: 200,
+      body: {
+        'data': [tagJson],
+        'meta': _meta,
+      },
+    );
     adapter.whenRequest('PUT', '/v1/post-tags/2', statusCode: 200, body: tagJson);
 
     final page = await repository.tags(page: 1);
@@ -70,5 +78,35 @@ void main() {
     expect(adapter.requests.first.queryParameters['status'], 'active');
     expect(summary.active, 12);
     expect(summary.pending, 3);
+  });
+
+  test('séries : lecture, traduction et suppression', () async {
+    const seriesJson = {
+      'id': 4,
+      'slug': 'laravel-de-a-a-z',
+      'name': {'fr': 'Laravel de A à Z', 'en': 'Laravel de A à Z'},
+      'posts_count': 2,
+    };
+    adapter.whenRequest(
+      'GET',
+      '/v1/post-series',
+      statusCode: 200,
+      body: {
+        'data': [seriesJson],
+        'meta': _meta,
+      },
+    );
+    adapter.whenRequest('PUT', '/v1/post-series/4', statusCode: 200, body: seriesJson);
+    adapter.whenRequest('DELETE', '/v1/post-series/4', statusCode: 204);
+
+    final page = await repository.series(page: 1);
+    await repository.updateSeries(4, const Translated(fr: 'Laravel de A à Z', en: 'Laravel from A to Z'));
+    await repository.deleteSeries(4);
+
+    expect(page.items.single.postsCount, 2);
+    expect(adapter.requests[1].data, {
+      'name': {'fr': 'Laravel de A à Z', 'en': 'Laravel from A to Z'},
+    });
+    expect(adapter.requests.last.method, 'DELETE');
   });
 }

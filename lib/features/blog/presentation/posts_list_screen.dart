@@ -9,6 +9,7 @@ import '../../../shared/widgets/status_badge.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
 import 'post_form_screen.dart';
+import 'post_series_screen.dart';
 import 'post_tags_screen.dart';
 import 'subscribers_screen.dart';
 
@@ -50,6 +51,12 @@ class PostsListScreen extends ConsumerWidget {
           tooltip: 'Tags du blog',
           icon: const Icon(Icons.sell_outlined),
           onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PostTagsScreen())),
+        ),
+        IconButton(
+          tooltip: 'Séries d\'articles',
+          icon: const Icon(Icons.collections_bookmark_outlined),
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PostSeriesScreen())),
         ),
         IconButton(
           tooltip: 'Abonnés à la newsletter',

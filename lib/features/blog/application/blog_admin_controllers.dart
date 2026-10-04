@@ -23,3 +23,13 @@ class SubscriberListController extends PaginatedListController<Subscriber> {
       .read(blogAdminRepositoryProvider)
       .subscribers(page: page, search: query.search, status: query.filters['status'] as String?);
 }
+
+final postSeriesListProvider = AsyncNotifierProvider<PostSeriesListController, ListState<PostSeries>>(
+  PostSeriesListController.new,
+);
+
+class PostSeriesListController extends PaginatedListController<PostSeries> {
+  @override
+  Future<Paginated<PostSeries>> fetchPage({required int page, required ListQuery query}) =>
+      ref.read(blogAdminRepositoryProvider).series(page: page, search: query.search);
+}
