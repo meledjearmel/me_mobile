@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/glass.dart';
+import '../../booking/presentation/appointment_types_list_screen.dart';
+import '../../booking/presentation/availability_screen.dart';
 import '../../celebrations/presentation/celebrations_list_screen.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard.dart';
@@ -18,7 +20,8 @@ import '../skills/presentation/skills_list_screen.dart';
 import '../technologies/presentation/technologies_list_screen.dart';
 
 /// Sommaire des sections de contenu (§4.3), groupées comme le menu
-/// d'administration du site : Parcours, Réalisations, Référentiels, Musique, Site.
+/// d'administration du site : Parcours, Réalisations, Référentiels, Rendez-vous,
+/// Musique, Site.
 /// Les catégories de technologies s'ouvrent depuis l'écran Technologies.
 class ContentScreen extends ConsumerWidget {
   const ContentScreen({super.key});
@@ -49,6 +52,13 @@ class ContentScreen extends ConsumerWidget {
       ],
     ),
     (
+      label: 'Rendez-vous',
+      sections: [
+        (icon: Icons.event_note_outlined, label: 'Types de rendez-vous', builder: _appointmentTypesScreen),
+        (icon: Icons.schedule_rounded, label: 'Disponibilités', builder: _availabilityScreen),
+      ],
+    ),
+    (
       label: 'Musique',
       sections: [(icon: Icons.music_note_outlined, label: 'Pistes et registres', builder: _musicScreen)],
     ),
@@ -69,6 +79,8 @@ class ContentScreen extends ConsumerWidget {
   static Widget _referencesScreen(BuildContext context) => const ProfessionalReferencesListScreen();
   static Widget _musicScreen(BuildContext context) => const MusicScreen();
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
+  static Widget _appointmentTypesScreen(BuildContext context) => const AppointmentTypesListScreen();
+  static Widget _availabilityScreen(BuildContext context) => const AvailabilityScreen();
 
   /// Nombre d'éléments par section, tiré du tableau de bord (absent si non fourni).
   static int? _countFor(String label, DashboardContent? content) => switch (label) {
