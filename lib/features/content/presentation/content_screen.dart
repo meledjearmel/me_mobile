@@ -19,6 +19,7 @@ import '../music/presentation/music_screen.dart';
 import '../professional_references/presentation/professional_references_list_screen.dart';
 import '../skills/presentation/skills_list_screen.dart';
 import '../technologies/presentation/technologies_list_screen.dart';
+import '../uses/presentation/uses_items_list_screen.dart';
 
 /// Sommaire des sections de contenu (§4.3), groupées comme le menu
 /// d'administration du site : Parcours, Réalisations, Référentiels, Rendez-vous,
@@ -67,6 +68,7 @@ class ContentScreen extends ConsumerWidget {
       label: 'Site',
       sections: [
         (icon: Icons.article_outlined, label: 'Blog', builder: _postsScreen),
+        (icon: Icons.devices_other_outlined, label: 'Uses', builder: _usesScreen),
         (icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen),
       ],
     ),
@@ -84,6 +86,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _musicScreen(BuildContext context) => const MusicScreen();
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
   static Widget _postsScreen(BuildContext context) => const PostsListScreen();
+  static Widget _usesScreen(BuildContext context) => const UsesItemsListScreen();
   static Widget _appointmentTypesScreen(BuildContext context) => const AppointmentTypesListScreen();
   static Widget _availabilityScreen(BuildContext context) => const AvailabilityScreen();
 
