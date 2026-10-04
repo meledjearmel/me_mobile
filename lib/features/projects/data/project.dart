@@ -51,6 +51,29 @@ class KeyFigure {
   int get hashCode => Object.hash(value, label);
 }
 
+/// Choix technique argumenté de l'étude de cas : le choix et sa raison,
+/// bilingues. [maxCount] au plus par projet, dans l'ordre d'affichage.
+@immutable
+class Decision {
+  const Decision({required this.choice, required this.reason});
+
+  factory Decision.fromJson(Map<String, dynamic> json) =>
+      Decision(choice: Translated.fromJson(json['choice']), reason: Translated.fromJson(json['reason']));
+
+  static const maxCount = 6;
+
+  final Translated choice;
+  final Translated reason;
+
+  Map<String, Object> toJson() => {'choice': choice, 'reason': reason};
+
+  @override
+  bool operator ==(Object other) => other is Decision && other.choice == choice && other.reason == reason;
+
+  @override
+  int get hashCode => Object.hash(choice, reason);
+}
+
 @immutable
 class Project {
   const Project({
@@ -65,6 +88,11 @@ class Project {
     required this.realization,
     required this.result,
     this.keyFigures = const [],
+    this.challenges = const Translated(),
+    this.decisions = const [],
+    this.startedOn,
+    this.endedOn,
+    this.teamSize,
     required this.accentColor,
     required this.repoUrl,
     required this.demoUrl,
@@ -96,6 +124,14 @@ class Project {
       for (final item in (json['key_figures'] as List<dynamic>? ?? const []))
         if (item is Map<String, dynamic>) KeyFigure.fromJson(item),
     ],
+    challenges: Translated.fromJson(json['challenges']),
+    decisions: [
+      for (final item in (json['decisions'] as List<dynamic>? ?? const []))
+        if (item is Map<String, dynamic>) Decision.fromJson(item),
+    ],
+    startedOn: json['started_on'] as String?,
+    endedOn: json['ended_on'] as String?,
+    teamSize: json['team_size'] as int?,
     accentColor: json['accent_color'] as String?,
     repoUrl: json['repo_url'] as String?,
     demoUrl: json['demo_url'] as String?,
@@ -140,6 +176,17 @@ class Project {
   final Translated realization;
   final Translated result;
   final List<KeyFigure> keyFigures;
+
+  /// Défis et contraintes (section facultative de l'étude de cas).
+  final Translated challenges;
+  final List<Decision> decisions;
+
+  /// Période au mois près (`AAAA-MM`). Fin `null` avec un début : en cours.
+  final String? startedOn;
+  final String? endedOn;
+
+  /// Taille de l'équipe, moi compris.
+  final int? teamSize;
   final String? accentColor;
   final String? repoUrl;
   final String? demoUrl;

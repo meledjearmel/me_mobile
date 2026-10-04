@@ -44,8 +44,8 @@ class ProjectRepository {
   /// [id] = `null` : création (`POST`). Sinon modification (`_method=PUT`, §3.4).
   ///
   /// Toujours renvoyer la ressource complète (§3.5) : `domains`, `job_profiles`,
-  /// `technologies`, `related_projects` et `key_figures` absents videraient
-  /// ces listes côté serveur.
+  /// `technologies`, `related_projects`, `key_figures` et `decisions` absents
+  /// videraient ces listes côté serveur.
   Future<Project> save({
     int? id,
     required Translated title,
@@ -58,6 +58,11 @@ class ProjectRepository {
     required Translated realization,
     required Translated result,
     required List<KeyFigure> keyFigures,
+    required Translated challenges,
+    required List<Decision> decisions,
+    required String? startedOn,
+    required String? endedOn,
+    required int? teamSize,
     required String? accentColor,
     required String? repoUrl,
     required String? demoUrl,
@@ -84,6 +89,11 @@ class ProjectRepository {
       'realization': realization,
       'result': result,
       'key_figures': [for (final figure in keyFigures) figure.toJson()],
+      'challenges': challenges,
+      'decisions': [for (final decision in decisions) decision.toJson()],
+      'started_on': startedOn,
+      'ended_on': endedOn,
+      'team_size': teamSize,
       'accent_color': accentColor,
       'repo_url': repoUrl,
       'demo_url': demoUrl,

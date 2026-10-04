@@ -43,7 +43,8 @@ void main() {
     );
   });
 
-  Future<void> saveArgs({int? id, List<KeyFigure> keyFigures = const []}) => repository.save(
+  Future<void> saveArgs({int? id, List<KeyFigure> keyFigures = const [], List<Decision> decisions = const []}) =>
+      repository.save(
     id: id,
     title: const Translated(fr: 'Mon projet', en: 'My project'),
     slug: 'mon-projet',
@@ -55,6 +56,11 @@ void main() {
     realization: const Translated(),
     result: const Translated(),
     keyFigures: keyFigures,
+    challenges: const Translated(fr: 'Délais serrés'),
+    decisions: decisions,
+    startedOn: '2025-03',
+    endedOn: null,
+    teamSize: 4,
     accentColor: null,
     repoUrl: null,
     demoUrl: null,
@@ -172,5 +178,50 @@ void main() {
     expect(fields['key_figures[0][value]'], '3×');
     expect(fields['key_figures[0][label][fr]'], 'plus rapide');
     expect(fields['key_figures[1][label][en]'], 'lower costs');
+  });
+
+  test("save renvoie toujours la liste des choix techniques, et l'étude de cas enrichie", () async {
+    adapter.whenRequest('POST', '/v1/projects/1', statusCode: 200, body: _projectJson);
+
+    await saveArgs(
+      id: 1,
+      decisions: const [
+        Decision(
+          choice: Translated(fr: 'Laravel', en: 'Laravel'),
+          reason: Translated(fr: 'Productif', en: 'Productive'),
+        ),
+      ],
+    );
+
+    final fields = _fieldMap(adapter.requests.single.data as FormData);
+    expect(fields['decisions[0][choice][fr]'], 'Laravel');
+    expect(fields['decisions[0][reason][en]'], 'Productive');
+    expect(fields['challenges[fr]'], 'Délais serrés');
+    expect(fields['started_on'], '2025-03');
+    expect(fields['ended_on'], '');
+    expect(fields['team_size'], '4');
+  });
+
+  test('Project.fromJson lit défis, choix techniques, période et équipe', () {
+    final project = Project.fromJson({
+      ..._projectJson,
+      'challenges': {'fr': 'Délais', 'en': 'Deadlines'},
+      'decisions': [
+        {
+          'choice': {'fr': 'Flutter', 'en': 'Flutter'},
+          'reason': {'fr': 'Un seul code', 'en': 'One codebase'},
+        },
+      ],
+      'started_on': '2025-03',
+      'ended_on': null,
+      'team_size': 3,
+    });
+
+    expect(project.challenges.en, 'Deadlines');
+    expect(project.decisions.single.reason.fr, 'Un seul code');
+    expect(project.startedOn, '2025-03');
+    expect(project.endedOn, isNull);
+    expect(project.teamSize, 3);
+    expect(Project.fromJson(_projectJson).decisions, isEmpty);
   });
 }

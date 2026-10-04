@@ -20,7 +20,9 @@ import '../../../shared/widgets/translated_field.dart';
 import '../../content/data/reference_repository.dart';
 import '../application/project_list_controller.dart';
 import '../data/project.dart';
+import 'widgets/decisions_editor.dart';
 import 'widgets/key_figures_editor.dart';
+import 'widgets/month_field.dart';
 import '../data/project_repository.dart';
 import '../../../shared/widgets/color_picker_field.dart';
 import 'widgets/gallery_grid.dart';
@@ -52,6 +54,11 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   Translated _client = const Translated();
   Translated _platform = const Translated();
   List<KeyFigure> _keyFigures = const [];
+  Translated _challenges = const Translated();
+  List<Decision> _decisions = const [];
+  String? _startedOn;
+  String? _endedOn;
+  late final _teamSize = TextEditingController();
   late final _slug = TextEditingController();
   late final _repoUrl = TextEditingController();
   late final _demoUrl = TextEditingController();
@@ -95,6 +102,11 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     _client = project.client;
     _platform = project.platform;
     _keyFigures = project.keyFigures;
+    _challenges = project.challenges;
+    _decisions = project.decisions;
+    _startedOn = project.startedOn;
+    _endedOn = project.endedOn;
+    _teamSize.text = project.teamSize?.toString() ?? '';
     _slug.text = project.slug;
     _repoUrl.text = project.repoUrl ?? '';
     _demoUrl.text = project.demoUrl ?? '';
@@ -117,6 +129,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     _repoUrl.dispose();
     _demoUrl.dispose();
     _sortOrder.dispose();
+    _teamSize.dispose();
     super.dispose();
   }
 
@@ -268,6 +281,11 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
             client: _client,
             platform: _platform,
             keyFigures: _keyFigures,
+            challenges: _challenges,
+            decisions: _decisions,
+            startedOn: _startedOn,
+            endedOn: _endedOn,
+            teamSize: int.tryParse(_teamSize.text.trim()),
             accentColor: _accentColor?.isEmpty ?? true ? null : _accentColor,
             repoUrl: _repoUrl.text.trim().isEmpty ? null : _repoUrl.text.trim(),
             demoUrl: _demoUrl.text.trim().isEmpty ? null : _demoUrl.text.trim(),
@@ -508,6 +526,9 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                   hasError:
                       anyError([
                         for (final field in ['tagline', 'role', 'client', 'platform']) ...['$field.fr', '$field.en'],
+                        'started_on',
+                        'ended_on',
+                        'team_size',
                       ]) ||
                       (v?.errors.keys.any((key) => key.startsWith('key_figures')) ?? false),
                   children: [
@@ -563,6 +584,47 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                         _markDirty();
                       },
                     ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: MonthField(
+                            label: 'Début',
+                            value: _startedOn,
+                            errorText: v?.errorFor('started_on'),
+                            onChanged: (value) {
+                              setState(() => _startedOn = value);
+                              _markDirty();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MonthField(
+                            label: 'Fin',
+                            value: _endedOn,
+                            emptyText: _startedOn == null ? 'Non renseigné' : 'En cours',
+                            errorText: v?.errorFor('ended_on'),
+                            onChanged: (value) {
+                              setState(() => _endedOn = value);
+                              _markDirty();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _teamSize,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (_) => _markDirty(),
+                      decoration: InputDecoration(
+                        labelText: 'Taille de l\'équipe (facultatif)',
+                        helperText: 'Vous compris.',
+                        errorText: v?.errorFor('team_size'),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     KeyFiguresEditor(
                       value: _keyFigures,
@@ -577,14 +639,18 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                 gap,
                 FormSection(
                   title: 'Description',
-                  hasError: anyError([
-                    'context.fr',
-                    'context.en',
-                    'realization.fr',
-                    'realization.en',
-                    'result.fr',
-                    'result.en',
-                  ]),
+                  hasError:
+                      anyError([
+                        'context.fr',
+                        'context.en',
+                        'challenges.fr',
+                        'challenges.en',
+                        'realization.fr',
+                        'realization.en',
+                        'result.fr',
+                        'result.en',
+                      ]) ||
+                      (v?.errors.keys.any((key) => key.startsWith('decisions')) ?? false),
                   children: [
                     TranslatedField(
                       label: 'Contexte',
@@ -594,6 +660,18 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                       errorEn: v?.errorFor('context.en'),
                       onChanged: (value) {
                         setState(() => _projectContext = value);
+                        _markDirty();
+                      },
+                    ),
+                    TranslatedField(
+                      label: 'Défis et contraintes',
+                      optional: true,
+                      value: _challenges,
+                      maxLines: 5,
+                      errorFr: v?.errorFor('challenges.fr'),
+                      errorEn: v?.errorFor('challenges.en'),
+                      onChanged: (value) {
+                        setState(() => _challenges = value);
                         _markDirty();
                       },
                     ),
@@ -608,6 +686,16 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                         _markDirty();
                       },
                     ),
+                    const SizedBox(height: 8),
+                    DecisionsEditor(
+                      value: _decisions,
+                      errorFor: (key) => v?.errorFor(key),
+                      onChanged: (decisions) {
+                        setState(() => _decisions = decisions);
+                        _markDirty();
+                      },
+                    ),
+                    const SizedBox(height: 8),
                     TranslatedField(
                       label: 'Résultat',
                       value: _result,
