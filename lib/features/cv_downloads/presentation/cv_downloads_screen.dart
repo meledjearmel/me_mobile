@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme/app_palette.dart';
+import '../../../core/api/api_exception.dart';
 import '../../../core/utils/relative_date.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
@@ -17,7 +18,10 @@ import '../data/cv_download_repository.dart';
 /// Téléchargements du CV depuis le site, du plus récent au plus ancien :
 /// synthèse (tableau de bord), recherche, filtre par langue, détail en feuille.
 class CvDownloadsScreen extends ConsumerStatefulWidget {
-  const CvDownloadsScreen({super.key});
+  const CvDownloadsScreen({super.key, this.openId});
+
+  /// Téléchargement à ouvrir dès l'arrivée (notification « CV téléchargé »).
+  final int? openId;
 
   @override
   ConsumerState<CvDownloadsScreen> createState() => _CvDownloadsScreenState();
@@ -35,6 +39,9 @@ class _CvDownloadsScreenState extends ConsumerState<CvDownloadsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.invalidate(cvDownloadListProvider);
+        if (widget.openId != null) {
+          _openById(widget.openId!);
+        }
       }
     });
   }
@@ -50,6 +57,19 @@ class _CvDownloadsScreenState extends ConsumerState<CvDownloadsScreen> {
   void _searchFor(String text) {
     _search.text = text;
     ref.read(cvDownloadListProvider.notifier).setSearch(text);
+  }
+
+  Future<void> _openById(int id) async {
+    try {
+      final download = await ref.read(cvDownloadRepositoryProvider).get(id);
+      if (mounted) {
+        await _openDetail(download);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
   }
 
   Future<void> _openDetail(CvDownload download) async {

@@ -28,6 +28,38 @@ class ProjectRef {
   final Translated title;
 }
 
+/// Expérience à laquelle un avis est rattaché.
+@immutable
+class ExperienceRef {
+  const ExperienceRef({required this.id, required this.company, required this.role});
+
+  factory ExperienceRef.fromJson(Map<String, dynamic> json) => ExperienceRef(
+        id: json['id'] as int,
+        company: json['company'] as String,
+        role: Translated.fromJson(json['role']),
+      );
+
+  final int id;
+  final String company;
+  final Translated role;
+}
+
+/// Formation à laquelle un avis est rattaché.
+@immutable
+class EducationRef {
+  const EducationRef({required this.id, required this.institution, required this.degree});
+
+  factory EducationRef.fromJson(Map<String, dynamic> json) => EducationRef(
+        id: json['id'] as int,
+        institution: json['institution'] as String,
+        degree: Translated.fromJson(json['degree']),
+      );
+
+  final int id;
+  final String institution;
+  final Translated degree;
+}
+
 /// Vidéo jointe ou filmée par le visiteur. `duration` (secondes), `width` et
 /// `height` restent nuls tant que le serveur n'a pas traité la vidéo.
 @immutable
@@ -80,6 +112,8 @@ class Testimonial {
     this.highlight = const Translated(),
     this.videoTranscript = const Translated(),
     this.video,
+    this.experience,
+    this.education,
   });
 
   factory Testimonial.fromJson(Map<String, dynamic> json) => Testimonial(
@@ -96,6 +130,12 @@ class Testimonial {
     videoTranscript: Translated.fromJson(json['video_transcript']),
     video: json['video'] is Map<String, dynamic>
         ? TestimonialVideo.fromJson(json['video'] as Map<String, dynamic>)
+        : null,
+    experience: json['experience'] is Map<String, dynamic>
+        ? ExperienceRef.fromJson(json['experience'] as Map<String, dynamic>)
+        : null,
+    education: json['education'] is Map<String, dynamic>
+        ? EducationRef.fromJson(json['education'] as Map<String, dynamic>)
         : null,
   );
 
@@ -116,6 +156,10 @@ class Testimonial {
   /// `null` : avis texte.
   final TestimonialVideo? video;
 
+  /// Projet, expérience et formation liés : indépendants, chacun facultatif.
+  final ExperienceRef? experience;
+  final EducationRef? education;
+
   Testimonial copyWith({
     TestimonialStatus? status,
     bool? isFeatured,
@@ -135,5 +179,7 @@ class Testimonial {
     highlight: highlight,
     videoTranscript: videoTranscript,
     video: video,
+    experience: experience,
+    education: education,
   );
 }

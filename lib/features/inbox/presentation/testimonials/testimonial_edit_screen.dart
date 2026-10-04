@@ -14,6 +14,7 @@ import '../../../../shared/widgets/translated_field.dart';
 import '../../application/testimonial_list_controller.dart';
 import '../../data/testimonial.dart';
 import '../../data/testimonial_repository.dart';
+import 'testimonial_links_card.dart';
 import 'testimonial_video_card.dart';
 
 /// Modération et correction de texte d'un avis, dans la même requête `PUT` (§4.2).
@@ -38,6 +39,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
   Translated _highlight = const Translated();
   Translated _videoTranscript = const Translated();
   XFile? _videoPending;
+  int? _projectId;
+  int? _experienceId;
+  int? _educationId;
 
   bool _saving = false;
   bool _removingVideo = false;
@@ -55,6 +59,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
     _content = testimonial.content;
     _highlight = testimonial.highlight;
     _videoTranscript = testimonial.videoTranscript;
+    _projectId = testimonial.project?.id;
+    _experienceId = testimonial.experience?.id;
+    _educationId = testimonial.education?.id;
     return testimonial;
   }
 
@@ -104,6 +111,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
             content: _content,
             highlight: _highlight,
             videoTranscript: _videoTranscript,
+            projectId: _projectId,
+            experienceId: _experienceId,
+            educationId: _educationId,
             video: pending == null ? null : await dio.MultipartFile.fromFile(pending.path, filename: pending.name),
             onProgress: pending == null
                 ? null
@@ -275,13 +285,6 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
                             ),
                         ],
                       ),
-                      if (testimonial.project != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'À propos de : ${testimonial.project!.title.display}',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                        ),
-                      ],
                       const SizedBox(height: 20),
                       Text('Modération', style: theme.textTheme.labelLarge),
                       const SizedBox(height: 8),
@@ -354,6 +357,25 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 12),
+                TestimonialLinksCard(
+                  testimonial: testimonial,
+                  projectId: _projectId,
+                  experienceId: _experienceId,
+                  educationId: _educationId,
+                  onProjectChanged: (id) {
+                    setState(() => _projectId = id);
+                    _markDirty();
+                  },
+                  onExperienceChanged: (id) {
+                    setState(() => _experienceId = id);
+                    _markDirty();
+                  },
+                  onEducationChanged: (id) {
+                    setState(() => _educationId = id);
+                    _markDirty();
+                  },
                 ),
                 const SizedBox(height: 12),
                 TestimonialVideoCard(

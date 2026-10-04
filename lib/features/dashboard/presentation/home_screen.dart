@@ -38,22 +38,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(pushServiceProvider).registerForCurrentSession(context);
-        _openPendingCongratulation(ref.read(pendingPushTargetProvider));
+        _openPendingHomeTarget(ref.read(pendingPushTargetProvider));
       }
     });
   }
 
-  /// Notification « Nouvelles félicitations » tapée : ouvre leur historique
-  /// en marquant l'envoi visé, puis consomme la cible.
-  void _openPendingCongratulation(PushTarget? target) {
-    if (target == null || target.type != PushResourceType.congratulation) {
-      return;
+  /// Notification consommée par l'accueil, puis effacée : « Nouvelles
+  /// félicitations » ouvre leur historique en marquant l'envoi visé, « CV
+  /// téléchargé » ouvre les téléchargements sur le détail de celui-ci.
+  void _openPendingHomeTarget(PushTarget? target) {
+    final Widget screen;
+    switch (target?.type) {
+      case PushResourceType.congratulation:
+        screen = CongratulationsScreen(highlightId: target!.id);
+      case PushResourceType.cvDownload:
+        screen = CvDownloadsScreen(openId: target!.id);
+      default:
+        return;
     }
     ref.read(pendingPushTargetProvider.notifier).state = null;
     ref.invalidate(dashboardProvider);
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => CongratulationsScreen(highlightId: target.id)),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
   }
 
   String _greeting() {
@@ -94,7 +99,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // Accueil déjà monté (app en arrière-plan) : la cible arrive après coup.
-    ref.listen(pendingPushTargetProvider, (_, target) => _openPendingCongratulation(target));
+    ref.listen(pendingPushTargetProvider, (_, target) => _openPendingHomeTarget(target));
     final user = ref.watch(sessionProvider).value;
     final dashboard = ref.watch(dashboardProvider);
     final theme = Theme.of(context);

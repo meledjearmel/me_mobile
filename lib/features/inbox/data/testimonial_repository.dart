@@ -53,6 +53,9 @@ class TestimonialRepository {
     required Translated content,
     Translated highlight = const Translated(),
     Translated videoTranscript = const Translated(),
+    int? projectId,
+    int? experienceId,
+    int? educationId,
     MultipartFile? video,
     void Function(int sent, int total)? onProgress,
   }) {
@@ -64,6 +67,9 @@ class TestimonialRepository {
       'content': content,
       'highlight': highlight,
       'video_transcript': videoTranscript,
+      'project_id': projectId,
+      'experience_id': experienceId,
+      'education_id': educationId,
       if (video != null) 'video': video,
     }, method: 'PUT');
     return _guardFeatured(

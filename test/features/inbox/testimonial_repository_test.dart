@@ -59,6 +59,7 @@ void main() {
       content: const Translated(fr: 'Corrigé', en: 'Fixed'),
       highlight: const Translated(fr: 'Top'),
       videoTranscript: const Translated(en: 'Hello'),
+      experienceId: 4,
     );
 
     final form = adapter.requests.single.data as FormData;
@@ -71,6 +72,9 @@ void main() {
     expect(fields['highlight[fr]'], 'Top');
     expect(fields['video_transcript[en]'], 'Hello');
     expect(fields['is_featured'], '1');
+    expect(fields['project_id'], '');
+    expect(fields['experience_id'], '4');
+    expect(fields['education_id'], '');
     expect(form.files, isEmpty);
   });
 

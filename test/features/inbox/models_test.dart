@@ -121,6 +121,33 @@ void main() {
       expect(testimonial.video!.aspectRatio, 720 / 1280);
     });
 
+    test('expérience et formation liées sont parsées', () {
+      final testimonial = Testimonial.fromJson({
+        'id': 1,
+        'author_name': 'Alice',
+        'author_email': 'a@example.com',
+        'author_role': null,
+        'content': {'fr': 'Bien', 'en': 'Good'},
+        'status': 'approved',
+        'project': null,
+        'experience': {
+          'id': 4,
+          'company': 'ACME',
+          'role': {'fr': 'Développeur', 'en': 'Developer'},
+        },
+        'education': {
+          'id': 2,
+          'institution': 'ESATIC',
+          'degree': {'fr': 'Master', 'en': 'Master'},
+        },
+        'submitted_at': '2026-09-25T10:00:00Z',
+      });
+
+      expect(testimonial.experience!.company, 'ACME');
+      expect(testimonial.experience!.role.en, 'Developer');
+      expect(testimonial.education!.institution, 'ESATIC');
+    });
+
     test('une vidéo non traitée garde un format 16:9 et pas de durée', () {
       const video = TestimonialVideo(url: 'https://armeldev.xyz/v.mp4');
 

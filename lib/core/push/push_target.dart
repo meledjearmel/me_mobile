@@ -3,13 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Les éléments qui déclenchent une notification push (§4.6) : nouveau
 /// message, nouvelle demande de collaboration, nouvel avis déposé, demande ou
-/// annulation de rendez-vous, nouvelles félicitations reçues sur le site.
+/// annulation de rendez-vous, nouvelles félicitations reçues sur le site,
+/// téléchargement du CV.
 enum PushResourceType {
   contact('contact', 'message', 'Nouveau message', 0),
   engagement('engagement', 'demande de collaboration', 'Nouvelle demande de collaboration', 1),
   testimonial('testimonial', 'avis', 'Nouvel avis déposé', 2),
   appointment('appointment', 'rendez-vous', 'Rendez-vous', 3),
-  congratulation('congratulation', 'félicitations', 'Nouvelles félicitations 🎉', null);
+  congratulation('congratulation', 'félicitations', 'Nouvelles félicitations 🎉', null),
+  cvDownload('cv_download', 'téléchargement du CV', 'CV téléchargé', null);
 
   const PushResourceType(this.wireValue, this.label, this.notificationTitle, this.inboxTabIndex);
 
@@ -21,8 +23,8 @@ enum PushResourceType {
   /// affichées manuellement en avant-plan comme en arrière-plan.
   final String notificationTitle;
 
-  /// Onglet de la boîte de réception à ouvrir ; `null` pour les félicitations,
-  /// qui s'ouvrent depuis l'accueil.
+  /// Onglet de la boîte de réception à ouvrir ; `null` pour les félicitations
+  /// et les téléchargements du CV, qui s'ouvrent depuis l'accueil.
   final int? inboxTabIndex;
 
   /// Onglet de l'app qui consomme la cible.

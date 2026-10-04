@@ -45,7 +45,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
           _autoOpenTestimonialId = target.id;
         case PushResourceType.appointment:
           _autoOpenAppointmentId = target.id;
-        case PushResourceType.congratulation:
+        case PushResourceType.congratulation || PushResourceType.cvDownload:
           // Consommée par l'accueil.
           break;
       }

@@ -18,6 +18,9 @@ const trashTypes = [
   ('testimonials', 'Avis'),
   ('contacts', 'Messages'),
   ('engagements', 'Collaborations'),
+  ('appointments', 'Rendez-vous'),
+  ('appointment-types', 'Types de rendez-vous'),
+  ('posts', 'Articles du blog'),
 ];
 
 @immutable
