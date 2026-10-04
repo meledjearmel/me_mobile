@@ -103,7 +103,12 @@ class PostsListScreen extends ConsumerWidget {
           ],
         ),
         subtitle: Text(
-          ['${post.readingMinutes} min de lecture', if (post.tags.isNotEmpty) post.tags.take(3).join(', ')].join(' · '),
+          [
+            '${post.viewsCount} lecture${post.viewsCount > 1 ? 's' : ''}',
+            if (post.reactionsTotal > 0) '${post.reactionsTotal} réaction${post.reactionsTotal > 1 ? 's' : ''}',
+            if (post.pendingCommentsCount > 0) '${post.pendingCommentsCount} comm. à modérer',
+            if (post.tags.isNotEmpty) post.tags.take(2).join(', '),
+          ].join(' · '),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

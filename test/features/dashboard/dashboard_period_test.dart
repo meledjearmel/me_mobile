@@ -8,7 +8,7 @@ import '../../helpers/fake_dio_adapter.dart';
 import '../../helpers/memory_token_storage.dart';
 
 Map<String, dynamic> _dashboard({int? periodDays, String? since, String granularity = 'day'}) => {
-  'todo': {'contacts': 1, 'engagements': 0, 'testimonials': 2, 'appointments': 3},
+  'todo': {'contacts': 1, 'engagements': 0, 'testimonials': 2, 'appointments': 3, 'comments': 4},
   'visits': {
     'total': 900,
     'period_days': periodDays,
@@ -38,6 +38,23 @@ Map<String, dynamic> _dashboard({int? periodDays, String? since, String granular
   'recent': {'contacts': [], 'engagements': [], 'testimonials': []},
   'cv_downloads': {'total': 5, 'period_days': periodDays, 'since': since, 'period': 5, 'with_email': 1},
   'conversions': {'period_days': periodDays, 'since': since, 'visitors': 250, 'goals': []},
+  'blog': {
+    'period_days': periodDays,
+    'since': since,
+    'views_total': 1500,
+    'reactions': {
+      'total': 40,
+      'period': 12,
+      'by_type': [
+        {'label': 'like', 'count': 8},
+        {'label': 'idea', 'count': 4},
+      ],
+    },
+    'comments': {'total': 9, 'period': 3, 'pending': 2, 'approved': 6, 'rejected': 1},
+    'top_posts': [
+      {'id': 3, 'title': 'Mon article', 'url': '/fr/blog/mon-article', 'views': 800, 'reactions': 10, 'comments': 2},
+    ],
+  },
 };
 
 void main() {
@@ -85,6 +102,18 @@ void main() {
     final dashboard = Dashboard.fromJson(_dashboard(periodDays: 30));
 
     expect(dashboard.todo.appointments, 3);
-    expect(dashboard.todo.total, 6);
+    expect(dashboard.todo.comments, 4);
+    expect(dashboard.todo.total, 10);
+  });
+
+  test('bloc blog : lectures, réactions, commentaires et top des articles', () {
+    final blog = Dashboard.fromJson(_dashboard(periodDays: 30)).blog;
+
+    expect(blog.viewsTotal, 1500);
+    expect(blog.reactionsPeriod, 12);
+    expect(blog.reactionsByType.first.label, 'like');
+    expect(blog.commentsPending, 2);
+    expect(blog.topPosts.single.views, 800);
+    expect(blog.periodLabel, '30 derniers jours');
   });
 }

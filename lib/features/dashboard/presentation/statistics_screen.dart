@@ -9,6 +9,8 @@ import '../../../shared/widgets/form_layout.dart';
 import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
+import '../../blog/data/post.dart';
+import '../../blog/presentation/post_form_screen.dart';
 import '../../celebrations/presentation/congratulations_screen.dart';
 import '../../cv_downloads/presentation/cv_downloads_screen.dart';
 import '../data/dashboard.dart';
@@ -198,6 +200,45 @@ class _StatisticsBody extends ConsumerWidget {
               Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CongratulationsScreen())),
         ),
         gap,
+        const SectionHeader('Blog'),
+        const SizedBox(height: 4),
+        Text(
+          '${dashboard.blog.periodLabel} · lectures depuis le début',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        small,
+        _Grid(
+          children: [
+            StatTile(value: dashboard.blog.viewsTotal, label: 'Lectures'),
+            StatTile(
+              value: dashboard.blog.reactionsPeriod,
+              label: 'Réactions',
+              caption: '${dashboard.blog.reactionsTotal} au total',
+            ),
+            StatTile(
+              value: dashboard.blog.commentsPeriod,
+              label: 'Commentaires',
+              caption: '${dashboard.blog.commentsTotal} au total',
+            ),
+            StatTile(
+              value: dashboard.blog.commentsPending,
+              label: 'À modérer',
+              caption: '${dashboard.blog.commentsApproved} approuvés · ${dashboard.blog.commentsRejected} rejetés',
+            ),
+          ],
+        ),
+        if (dashboard.blog.reactionsByType.any((r) => r.count > 0)) ...[
+          const SizedBox(height: 10),
+          _BarListCard(
+            title: 'Réactions',
+            items: [for (final r in dashboard.blog.reactionsByType) (label: _reactionLabel(r.label), count: r.count)],
+          ),
+        ],
+        if (dashboard.blog.topPosts.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _BlogTopPostsCard(posts: dashboard.blog.topPosts),
+        ],
+        gap,
         SectionHeader('CV téléchargés', actionLabel: 'Tout voir', onAction: () => _openCvDownloads(context)),
         small,
         CvDownloadsCard(summary: dashboard.cvDownloads, onTap: () => _openCvDownloads(context)),
@@ -226,6 +267,11 @@ class _StatisticsBody extends ConsumerWidget {
       ],
     );
   }
+}
+
+String _reactionLabel(String wire) {
+  final type = PostReactionType.fromWire(wire);
+  return type == null ? wire : '${type.emoji}  ${type.label}';
 }
 
 String _sourceLabel(String source) => source == 'direct' ? 'Accès direct' : source;
@@ -425,6 +471,58 @@ class _TopContentCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text('${item.visits}', style: theme.textTheme.labelLarge),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Articles les plus engagés sur la période ; un tap ouvre l'article.
+class _BlogTopPostsCard extends StatelessWidget {
+  const _BlogTopPostsCard({required this.posts});
+
+  final List<BlogTopPost> posts;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Articles les plus engagés', style: theme.textTheme.titleSmall),
+          for (final post in posts)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (context) => PostFormScreen(id: post.id))),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 2),
+                child: Row(
+                  children: [
+                    const Icon(Icons.article_outlined, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(post.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            '${post.reactions} réaction${post.reactions > 1 ? 's' : ''} · '
+                            '${post.comments} commentaire${post.comments > 1 ? 's' : ''}',
+                            style: muted,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('${post.views} lect.', style: theme.textTheme.labelLarge),
                   ],
                 ),
               ),

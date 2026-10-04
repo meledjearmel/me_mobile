@@ -6,15 +6,16 @@ import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 import 'appointments/appointments_tab.dart';
+import 'comments/comments_tab.dart';
 import 'contacts/contacts_tab.dart';
 import 'engagements/engagements_tab.dart';
 import 'testimonials/testimonials_tab.dart';
 
-/// Boîte de réception : contacts, collaborations, avis (§4.2) et rendez-vous, en 4 segments.
+/// Boîte de réception : contacts, collaborations, avis (§4.2), rendez-vous et commentaires du blog, en 5 segments.
 class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
 
-  static const _tabs = [(label: 'Messages'), (label: 'Demandes'), (label: 'Avis'), (label: 'RDV')];
+  static const _tabs = [(label: 'Messages'), (label: 'Demandes'), (label: 'Avis'), (label: 'RDV'), (label: 'Comm.')];
 
   @override
   ConsumerState<InboxScreen> createState() => _InboxScreenState();
@@ -26,6 +27,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
   int? _autoOpenEngagementId;
   int? _autoOpenTestimonialId;
   int? _autoOpenAppointmentId;
+  int? _autoOpenCommentId;
 
   @override
   void initState() {
@@ -45,7 +47,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
           _autoOpenTestimonialId = target.id;
         case PushResourceType.appointment:
           _autoOpenAppointmentId = target.id;
-        case PushResourceType.congratulation || PushResourceType.cvDownload:
+        case PushResourceType.postComment:
+          _autoOpenCommentId = target.id;
+        case PushResourceType.congratulation || PushResourceType.cvDownload || PushResourceType.postReaction:
           // Consommée par l'accueil.
           break;
       }
@@ -73,7 +77,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final todo = ref.watch(dashboardProvider).value?.todo;
     // Même ordre que InboxScreen._tabs (voir aussi PushResourceType.inboxTabIndex).
-    final counts = [todo?.contacts ?? 0, todo?.engagements ?? 0, todo?.testimonials ?? 0, todo?.appointments ?? 0];
+    final counts = [todo?.contacts ?? 0, todo?.engagements ?? 0, todo?.testimonials ?? 0, todo?.appointments ?? 0, todo?.comments ?? 0];
 
     return Scaffold(
       // Titre et sélecteur flottent : les listes défilent dessous.
@@ -110,6 +114,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
           EngagementsTab(autoOpenId: _autoOpenEngagementId),
           TestimonialsTab(autoOpenId: _autoOpenTestimonialId),
           AppointmentsTab(autoOpenId: _autoOpenAppointmentId),
+          CommentsTab(autoOpenId: _autoOpenCommentId),
         ],
       ),
     );

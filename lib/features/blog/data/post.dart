@@ -22,6 +22,10 @@ class Post {
     required this.tags,
     this.series,
     this.seriesPosition,
+    this.viewsCount = 0,
+    this.previewUrl,
+    this.reactions = const {},
+    this.pendingCommentsCount = 0,
     required this.updatedAt,
   });
 
@@ -40,6 +44,13 @@ class Post {
     tags: [for (final tag in json['tags'] as List<dynamic>? ?? const []) '$tag'],
     series: json['series'] as String?,
     seriesPosition: json['series_position'] as int?,
+    viewsCount: json['views_count'] as int? ?? 0,
+    previewUrl: json['preview_url'] as String?,
+    reactions: {
+      if (json['reactions'] case final Map<String, dynamic> map)
+        for (final type in PostReactionType.values) type: map[type.wireValue] as int? ?? 0,
+    },
+    pendingCommentsCount: json['pending_comments_count'] as int? ?? 0,
     updatedAt: _date(json['updated_at']),
   );
 
@@ -71,6 +82,16 @@ class Post {
 
   /// Place dans la série (1, 2, 3…).
   final int? seriesPosition;
+
+  /// Lectures (une par session toutes les 30 minutes, robots exclus).
+  final int viewsCount;
+
+  /// Lien signé vers l'aperçu sur le site, valable 72 heures, même en brouillon.
+  final String? previewUrl;
+  final Map<PostReactionType, int> reactions;
+  final int pendingCommentsCount;
+
+  int get reactionsTotal => reactions.values.fold(0, (a, b) => a + b);
   final DateTime? updatedAt;
 
   /// Publié mais pas encore visible : date de parution à venir.
@@ -133,4 +154,28 @@ String slugify(String title) {
   };
   final lower = title.toLowerCase().split('').map((c) => accents[c] ?? c).join();
   return lower.replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+}
+
+/// Réactions des lecteurs, dans l'ordre du site.
+enum PostReactionType {
+  like('like', '👍', 'J\'aime'),
+  love('love', '❤️', 'J\'adore'),
+  fire('fire', '🔥', 'Impressionnant'),
+  idea('idea', '💡', 'Instructif'),
+  think('think', '🤔', 'Réflexion');
+
+  const PostReactionType(this.wireValue, this.emoji, this.label);
+
+  final String wireValue;
+  final String emoji;
+  final String label;
+
+  static PostReactionType? fromWire(String value) {
+    for (final type in values) {
+      if (type.wireValue == value) {
+        return type;
+      }
+    }
+    return null;
+  }
 }

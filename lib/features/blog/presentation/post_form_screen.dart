@@ -387,7 +387,11 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
               Row(
                 children: [
                   Expanded(child: Text('Contenu', style: theme.textTheme.labelLarge)),
-                  if (post != null) Text('${post.readingMinutes} min de lecture', style: muted),
+                  if (post != null)
+                    Text(
+                      '${post.readingMinutes} min de lecture · ${post.viewsCount} lecture${post.viewsCount > 1 ? 's' : ''}',
+                      style: muted,
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -418,14 +422,40 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
                   style: muted,
                 ),
                 const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.tonalIcon(
-                    onPressed: _openAdmin,
-                    icon: const Icon(Icons.edit_note_rounded),
-                    label: const Text('Rédiger dans l\'admin web'),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.tonalIcon(
+                      onPressed: _openAdmin,
+                      icon: const Icon(Icons.edit_note_rounded),
+                      label: const Text('Rédiger dans l\'admin web'),
+                    ),
+                    if (post.previewUrl != null)
+                      OutlinedButton.icon(
+                        onPressed: () => launchUrl(Uri.parse(post.previewUrl!), mode: LaunchMode.externalApplication),
+                        icon: const Icon(Icons.visibility_outlined),
+                        label: const Text('Aperçu'),
+                      ),
+                  ],
                 ),
+                if (post.reactionsTotal > 0 || post.pendingCommentsCount > 0) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    children: [
+                      for (final type in PostReactionType.values)
+                        if ((post.reactions[type] ?? 0) > 0)
+                          Tooltip(message: type.label, child: Text('${type.emoji} ${post.reactions[type]}')),
+                      if (post.pendingCommentsCount > 0)
+                        Text(
+                          '${post.pendingCommentsCount} commentaire${post.pendingCommentsCount > 1 ? 's' : ''} à modérer',
+                          style: muted,
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ],
           ),

@@ -16,6 +16,7 @@ class Dashboard {
     required this.recent,
     this.cvDownloads = const DashboardCvDownloads(),
     this.conversions = const DashboardConversions(),
+    this.blog = const DashboardBlog(),
   });
 
   factory Dashboard.fromJson(Map<String, dynamic> json) => Dashboard(
@@ -31,6 +32,9 @@ class Dashboard {
     conversions: json['conversions'] is Map<String, dynamic>
         ? DashboardConversions.fromJson(json['conversions'] as Map<String, dynamic>)
         : const DashboardConversions(),
+    blog: json['blog'] is Map<String, dynamic>
+        ? DashboardBlog.fromJson(json['blog'] as Map<String, dynamic>)
+        : const DashboardBlog(),
   );
 
   final DashboardTodo todo;
@@ -41,6 +45,106 @@ class Dashboard {
   final DashboardRecent recent;
   final DashboardCvDownloads cvDownloads;
   final DashboardConversions conversions;
+  final DashboardBlog blog;
+}
+
+/// Engagement des lecteurs du blog. Lectures, réactions et commentaires au
+/// total ne dépendent pas de la période ; le reste la suit.
+@immutable
+class DashboardBlog {
+  const DashboardBlog({
+    this.periodDays = 30,
+    this.since,
+    this.viewsTotal = 0,
+    this.reactionsTotal = 0,
+    this.reactionsPeriod = 0,
+    this.reactionsByType = const [],
+    this.commentsTotal = 0,
+    this.commentsPeriod = 0,
+    this.commentsPending = 0,
+    this.commentsApproved = 0,
+    this.commentsRejected = 0,
+    this.topPosts = const [],
+  });
+
+  factory DashboardBlog.fromJson(Map<String, dynamic> json) {
+    final reactions = json['reactions'] as Map<String, dynamic>? ?? const {};
+    final comments = json['comments'] as Map<String, dynamic>? ?? const {};
+    return DashboardBlog(
+      periodDays: json['period_days'] as int?,
+      since: _parseDate(json['since']),
+      viewsTotal: json['views_total'] as int? ?? 0,
+      reactionsTotal: reactions['total'] as int? ?? 0,
+      reactionsPeriod: reactions['period'] as int? ?? 0,
+      reactionsByType: [
+        for (final item in reactions['by_type'] as List<dynamic>? ?? const [])
+          CategoryCount.fromJson(item as Map<String, dynamic>),
+      ],
+      commentsTotal: comments['total'] as int? ?? 0,
+      commentsPeriod: comments['period'] as int? ?? 0,
+      commentsPending: comments['pending'] as int? ?? 0,
+      commentsApproved: comments['approved'] as int? ?? 0,
+      commentsRejected: comments['rejected'] as int? ?? 0,
+      topPosts: [
+        for (final item in json['top_posts'] as List<dynamic>? ?? const [])
+          BlogTopPost.fromJson(item as Map<String, dynamic>),
+      ],
+    );
+  }
+
+  final int? periodDays;
+  final DateTime? since;
+
+  /// Lectures de tous les articles, depuis le début.
+  final int viewsTotal;
+  final int reactionsTotal;
+  final int reactionsPeriod;
+
+  /// Sur la période : `label` vaut `like`, `love`, `fire`, `idea` ou `think`.
+  final List<CategoryCount> reactionsByType;
+  final int commentsTotal;
+  final int commentsPeriod;
+  final int commentsPending;
+  final int commentsApproved;
+  final int commentsRejected;
+
+  /// Les 5 articles les plus engagés sur la période.
+  final List<BlogTopPost> topPosts;
+
+  String get periodLabel => describePeriod(periodDays, since);
+}
+
+/// Article parmi les plus engagés (un commentaire pèse comme trois réactions).
+@immutable
+class BlogTopPost {
+  const BlogTopPost({
+    required this.id,
+    required this.title,
+    required this.url,
+    required this.views,
+    required this.reactions,
+    required this.comments,
+  });
+
+  factory BlogTopPost.fromJson(Map<String, dynamic> json) => BlogTopPost(
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    url: json['url'] as String? ?? '',
+    views: json['views'] as int? ?? 0,
+    reactions: json['reactions'] as int? ?? 0,
+    comments: json['comments'] as int? ?? 0,
+  );
+
+  final int id;
+  final String title;
+  final String url;
+
+  /// Lectures depuis le début.
+  final int views;
+
+  /// Réactions et commentaires sur la période.
+  final int reactions;
+  final int comments;
 }
 
 /// Objectifs atteints sur la période, rapportés aux visiteurs uniques.
@@ -147,6 +251,7 @@ class DashboardTodo {
     required this.engagements,
     required this.testimonials,
     this.appointments = 0,
+    this.comments = 0,
   });
 
   factory DashboardTodo.fromJson(Map<String, dynamic> json) => DashboardTodo(
@@ -154,6 +259,7 @@ class DashboardTodo {
     engagements: json['engagements'] as int? ?? 0,
     testimonials: json['testimonials'] as int? ?? 0,
     appointments: json['appointments'] as int? ?? 0,
+    comments: json['comments'] as int? ?? 0,
   );
 
   final int contacts;
@@ -163,7 +269,10 @@ class DashboardTodo {
   /// Demandes de rendez-vous en attente.
   final int appointments;
 
-  int get total => contacts + engagements + testimonials + appointments;
+  /// Commentaires du blog à modérer.
+  final int comments;
+
+  int get total => contacts + engagements + testimonials + appointments + comments;
 }
 
 @immutable

@@ -67,6 +67,8 @@ class _SiteSettingsForm extends ConsumerStatefulWidget {
 class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
   late bool _contactOpensDrawer = widget.settings.contactOpensDrawer;
   late bool _blogEnabled = widget.settings.blogEnabled;
+  late bool _blogReactionsEnabled = widget.settings.blogReactionsEnabled;
+  late bool _blogCommentsEnabled = widget.settings.blogCommentsEnabled;
   late AvailabilityStatus _availability = widget.settings.availabilityStatus;
   late DateTime? _availableFrom = widget.settings.availableFrom;
   late bool _testimonialVideoEnabled = widget.settings.testimonialVideoEnabled;
@@ -123,6 +125,8 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
               availabilityStatus: _availability,
               availableFrom: _availableFrom,
               blogEnabled: _blogEnabled,
+              blogReactionsEnabled: _blogReactionsEnabled,
+              blogCommentsEnabled: _blogCommentsEnabled,
               cvJobProfileId: _cvJobProfileId,
               cvSource: _cvSource,
               congratulationNotifyMinutes: _notifyMinutes,
@@ -317,6 +321,20 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
                     subtitle: const Text('Affiché sur le site : pages, navigation et plan du site.'),
                     value: _blogEnabled,
                     onChanged: (value) => _set(() => _blogEnabled = value),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Réactions des lecteurs'),
+                    subtitle: const Text('👍 ❤️ 🔥 💡 🤔 sous les articles, sans compte.'),
+                    value: _blogReactionsEnabled,
+                    onChanged: (value) => _set(() => _blogReactionsEnabled = value),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Commentaires'),
+                    subtitle: const Text('Publiés sous les articles après votre approbation.'),
+                    value: _blogCommentsEnabled,
+                    onChanged: (value) => _set(() => _blogCommentsEnabled = value),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,

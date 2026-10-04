@@ -10,8 +10,12 @@ enum PushResourceType {
   engagement('engagement', 'demande de collaboration', 'Nouvelle demande de collaboration', 1),
   testimonial('testimonial', 'avis', 'Nouvel avis déposé', 2),
   appointment('appointment', 'rendez-vous', 'Rendez-vous', 3),
+  postComment('post_comment', 'commentaire', 'Nouveau commentaire', 4),
   congratulation('congratulation', 'félicitations', 'Nouvelles félicitations 🎉', null),
-  cvDownload('cv_download', 'téléchargement du CV', 'CV téléchargé', null);
+  cvDownload('cv_download', 'téléchargement du CV', 'CV téléchargé', null),
+
+  /// Réactions regroupées sur un article (`id` : l'article).
+  postReaction('post_reaction', 'réactions', 'Nouvelles réactions', null);
 
   const PushResourceType(this.wireValue, this.label, this.notificationTitle, this.inboxTabIndex);
 
@@ -23,8 +27,8 @@ enum PushResourceType {
   /// affichées manuellement en avant-plan comme en arrière-plan.
   final String notificationTitle;
 
-  /// Onglet de la boîte de réception à ouvrir ; `null` pour les félicitations
-  /// et les téléchargements du CV, qui s'ouvrent depuis l'accueil.
+  /// Onglet de la boîte de réception à ouvrir ; `null` pour les félicitations,
+  /// les téléchargements du CV et les réactions, qui s'ouvrent depuis l'accueil.
   final int? inboxTabIndex;
 
   /// Onglet de l'app qui consomme la cible.

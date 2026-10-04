@@ -12,6 +12,8 @@ const _settingsJson = {
   'availability_status': 'from',
   'available_from': '2026-12-01',
   'blog_enabled': true,
+  'blog_reactions_enabled': true,
+  'blog_comments_enabled': false,
   'cv_job_profile_id': 3,
   'cv_source': 'generated',
   'congratulation_notify_minutes': 30,

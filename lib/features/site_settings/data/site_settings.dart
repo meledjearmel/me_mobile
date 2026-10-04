@@ -56,6 +56,8 @@ class SiteSettings {
     this.availabilityStatus = AvailabilityStatus.available,
     this.availableFrom,
     this.blogEnabled = false,
+    this.blogReactionsEnabled = false,
+    this.blogCommentsEnabled = false,
     this.cvJobProfileId,
     this.cvSource = CvSource.uploaded,
     this.congratulationNotifyMinutes = 10,
@@ -75,6 +77,8 @@ class SiteSettings {
     availabilityStatus: AvailabilityStatus.fromWire(json['availability_status'] as String?),
     availableFrom: json['available_from'] == null ? null : DateTime.tryParse(json['available_from'] as String),
     blogEnabled: json['blog_enabled'] as bool? ?? false,
+    blogReactionsEnabled: json['blog_reactions_enabled'] as bool? ?? false,
+    blogCommentsEnabled: json['blog_comments_enabled'] as bool? ?? false,
     cvJobProfileId: json['cv_job_profile_id'] as int?,
     cvSource: CvSource.fromWire(json['cv_source'] as String?),
     congratulationNotifyMinutes: json['congratulation_notify_minutes'] as int? ?? 10,
@@ -102,6 +106,12 @@ class SiteSettings {
 
   /// Le blog est affiché sur le site public.
   final bool blogEnabled;
+
+  /// Les lecteurs peuvent réagir aux articles, sans compte.
+  final bool blogReactionsEnabled;
+
+  /// Les lecteurs peuvent commenter ; un commentaire n'apparaît qu'une fois approuvé.
+  final bool blogCommentsEnabled;
 
   /// Profil métier dont le CV est proposé (`null` : le premier publié).
   final int? cvJobProfileId;
@@ -144,6 +154,8 @@ class SiteSettings {
         ? DateFormat('yyyy-MM-dd').format(availableFrom!)
         : null,
     'blog_enabled': blogEnabled,
+    'blog_reactions_enabled': blogReactionsEnabled,
+    'blog_comments_enabled': blogCommentsEnabled,
     'cv_job_profile_id': cvJobProfileId,
     'cv_source': cvSource.wireValue,
     'congratulation_notify_minutes': congratulationNotifyMinutes,

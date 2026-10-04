@@ -22,7 +22,7 @@ void main() {
     expect(item.deletedAt, isNotNull);
   });
 
-  test('les 19 types de l\'API sont bien listés (§4.5)', () {
+  test('les 20 types de l\'API sont bien listés (§4.5)', () {
     final wireValues = trashTypes.map((t) => t.$1).toSet();
     expect(wireValues, {
       'domains',
@@ -44,6 +44,7 @@ void main() {
       'posts',
       'uses-items',
       'certifications',
+      'post-comments',
     });
   });
 

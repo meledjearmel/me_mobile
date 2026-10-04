@@ -13,6 +13,7 @@ import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../auth/application/session_controller.dart';
 import '../../celebrations/presentation/congratulations_screen.dart';
+import '../../blog/presentation/post_form_screen.dart';
 import '../../cv_downloads/presentation/cv_downloads_screen.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
@@ -53,6 +54,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         screen = CongratulationsScreen(highlightId: target!.id);
       case PushResourceType.cvDownload:
         screen = CvDownloadsScreen(openId: target!.id);
+      case PushResourceType.postReaction:
+        screen = PostFormScreen(id: target!.id);
       default:
         return;
     }

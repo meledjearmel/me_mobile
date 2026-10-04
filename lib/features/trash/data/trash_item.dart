@@ -23,6 +23,7 @@ const trashTypes = [
   ('appointments', 'Rendez-vous'),
   ('appointment-types', 'Types de rendez-vous'),
   ('posts', 'Articles du blog'),
+  ('post-comments', 'Commentaires du blog'),
 ];
 
 @immutable
