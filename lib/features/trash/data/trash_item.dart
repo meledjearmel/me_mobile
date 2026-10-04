@@ -7,6 +7,7 @@ const trashTypes = [
   ('domains', 'Domaines'),
   ('music-genres', 'Registres'),
   ('tracks', 'Pistes'),
+  ('uses-items', 'Éléments « Uses »'),
   ('technologies', 'Technologies'),
   ('technology-categories', 'Catégories de technologies'),
   ('job-profiles', 'Profils métier'),

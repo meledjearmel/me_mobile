@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 /// Source du CV servi par le site : le PDF importé sur le profil métier, ou
 /// le CV généré à partir du contenu.
@@ -13,6 +14,21 @@ enum CvSource {
 
   /// Défaut côté serveur : `uploaded` (le CV généré sert alors de repli).
   static CvSource fromWire(String? value) => value == generated.wireValue ? generated : uploaded;
+}
+
+/// Ma disponibilité affichée sur le site (badge de l'en-tête, fenêtre de contact).
+enum AvailabilityStatus {
+  available('available', 'Disponible'),
+  from('from', 'À partir du'),
+  unavailable('unavailable', 'Indisponible');
+
+  const AvailabilityStatus(this.wireValue, this.label);
+
+  final String wireValue;
+  final String label;
+
+  static AvailabilityStatus fromWire(String? value) =>
+      values.firstWhere((s) => s.wireValue == value, orElse: () => AvailabilityStatus.available);
 }
 
 /// Visio d'un rendez-vous confirmé : un lien Jitsi unique, ou un lien fixe.
@@ -35,6 +51,8 @@ class SiteSettings {
   const SiteSettings({
     this.contactOpensDrawer = true,
     this.testimonialVideoEnabled = false,
+    this.availabilityStatus = AvailabilityStatus.available,
+    this.availableFrom,
     this.blogEnabled = false,
     this.cvJobProfileId,
     this.cvSource = CvSource.uploaded,
@@ -50,6 +68,8 @@ class SiteSettings {
   factory SiteSettings.fromJson(Map<String, dynamic> json) => SiteSettings(
     contactOpensDrawer: json['contact_opens_drawer'] as bool? ?? true,
     testimonialVideoEnabled: json['testimonial_video_enabled'] as bool? ?? false,
+    availabilityStatus: AvailabilityStatus.fromWire(json['availability_status'] as String?),
+    availableFrom: json['available_from'] == null ? null : DateTime.tryParse(json['available_from'] as String),
     blogEnabled: json['blog_enabled'] as bool? ?? false,
     cvJobProfileId: json['cv_job_profile_id'] as int?,
     cvSource: CvSource.fromWire(json['cv_source'] as String?),
@@ -67,6 +87,12 @@ class SiteSettings {
 
   /// Les visiteurs peuvent joindre ou filmer une vidéo avec leur avis.
   final bool testimonialVideoEnabled;
+
+  final AvailabilityStatus availabilityStatus;
+
+  /// Date de disponibilité (statut `from`, date à venir) ; passée, le site
+  /// affiche « disponible ».
+  final DateTime? availableFrom;
 
   /// Le blog est affiché sur le site public.
   final bool blogEnabled;
@@ -99,6 +125,11 @@ class SiteSettings {
   Map<String, Object?> toJson() => {
     'contact_opens_drawer': contactOpensDrawer,
     'testimonial_video_enabled': testimonialVideoEnabled,
+    'availability_status': availabilityStatus.wireValue,
+    // Seulement avec le statut `from` : le serveur exige alors une date à venir.
+    'available_from': availabilityStatus == AvailabilityStatus.from && availableFrom != null
+        ? DateFormat('yyyy-MM-dd').format(availableFrom!)
+        : null,
     'blog_enabled': blogEnabled,
     'cv_job_profile_id': cvJobProfileId,
     'cv_source': cvSource.wireValue,

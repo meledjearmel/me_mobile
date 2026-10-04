@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
@@ -65,6 +66,8 @@ class _SiteSettingsForm extends ConsumerStatefulWidget {
 class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
   late bool _contactOpensDrawer = widget.settings.contactOpensDrawer;
   late bool _blogEnabled = widget.settings.blogEnabled;
+  late AvailabilityStatus _availability = widget.settings.availabilityStatus;
+  late DateTime? _availableFrom = widget.settings.availableFrom;
   late bool _testimonialVideoEnabled = widget.settings.testimonialVideoEnabled;
   late int? _cvJobProfileId = widget.settings.cvJobProfileId;
   late CvSource _cvSource = widget.settings.cvSource;
@@ -115,6 +118,8 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
             SiteSettings(
               contactOpensDrawer: _contactOpensDrawer,
               testimonialVideoEnabled: _testimonialVideoEnabled,
+              availabilityStatus: _availability,
+              availableFrom: _availableFrom,
               blogEnabled: _blogEnabled,
               cvJobProfileId: _cvJobProfileId,
               cvSource: _cvSource,
@@ -197,6 +202,66 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
             const SizedBox(height: 16),
             if (_error != null) ...[ErrorBanner(_error!), const SizedBox(height: 16)],
             if (v != null) ...[ErrorBanner(v.message), const SizedBox(height: 16)],
+            SurfaceCard(
+              radius: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Ma disponibilité', style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 4),
+                  Text('Badge de l\'en-tête et fenêtre de contact du site.', style: muted),
+                  const SizedBox(height: 12),
+                  SegmentedButton<AvailabilityStatus>(
+                    segments: [
+                      for (final status in AvailabilityStatus.values)
+                        ButtonSegment(value: status, label: Text(status.label)),
+                    ],
+                    selected: {_availability},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (selection) => _set(() => _availability = selection.first),
+                  ),
+                  if (v?.errorFor('availability_status') != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      v!.errorFor('availability_status')!,
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                    ),
+                  ],
+                  if (_availability == AvailabilityStatus.from)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.event_available_outlined),
+                      title: Text(
+                        _availableFrom == null
+                            ? 'Choisir la date'
+                            : 'Disponible à partir du ${DateFormat('d MMMM y', 'fr_FR').format(_availableFrom!)}',
+                      ),
+                      subtitle: Text(
+                        v?.errorFor('available_from') ?? 'Une fois la date passée, le site affiche « Disponible ».',
+                        style: v?.errorFor('available_from') == null
+                            ? null
+                            : TextStyle(color: theme.colorScheme.error),
+                      ),
+                      onTap: () async {
+                        final tomorrow = DateUtils.dateOnly(DateTime.now()).add(const Duration(days: 1));
+                        final initial = _availableFrom != null && _availableFrom!.isAfter(tomorrow)
+                            ? _availableFrom!
+                            : tomorrow;
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: initial,
+                          firstDate: tomorrow,
+                          lastDate: tomorrow.add(const Duration(days: 730)),
+                        );
+                        if (date != null) {
+                          _set(() => _availableFrom = date);
+                        }
+                      },
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             SurfaceCard(
               radius: 22,
               child: Column(

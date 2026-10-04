@@ -9,6 +9,8 @@ import '../../helpers/memory_token_storage.dart';
 const _settingsJson = {
   'contact_opens_drawer': false,
   'testimonial_video_enabled': true,
+  'availability_status': 'from',
+  'available_from': '2026-12-01',
   'blog_enabled': true,
   'cv_job_profile_id': 3,
   'cv_source': 'generated',
@@ -39,6 +41,8 @@ void main() {
 
     expect(settings.contactOpensDrawer, isFalse);
     expect(settings.testimonialVideoEnabled, isTrue);
+    expect(settings.availabilityStatus, AvailabilityStatus.from);
+    expect(settings.availableFrom, DateTime(2026, 12));
     expect(settings.blogEnabled, isTrue);
     expect(settings.cvJobProfileId, 3);
     expect(settings.cvSource, CvSource.generated);
@@ -65,6 +69,14 @@ void main() {
 
     final body = adapter.requests.single.data as Map;
     expect(body, {..._settingsJson, 'cv_job_profile_id': null});
+  });
+
+  test('available_from ne part qu\'avec le statut « à partir du »', () {
+    final settings = SiteSettings.fromJson({..._settingsJson, 'availability_status': 'unavailable'});
+
+    expect(settings.toJson()['availability_status'], 'unavailable');
+    expect(settings.toJson()['available_from'], isNull);
+    expect(SiteSettings.fromJson(_settingsJson).toJson()['available_from'], '2026-12-01');
   });
 
   test('patch n\'envoie que les champs demandés', () async {
