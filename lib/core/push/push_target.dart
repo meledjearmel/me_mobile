@@ -2,12 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Les éléments qui déclenchent une notification push (§4.6) : nouveau
-/// message, nouvelle demande de collaboration, nouvel avis déposé, nouvelles
-/// félicitations reçues sur le site.
+/// message, nouvelle demande de collaboration, nouvel avis déposé, demande ou
+/// annulation de rendez-vous, nouvelles félicitations reçues sur le site.
 enum PushResourceType {
   contact('contact', 'message', 'Nouveau message', 0),
   engagement('engagement', 'demande de collaboration', 'Nouvelle demande de collaboration', 1),
   testimonial('testimonial', 'avis', 'Nouvel avis déposé', 2),
+  appointment('appointment', 'rendez-vous', 'Rendez-vous', 3),
   congratulation('congratulation', 'félicitations', 'Nouvelles félicitations 🎉', null);
 
   const PushResourceType(this.wireValue, this.label, this.notificationTitle, this.inboxTabIndex);
