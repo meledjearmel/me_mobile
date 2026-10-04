@@ -9,6 +9,8 @@ import '../../../shared/widgets/status_badge.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
 import 'post_form_screen.dart';
+import 'post_tags_screen.dart';
+import 'subscribers_screen.dart';
 
 class PostsListScreen extends ConsumerWidget {
   const PostsListScreen({super.key});
@@ -43,6 +45,19 @@ class PostsListScreen extends ConsumerWidget {
       onRefresh: notifier.refresh,
       onRetry: () => ref.invalidate(postListProvider),
       onCreate: () => _openForm(context, ref),
+      actions: [
+        IconButton(
+          tooltip: 'Tags du blog',
+          icon: const Icon(Icons.sell_outlined),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PostTagsScreen())),
+        ),
+        IconButton(
+          tooltip: 'Abonnés à la newsletter',
+          icon: const Icon(Icons.mark_email_read_outlined),
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SubscribersScreen())),
+        ),
+      ],
       emptyIcon: Icons.article_outlined,
       emptyTitle: 'Aucun article pour l\'instant',
       emptyDescription: 'Lancez un brouillon avec le bouton +, puis rédigez-le dans l\'admin web.',
