@@ -13,6 +13,7 @@ import '../../profile/presentation/profile_screen.dart';
 import '../../projects/presentation/projects_list_screen.dart';
 import '../certifications/presentation/certifications_list_screen.dart';
 import '../domains/presentation/domains_list_screen.dart';
+import '../github/presentation/github_screen.dart';
 import '../educations/presentation/educations_list_screen.dart';
 import '../experiences/presentation/experiences_list_screen.dart';
 import '../job_profiles/presentation/job_profiles_list_screen.dart';
@@ -71,6 +72,7 @@ class ContentScreen extends ConsumerWidget {
       sections: [
         (icon: Icons.article_outlined, label: 'Blog', builder: _postsScreen),
         (icon: Icons.devices_other_outlined, label: 'Uses', builder: _usesScreen),
+        (icon: Icons.code_rounded, label: 'Dépôts GitHub', builder: _gitHubScreen),
         (icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen),
       ],
     ),
@@ -90,6 +92,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
   static Widget _postsScreen(BuildContext context) => const PostsListScreen();
   static Widget _usesScreen(BuildContext context) => const UsesItemsListScreen();
+  static Widget _gitHubScreen(BuildContext context) => const GitHubScreen();
   static Widget _appointmentTypesScreen(BuildContext context) => const AppointmentTypesListScreen();
   static Widget _availabilityScreen(BuildContext context) => const AvailabilityScreen();
 
