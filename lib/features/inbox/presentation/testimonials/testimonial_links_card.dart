@@ -29,7 +29,7 @@ final _educationOptionsProvider = FutureProvider.autoDispose<List<_Option>>((ref
 class TestimonialLinksCard extends ConsumerWidget {
   const TestimonialLinksCard({
     super.key,
-    required this.testimonial,
+    this.testimonial,
     required this.projectId,
     required this.experienceId,
     required this.educationId,
@@ -39,7 +39,8 @@ class TestimonialLinksCard extends ConsumerWidget {
   });
 
   /// Liens d'origine : toujours proposés, même hors de la première page.
-  final Testimonial testimonial;
+  /// `null` pour une demande d'avis (aucun lien existant).
+  final Testimonial? testimonial;
   final int? projectId;
   final int? experienceId;
   final int? educationId;
@@ -50,9 +51,9 @@ class TestimonialLinksCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final project = testimonial.project;
-    final experience = testimonial.experience;
-    final education = testimonial.education;
+    final project = testimonial?.project;
+    final experience = testimonial?.experience;
+    final education = testimonial?.education;
 
     return SurfaceCard(
       radius: 22,

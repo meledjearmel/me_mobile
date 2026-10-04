@@ -10,6 +10,7 @@ import '../../../../shared/widgets/surfaces.dart';
 import '../../application/testimonial_list_controller.dart';
 import '../../data/testimonial.dart';
 import '../../data/testimonial_repository.dart';
+import 'review_invitations_screen.dart';
 import 'testimonial_edit_screen.dart';
 
 /// Onglet Avis : balayer une carte pour approuver ou rejeter, avec une
@@ -98,6 +99,15 @@ class _TestimonialsTabState extends ConsumerState<TestimonialsTab> {
       emptyTitle: 'Aucun avis pour l\'instant',
       emptyDescription: 'Les avis déposés sur le site public apparaîtront ici.',
       wrapInCard: false,
+      header: Align(
+        alignment: Alignment.centerLeft,
+        child: FilledButton.tonalIcon(
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ReviewInvitationsScreen())),
+          icon: const Icon(Icons.forward_to_inbox_outlined),
+          label: const Text('Demandes d\'avis'),
+        ),
+      ),
       filterChips: [
         for (final status in _statuses)
           PillFilterChip(
