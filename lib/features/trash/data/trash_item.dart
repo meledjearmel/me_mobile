@@ -13,6 +13,7 @@ const trashTypes = [
   ('job-profiles', 'Profils métier'),
   ('skills', 'Compétences'),
   ('educations', 'Formations'),
+  ('certifications', 'Certifications'),
   ('experiences', 'Expériences'),
   ('projects', 'Projets'),
   ('professional-references', 'Références'),

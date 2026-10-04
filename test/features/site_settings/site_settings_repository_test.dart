@@ -21,6 +21,7 @@ const _settingsJson = {
   'booking_buffer_minutes': 15,
   'booking_video_provider': 'link',
   'booking_video_link': 'https://meet.example.com/armel',
+  'now_content': {'fr': "Je construis l'app mobile.", 'en': 'Building the mobile app.'},
 };
 
 void main() {
@@ -52,6 +53,7 @@ void main() {
     expect(settings.bookingBufferMinutes, 15);
     expect(settings.bookingVideoProvider, BookingVideoProvider.link);
     expect(settings.bookingVideoLink, 'https://meet.example.com/armel');
+    expect(settings.nowContent.en, 'Building the mobile app.');
   });
 
   test('valeurs absentes ou inconnues : défauts du serveur', () {

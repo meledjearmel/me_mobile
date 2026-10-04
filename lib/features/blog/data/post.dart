@@ -20,6 +20,8 @@ class Post {
     required this.isLive,
     required this.coverUrl,
     required this.tags,
+    this.series,
+    this.seriesPosition,
     required this.updatedAt,
   });
 
@@ -36,6 +38,8 @@ class Post {
     isLive: json['is_live'] as bool? ?? false,
     coverUrl: json['cover_url'] as String?,
     tags: [for (final tag in json['tags'] as List<dynamic>? ?? const []) '$tag'],
+    series: json['series'] as String?,
+    seriesPosition: json['series_position'] as int?,
     updatedAt: _date(json['updated_at']),
   );
 
@@ -61,6 +65,12 @@ class Post {
 
   /// Noms des tags, en français.
   final List<String> tags;
+
+  /// Nom (français) de la série de l'article, `null` hors série.
+  final String? series;
+
+  /// Place dans la série (1, 2, 3…).
+  final int? seriesPosition;
   final DateTime? updatedAt;
 
   /// Publié mais pas encore visible : date de parution à venir.

@@ -176,6 +176,7 @@ class DashboardVisits {
     this.visitors = 0,
     this.bySource = const [],
     this.byDevice = const [],
+    this.topContent = const [],
   });
 
   factory DashboardVisits.fromJson(Map<String, dynamic> json) => DashboardVisits(
@@ -196,6 +197,10 @@ class DashboardVisits {
       for (final item in json['by_device'] as List<dynamic>? ?? const [])
         CategoryCount.fromJson(item as Map<String, dynamic>),
     ],
+    topContent: [
+      for (final item in json['top_content'] as List<dynamic>? ?? const [])
+        TopContent.fromJson(item as Map<String, dynamic>),
+    ],
   );
 
   final int total;
@@ -215,6 +220,45 @@ class DashboardVisits {
 
   /// Visiteurs uniques par appareil : `desktop`, `mobile`, `tablet`.
   final List<CategoryCount> byDevice;
+
+  /// Articles et projets les plus vus (8 au plus), toutes langues réunies.
+  final List<TopContent> topContent;
+}
+
+/// Article ou projet parmi les plus vus de la période.
+@immutable
+class TopContent {
+  const TopContent({
+    required this.type,
+    required this.title,
+    required this.url,
+    required this.visits,
+    required this.visitors,
+    required this.topSource,
+  });
+
+  factory TopContent.fromJson(Map<String, dynamic> json) => TopContent(
+    type: json['type'] as String? ?? 'post',
+    title: json['title'] as String? ?? '',
+    url: json['url'] as String? ?? '',
+    visits: json['visits'] as int? ?? 0,
+    visitors: json['visitors'] as int? ?? 0,
+    topSource: json['top_source'] as String? ?? 'direct',
+  );
+
+  /// `post` ou `project`.
+  final String type;
+  final String title;
+
+  /// Chemin sur le site (`/fr/blog/…`).
+  final String url;
+  final int visits;
+  final int visitors;
+
+  /// Principale provenance : campagne, site d'origine ou `direct`.
+  final String topSource;
+
+  bool get isPost => type == 'post';
 }
 
 @immutable

@@ -51,6 +51,8 @@ class PostRepository {
     required PublicationStatus status,
     required DateTime? publishedAt,
     required List<String> tags,
+    String? series,
+    int? seriesPosition,
     MultipartFile? cover,
     void Function(int sent, int total)? onProgress,
   }) async {
@@ -63,6 +65,9 @@ class PostRepository {
       'status': status.wireValue,
       'published_at': publishedAt?.toUtc().toIso8601String(),
       'tags': tags,
+      // Toujours envoyée : vide, l'article sort de sa série ; inconnue, elle est créée.
+      'series': series,
+      'series_position': series == null ? null : seriesPosition,
       if (cover != null) 'cover': cover,
     }, method: id == null ? null : 'PUT');
     final json = await _api.upload(id == null ? '/v1/posts' : '/v1/posts/$id', form, onProgress: onProgress);

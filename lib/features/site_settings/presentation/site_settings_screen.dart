@@ -8,6 +8,7 @@ import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/form_layout.dart';
 import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/surfaces.dart';
+import '../../../shared/widgets/translated_field.dart';
 import 'widgets/cv_settings_card.dart';
 import '../data/site_settings.dart';
 import '../data/site_settings_repository.dart';
@@ -78,6 +79,7 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
   late final _buffer = TextEditingController(text: '${widget.settings.bookingBufferMinutes}');
   late BookingVideoProvider _videoProvider = widget.settings.bookingVideoProvider;
   late final _videoLink = TextEditingController(text: widget.settings.bookingVideoLink ?? '');
+  late var _nowContent = widget.settings.nowContent;
 
   bool _dirty = false;
   bool _saving = false;
@@ -130,6 +132,7 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
               bookingBufferMinutes: _intOf(_buffer, current.bookingBufferMinutes),
               bookingVideoProvider: _videoProvider,
               bookingVideoLink: link.isEmpty ? null : link,
+              nowContent: _nowContent,
             ),
           );
       _dirty = false;
@@ -258,6 +261,37 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
                         }
                       },
                     ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SurfaceCard(
+              radius: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Page « Now »', style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      'Ce sur quoi je travaille en ce moment. Vide en français, la page est masquée.',
+                      if (widget.settings.nowUpdatedAt != null)
+                        'Mise à jour le ${DateFormat('d MMMM y', 'fr_FR').format(widget.settings.nowUpdatedAt!)}.',
+                    ].join(' '),
+                    style: muted,
+                  ),
+                  const SizedBox(height: 12),
+                  TranslatedField(
+                    label: 'Texte',
+                    value: _nowContent,
+                    maxLines: 10,
+                    maxLength: 5000,
+                    errorFr: v?.errorFor('now_content.fr'),
+                    errorEn: v?.errorFor('now_content.en'),
+                    onChanged: (value) => _set(() => _nowContent = value),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Une ligne vide sépare deux paragraphes ; « - » en début de ligne fait une liste.', style: muted),
                 ],
               ),
             ),

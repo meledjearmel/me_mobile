@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -42,6 +43,8 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
   Translated _excerpt = const Translated();
   late final _draft = TextEditingController();
   List<String> _tags = [];
+  late final _series = TextEditingController();
+  late final _seriesPosition = TextEditingController();
   bool _isFeatured = false;
   PublicationStatus _status = PublicationStatus.draft;
   DateTime? _publishedAt;
@@ -71,6 +74,8 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
     _slugEdited = true;
     _excerpt = post.excerpt;
     _tags = [...post.tags];
+    _series.text = post.series ?? '';
+    _seriesPosition.text = post.seriesPosition?.toString() ?? '';
     _isFeatured = post.isFeatured;
     _status = post.status;
     _publishedAt = post.publishedAt;
@@ -80,6 +85,8 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
   void dispose() {
     _slug.dispose();
     _draft.dispose();
+    _series.dispose();
+    _seriesPosition.dispose();
     super.dispose();
   }
 
@@ -124,6 +131,8 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
             status: _status,
             publishedAt: _publishedAt,
             tags: _tags,
+            series: _series.text.trim().isEmpty ? null : _series.text.trim(),
+            seriesPosition: int.tryParse(_seriesPosition.text.trim()),
             cover: pending == null ? null : await dio.MultipartFile.fromFile(pending.path, filename: pending.name),
             onProgress: pending == null
                 ? null
@@ -433,6 +442,47 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
               setState(() => _tags = tags);
               _markDirty();
             },
+          ),
+        ),
+        const SizedBox(height: 12),
+        SurfaceCard(
+          radius: 22,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Série (facultative)', style: theme.textTheme.labelLarge),
+              const SizedBox(height: 4),
+              Text('Une série inconnue est créée ; vide, l\'article sort de sa série.', style: muted),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _series,
+                      maxLength: 80,
+                      onChanged: (_) => _markDirty(),
+                      decoration: InputDecoration(
+                        labelText: 'Nom de la série',
+                        counterText: '',
+                        errorText: v?.errorFor('series'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _seriesPosition,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (_) => _markDirty(),
+                      decoration: InputDecoration(labelText: 'Place', errorText: v?.errorFor('series_position')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),

@@ -95,8 +95,50 @@ void main() {
     expect(fields['is_featured'], '1');
   });
 
+  test("série : envoyée avec sa place, vide pour sortir l'article de sa série", () async {
+    adapter.whenRequest(
+      'POST',
+      '/v1/posts/3',
+      statusCode: 200,
+      body: {..._postJson, 'series': 'Laravel', 'series_position': 2},
+    );
+
+    Future<Post> save(String? series) => repository.save(
+      id: 3,
+      title: const Translated(fr: 'Mon article'),
+      slug: 'mon-article',
+      excerpt: const Translated(),
+      body: const Translated(fr: '<p>x</p>'),
+      isFeatured: false,
+      status: PublicationStatus.draft,
+      publishedAt: null,
+      tags: const [],
+      series: series,
+      seriesPosition: 2,
+    );
+
+    final post = await save('Laravel');
+    await save(null);
+
+    final withSeries = _fields(adapter.requests.first.data as FormData);
+    expect(withSeries['series'], 'Laravel');
+    expect(withSeries['series_position'], '2');
+    final without = _fields(adapter.requests.last.data as FormData);
+    expect(without['series'], '');
+    expect(without['series_position'], '');
+    expect(post.series, 'Laravel');
+    expect(post.seriesPosition, 2);
+  });
+
   test('tags() lit la liste des noms', () async {
-    adapter.whenRequest('GET', '/v1/posts/tags', statusCode: 200, body: {'data': ['Laravel', 'IA']});
+    adapter.whenRequest(
+      'GET',
+      '/v1/posts/tags',
+      statusCode: 200,
+      body: {
+        'data': ['Laravel', 'IA'],
+      },
+    );
 
     expect(await repository.tags(), ['Laravel', 'IA']);
   });

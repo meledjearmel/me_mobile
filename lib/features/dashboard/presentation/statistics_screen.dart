@@ -99,6 +99,10 @@ class _StatisticsBody extends StatelessWidget {
             ],
           ),
         ],
+        if (dashboard.visits.topContent.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _TopContentCard(items: dashboard.visits.topContent),
+        ],
         if (dashboard.conversions.goals.isNotEmpty) ...[
           gap,
           const SectionHeader('Conversions'),
@@ -197,6 +201,7 @@ String _sourceLabel(String source) => source == 'direct' ? 'Accès direct' : sou
 String _deviceLabel(String device) => switch (device) {
   'desktop' => 'Ordinateur',
   'mobile' => 'Mobile',
+  'inconnu' => 'Inconnu',
   'tablet' => 'Tablette',
   _ => device,
 };
@@ -313,6 +318,53 @@ class _BarListCard extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Articles et projets les plus vus : visites, visiteurs uniques et provenance.
+class _TopContentCard extends StatelessWidget {
+  const _TopContentCard({required this.items});
+
+  final List<TopContent> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Articles et projets les plus vus', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 4),
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                children: [
+                  Icon(item.isPost ? Icons.article_outlined : Icons.work_outline_rounded, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(
+                          '${item.visitors} visiteur${item.visitors > 1 ? 's' : ''} · ${_sourceLabel(item.topSource)}',
+                          style: muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('${item.visits}', style: theme.textTheme.labelLarge),
+                ],
+              ),
+            ),
         ],
       ),
     );

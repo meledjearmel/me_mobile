@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/models/translated.dart';
+
 /// Source du CV servi par le site : le PDF importé sur le profil métier, ou
 /// le CV généré à partir du contenu.
 enum CvSource {
@@ -63,6 +65,8 @@ class SiteSettings {
     this.bookingBufferMinutes = 0,
     this.bookingVideoProvider = BookingVideoProvider.jitsi,
     this.bookingVideoLink,
+    this.nowContent = const Translated(),
+    this.nowUpdatedAt,
   });
 
   factory SiteSettings.fromJson(Map<String, dynamic> json) => SiteSettings(
@@ -80,6 +84,8 @@ class SiteSettings {
     bookingBufferMinutes: json['booking_buffer_minutes'] as int? ?? 0,
     bookingVideoProvider: BookingVideoProvider.fromWire(json['booking_video_provider'] as String?),
     bookingVideoLink: json['booking_video_link'] as String?,
+    nowContent: Translated.fromJson(json['now_content']),
+    nowUpdatedAt: json['now_updated_at'] == null ? null : DateTime.tryParse(json['now_updated_at'] as String)?.toLocal(),
   );
 
   /// Le bouton « Contact » ouvre le tiroir latéral (`true`) ou mène à la page Contact.
@@ -122,6 +128,13 @@ class SiteSettings {
   /// Lien fixe, utilisé quand [bookingVideoProvider] vaut `link`.
   final String? bookingVideoLink;
 
+  /// Texte de la page « Now » : une ligne vide entre deux paragraphes, « - »
+  /// en début de ligne pour une liste. Vide en français, la page est masquée.
+  final Translated nowContent;
+
+  /// Dernière modification de ce texte (lecture seule).
+  final DateTime? nowUpdatedAt;
+
   Map<String, Object?> toJson() => {
     'contact_opens_drawer': contactOpensDrawer,
     'testimonial_video_enabled': testimonialVideoEnabled,
@@ -140,5 +153,6 @@ class SiteSettings {
     'booking_buffer_minutes': bookingBufferMinutes,
     'booking_video_provider': bookingVideoProvider.wireValue,
     'booking_video_link': bookingVideoLink,
+    'now_content': nowContent.toJson(),
   };
 }
