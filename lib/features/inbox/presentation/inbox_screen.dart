@@ -73,8 +73,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final todo = ref.watch(dashboardProvider).value?.todo;
     // Même ordre que InboxScreen._tabs (voir aussi PushResourceType.inboxTabIndex).
-    // Le tableau de bord ne compte pas (encore) les rendez-vous en attente.
-    final counts = [todo?.contacts ?? 0, todo?.engagements ?? 0, todo?.testimonials ?? 0, 0];
+    final counts = [todo?.contacts ?? 0, todo?.engagements ?? 0, todo?.testimonials ?? 0, todo?.appointments ?? 0];
 
     return Scaffold(
       // Titre et sélecteur flottent : les listes défilent dessous.

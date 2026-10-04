@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/env.dart';
 import '../../../app/theme/app_palette.dart';
 import '../../../shared/widgets/form_layout.dart';
 import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../celebrations/presentation/congratulations_screen.dart';
 import '../../cv_downloads/presentation/cv_downloads_screen.dart';
@@ -15,19 +18,22 @@ import 'widgets/stat_tile.dart';
 import 'widgets/visits_chart.dart';
 
 /// Statistiques détaillées du site (visites, contenu, relations, répartitions),
-/// ouvertes depuis « Tout voir » de l'accueil. Même source que l'accueil.
+/// ouvertes depuis « Tout voir » de l'accueil. Filtrables par période et, pour
+/// les contenus les plus vus, par type ([statisticsQueryProvider]).
 class StatisticsScreen extends ConsumerWidget {
   const StatisticsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(dashboardProvider);
+    final dashboard = ref.watch(statisticsProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
       appBar: const GlassAppBar(),
       body: dashboard.when(
+        // Changer de période garde l'affichage précédent pendant le rechargement.
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Column(
@@ -35,30 +41,33 @@ class StatisticsScreen extends ConsumerWidget {
             children: [
               const Text('Impossible de charger les statistiques.'),
               const SizedBox(height: 12),
-              FilledButton(onPressed: () => ref.invalidate(dashboardProvider), child: const Text('Réessayer')),
+              FilledButton(onPressed: () => ref.invalidate(statisticsProvider), child: const Text('Réessayer')),
             ],
           ),
         ),
         data: (data) => RefreshIndicator(
-          onRefresh: () => ref.refresh(dashboardProvider.future),
+          onRefresh: () => ref.refresh(statisticsProvider.future),
           edgeOffset: MediaQuery.paddingOf(context).top,
-          child: _StatisticsBody(dashboard: data),
+          child: _StatisticsBody(dashboard: data, reloading: dashboard.isLoading),
         ),
       ),
     );
   }
 }
 
-class _StatisticsBody extends StatelessWidget {
-  const _StatisticsBody({required this.dashboard});
+class _StatisticsBody extends ConsumerWidget {
+  const _StatisticsBody({required this.dashboard, required this.reloading});
 
   final Dashboard dashboard;
+  final bool reloading;
 
   void _openCvDownloads(BuildContext context) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CvDownloadsScreen()));
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final query = ref.watch(statisticsQueryProvider);
+    final setQuery = ref.read(statisticsQueryProvider.notifier);
     final content = dashboard.content;
     final distribution = dashboard.distribution;
     const gap = SizedBox(height: 28);
@@ -70,7 +79,19 @@ class _StatisticsBody extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 4),
           child: FormHeader(title: 'Statistiques', subtitle: 'Visites, contenu et relations du site'),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<String>(
+            expandedInsets: EdgeInsets.zero,
+            segments: [for (final p in dashboardPeriods) ButtonSegment(value: p.days, label: Text(p.label))],
+            selected: {query.days},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) => setQuery.state = (days: selection.first, type: query.type),
+          ),
+        ),
+        SizedBox(height: 3, child: reloading ? const LinearProgressIndicator(minHeight: 3) : null),
+        const SizedBox(height: 17),
         const SectionHeader('Visites'),
         small,
         _VisitsCard(visits: dashboard.visits),
@@ -99,13 +120,24 @@ class _StatisticsBody extends StatelessWidget {
             ],
           ),
         ],
-        if (dashboard.visits.topContent.isNotEmpty) ...[
+        // Toujours affichée quand un type est choisi : la liste filtrée peut être vide.
+        if (dashboard.visits.topContent.isNotEmpty || query.type != null) ...[
           const SizedBox(height: 10),
-          _TopContentCard(items: dashboard.visits.topContent),
+          _TopContentCard(
+            items: dashboard.visits.topContent,
+            type: query.type,
+            onTypeChanged: (type) => setQuery.state = (days: query.days, type: type),
+          ),
         ],
         if (dashboard.conversions.goals.isNotEmpty) ...[
           gap,
           const SectionHeader('Conversions'),
+          const SizedBox(height: 4),
+          Text(
+            '${dashboard.conversions.periodLabel} · rapportées aux visiteurs uniques',
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
           small,
           _Grid(
             children: [
@@ -223,17 +255,23 @@ class _VisitsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${visits.periodDays} derniers jours', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+          Text(visits.periodLabel, style: theme.textTheme.bodySmall?.copyWith(color: muted)),
           const SizedBox(height: 4),
           Text(
-            '${visits.total}',
+            '${visits.period}',
             style: theme.textTheme.displaySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
           ),
           Text(
-            '${visits.total == 1 ? 'visite' : 'visites'} · ${visits.visitors} '
+            '${visits.period == 1 ? 'visite' : 'visites'} · ${visits.visitors} '
             '${visits.visitors == 1 ? 'visiteur unique' : 'visiteurs uniques'}',
             style: theme.textTheme.bodyMedium?.copyWith(color: muted),
           ),
+          // Avec « Tout », le total est déjà le chiffre principal.
+          if (visits.periodDays != null)
+            Text(
+              '${visits.total} ${visits.total == 1 ? 'visite' : 'visites'} depuis le début',
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            ),
           const SizedBox(height: 16),
           VisitsChart(daily: visits.daily),
           const SizedBox(height: 16),
@@ -325,10 +363,16 @@ class _BarListCard extends StatelessWidget {
 }
 
 /// Articles et projets les plus vus : visites, visiteurs uniques et provenance.
+/// Le type est filtré par l'API (paramètre `type`) : le top 8 est calculé
+/// après le filtre.
 class _TopContentCard extends StatelessWidget {
-  const _TopContentCard({required this.items});
+  const _TopContentCard({required this.items, required this.type, required this.onTypeChanged});
 
   final List<TopContent> items;
+
+  /// `null` : tous ; sinon `post` ou `project`.
+  final String? type;
+  final ValueChanged<String?> onTypeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -340,29 +384,49 @@ class _TopContentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Articles et projets les plus vus', style: theme.textTheme.titleSmall),
-          const SizedBox(height: 4),
-          for (final item in items)
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            children: [
+              for (final (value, label) in const [(null, 'Tous'), ('post', 'Articles'), ('project', 'Projets')])
+                PillFilterChip(label: label, selected: type == value, onTap: () => onTypeChanged(value)),
+            ],
+          ),
+          if (items.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 10),
-              child: Row(
-                children: [
-                  Icon(item.isPost ? Icons.article_outlined : Icons.work_outline_rounded, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Text(
-                          '${item.visitors} visiteur${item.visitors > 1 ? 's' : ''} · ${_sourceLabel(item.topSource)}',
-                          style: muted,
-                        ),
-                      ],
+              child: Text('Aucune visite sur cette période.', style: muted),
+            ),
+          const SizedBox(height: 4),
+          for (final item in items)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              // Ouvre la page sur le site (chemin relatif renvoyé par l'API).
+              onTap: item.url.isEmpty
+                  ? null
+                  : () => launchUrl(Uri.parse('${Env.siteUrl}${item.url}'), mode: LaunchMode.externalApplication),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 2),
+                child: Row(
+                  children: [
+                    Icon(item.isPost ? Icons.article_outlined : Icons.work_outline_rounded, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            '${item.visitors} visiteur${item.visitors > 1 ? 's' : ''} · ${_sourceLabel(item.topSource)}',
+                            style: muted,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text('${item.visits}', style: theme.textTheme.labelLarge),
-                ],
+                    const SizedBox(width: 8),
+                    Text('${item.visits}', style: theme.textTheme.labelLarge),
+                  ],
+                ),
               ),
             ),
         ],

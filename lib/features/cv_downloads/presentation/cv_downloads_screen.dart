@@ -196,7 +196,7 @@ class _SummaryCard extends StatelessWidget {
                 child: _Figure(value: summary.total, label: 'au total'),
               ),
               Expanded(
-                child: _Figure(value: summary.period, label: 'sur ${summary.periodDays} j'),
+                child: _Figure(value: summary.period, label: summary.periodLabel.toLowerCase()),
               ),
               Expanded(
                 child: _Figure(value: summary.withEmail, label: 'avec email'),
@@ -226,7 +226,7 @@ class _SummaryCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                'Sur ${summary.periodDays} jours · touchez une ligne pour filtrer',
+                '${summary.periodLabel} · touchez une ligne pour filtrer',
                 style: theme.textTheme.labelSmall?.copyWith(color: colors.muted),
               ),
             ),
@@ -487,10 +487,7 @@ class CvDownloadsCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Sur ${summary.periodDays} jours',
-                  style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-                ),
+                Text(summary.periodLabel, style: theme.textTheme.bodySmall?.copyWith(color: colors.muted)),
                 const SizedBox(height: 4),
                 Text(
                   '${summary.period}',

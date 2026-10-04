@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 /// Tableau de bord (`GET /dashboard`, §4.1). Le contrat exact des tableaux
 /// imbriqués (`daily`, `top_pages`, `distribution.*`, `recent.*`) vient du
@@ -45,10 +46,11 @@ class Dashboard {
 /// Objectifs atteints sur la période, rapportés aux visiteurs uniques.
 @immutable
 class DashboardConversions {
-  const DashboardConversions({this.periodDays = 30, this.visitors = 0, this.goals = const []});
+  const DashboardConversions({this.periodDays = 30, this.since, this.visitors = 0, this.goals = const []});
 
   factory DashboardConversions.fromJson(Map<String, dynamic> json) => DashboardConversions(
-    periodDays: json['period_days'] as int? ?? 30,
+    periodDays: json['period_days'] as int?,
+    since: _parseDate(json['since']),
     visitors: json['visitors'] as int? ?? 0,
     goals: [
       for (final item in json['goals'] as List<dynamic>? ?? const [])
@@ -56,7 +58,13 @@ class DashboardConversions {
     ],
   );
 
-  final int periodDays;
+  /// `null` pour la période « tout ».
+  final int? periodDays;
+
+  /// Début de la période (première donnée pour « tout »).
+  final DateTime? since;
+
+  String get periodLabel => describePeriod(periodDays, since);
   final int visitors;
   final List<ConversionGoal> goals;
 }
@@ -94,6 +102,7 @@ class DashboardCvDownloads {
   const DashboardCvDownloads({
     this.total = 0,
     this.periodDays = 30,
+    this.since,
     this.period = 0,
     this.withEmail = 0,
     this.byCountry = const [],
@@ -102,7 +111,8 @@ class DashboardCvDownloads {
 
   factory DashboardCvDownloads.fromJson(Map<String, dynamic> json) => DashboardCvDownloads(
     total: json['total'] as int? ?? 0,
-    periodDays: json['period_days'] as int? ?? 30,
+    periodDays: json['period_days'] as int?,
+    since: _parseDate(json['since']),
     period: json['period'] as int? ?? 0,
     withEmail: json['with_email'] as int? ?? 0,
     byCountry: [
@@ -116,7 +126,14 @@ class DashboardCvDownloads {
   );
 
   final int total;
-  final int periodDays;
+
+  /// `null` pour la période « tout ».
+  final int? periodDays;
+
+  /// Début de la période (première donnée pour « tout »).
+  final DateTime? since;
+
+  String get periodLabel => describePeriod(periodDays, since);
   final int period;
   final int withEmail;
   final List<CategoryCount> byCountry;
@@ -125,19 +142,28 @@ class DashboardCvDownloads {
 
 @immutable
 class DashboardTodo {
-  const DashboardTodo({required this.contacts, required this.engagements, required this.testimonials});
+  const DashboardTodo({
+    required this.contacts,
+    required this.engagements,
+    required this.testimonials,
+    this.appointments = 0,
+  });
 
   factory DashboardTodo.fromJson(Map<String, dynamic> json) => DashboardTodo(
     contacts: json['contacts'] as int? ?? 0,
     engagements: json['engagements'] as int? ?? 0,
     testimonials: json['testimonials'] as int? ?? 0,
+    appointments: json['appointments'] as int? ?? 0,
   );
 
   final int contacts;
   final int engagements;
   final int testimonials;
 
-  int get total => contacts + engagements + testimonials;
+  /// Demandes de rendez-vous en attente.
+  final int appointments;
+
+  int get total => contacts + engagements + testimonials + appointments;
 }
 
 @immutable
@@ -167,6 +193,8 @@ class DashboardVisits {
   const DashboardVisits({
     required this.total,
     required this.periodDays,
+    this.since,
+    this.granularity = 'day',
     required this.period,
     required this.today,
     required this.french,
@@ -181,7 +209,8 @@ class DashboardVisits {
 
   factory DashboardVisits.fromJson(Map<String, dynamic> json) => DashboardVisits(
     total: json['total'] as int? ?? 0,
-    periodDays: json['period_days'] as int? ?? 30,
+    periodDays: json['period_days'] as int?,
+    since: _parseDate(json['since']),
     period: json['period'] as int? ?? 0,
     today: json['today'] as int? ?? 0,
     french: json['french'] as int? ?? 0,
@@ -189,6 +218,7 @@ class DashboardVisits {
     daily: [for (final item in json['daily'] as List<dynamic>) DailyVisit.fromJson(item as Map<String, dynamic>)],
     topPages: [for (final item in json['top_pages'] as List<dynamic>) TopPage.fromJson(item as Map<String, dynamic>)],
     visitors: json['visitors'] as int? ?? 0,
+    granularity: json['granularity'] as String? ?? 'day',
     bySource: [
       for (final item in json['by_source'] as List<dynamic>? ?? const [])
         CategoryCount.fromJson(item as Map<String, dynamic>),
@@ -204,7 +234,14 @@ class DashboardVisits {
   );
 
   final int total;
-  final int periodDays;
+
+  /// `null` pour la période « tout ».
+  final int? periodDays;
+
+  /// Début de la période (première donnée pour « tout »).
+  final DateTime? since;
+
+  String get periodLabel => describePeriod(periodDays, since);
   final int period;
   final int today;
   final int french;
@@ -214,6 +251,9 @@ class DashboardVisits {
 
   /// Visiteurs uniques sur la période (empreinte anonyme du jour, sans cookie).
   final int visitors;
+
+  /// Pas de la courbe [daily] : `day`, `month` ou `year`.
+  final String granularity;
 
   /// Visiteurs uniques par provenance : campagne, site d'origine ou `direct`.
   final List<CategoryCount> bySource;
@@ -537,3 +577,22 @@ class DashboardRecent {
   final List<RecentEngagement> engagements;
   final List<RecentTestimonial> testimonials;
 }
+
+DateTime? _parseDate(Object? value) => value is String ? DateTime.tryParse(value) : null;
+
+/// Périodes proposées (paramètre `days` de l'API).
+const dashboardPeriods = [
+  (days: '7', label: '7 j'),
+  (days: '30', label: '30 j'),
+  (days: '90', label: '90 j'),
+  (days: '365', label: '12 mois'),
+  (days: 'all', label: 'Tout'),
+];
+
+/// « 30 derniers jours », « 12 derniers mois », « Depuis le 12 mars 2025 ».
+String describePeriod(int? days, DateTime? since) => switch (days) {
+  365 => '12 derniers mois',
+  final int d => '$d derniers jours',
+  null when since != null => 'Depuis le ${DateFormat('d MMMM y', 'fr_FR').format(since)}',
+  null => 'Depuis le début',
+};
