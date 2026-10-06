@@ -12,6 +12,7 @@ import '../../../shared/widgets/translated_field.dart';
 import 'widgets/cv_settings_card.dart';
 import '../data/site_settings.dart';
 import '../data/site_settings_repository.dart';
+import '../../../shared/widgets/mention_button.dart';
 
 /// Délais proposés entre deux notifications de félicitations d'un même motif.
 const congratulationNotifyDelays = [0, 5, 10, 30, 60, 180, 1440];
@@ -245,9 +246,7 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
                       ),
                       subtitle: Text(
                         v?.errorFor('available_from') ?? 'Une fois la date passée, le site affiche « Disponible ».',
-                        style: v?.errorFor('available_from') == null
-                            ? null
-                            : TextStyle(color: theme.colorScheme.error),
+                        style: v?.errorFor('available_from') == null ? null : TextStyle(color: theme.colorScheme.error),
                       ),
                       onTap: () async {
                         final tomorrow = DateUtils.dateOnly(DateTime.now()).add(const Duration(days: 1));
@@ -294,8 +293,12 @@ class _SiteSettingsFormState extends ConsumerState<_SiteSettingsForm> {
                     errorEn: v?.errorFor('now_content.en'),
                     onChanged: (value) => _set(() => _nowContent = value),
                   ),
+                  MentionButton(value: _nowContent, onChanged: (value) => _set(() => _nowContent = value)),
                   const SizedBox(height: 4),
-                  Text('Une ligne vide sépare deux paragraphes ; « - » en début de ligne fait une liste.', style: muted),
+                  Text(
+                    'Une ligne vide sépare deux paragraphes ; « - » en début de ligne fait une liste.',
+                    style: muted,
+                  ),
                 ],
               ),
             ),

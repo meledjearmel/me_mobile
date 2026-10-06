@@ -26,6 +26,7 @@ import 'widgets/month_field.dart';
 import '../data/project_repository.dart';
 import '../../../shared/widgets/color_picker_field.dart';
 import 'widgets/gallery_grid.dart';
+import '../../../shared/widgets/mention_button.dart';
 
 const _maxImageBytes = 5 * 1024 * 1024;
 
@@ -663,6 +664,13 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                         _markDirty();
                       },
                     ),
+                    MentionButton(
+                      value: _projectContext,
+                      onChanged: (value) {
+                        setState(() => _projectContext = value);
+                        _markDirty();
+                      },
+                    ),
                     TranslatedField(
                       label: 'Défis et contraintes',
                       optional: true,
@@ -675,12 +683,26 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                         _markDirty();
                       },
                     ),
+                    MentionButton(
+                      value: _challenges,
+                      onChanged: (value) {
+                        setState(() => _challenges = value);
+                        _markDirty();
+                      },
+                    ),
                     TranslatedField(
                       label: 'Réalisation',
                       value: _realization,
                       maxLines: 5,
                       errorFr: v?.errorFor('realization.fr'),
                       errorEn: v?.errorFor('realization.en'),
+                      onChanged: (value) {
+                        setState(() => _realization = value);
+                        _markDirty();
+                      },
+                    ),
+                    MentionButton(
+                      value: _realization,
                       onChanged: (value) {
                         setState(() => _realization = value);
                         _markDirty();
@@ -702,6 +724,13 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                       maxLines: 5,
                       errorFr: v?.errorFor('result.fr'),
                       errorEn: v?.errorFor('result.en'),
+                      onChanged: (value) {
+                        setState(() => _result = value);
+                        _markDirty();
+                      },
+                    ),
+                    MentionButton(
+                      value: _result,
                       onChanged: (value) {
                         setState(() => _result = value);
                         _markDirty();

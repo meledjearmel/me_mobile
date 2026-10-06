@@ -14,6 +14,7 @@ import '../../../../shared/widgets/translated_field.dart';
 import '../application/experience_list_controller.dart';
 import '../data/experience.dart';
 import '../data/experience_repository.dart';
+import '../../../../shared/widgets/mention_button.dart';
 
 /// Création ou modification d'une expérience (§4.3). `id == null` : création.
 class ExperienceFormScreen extends ConsumerStatefulWidget {
@@ -343,6 +344,13 @@ class _ExperienceFormScreenState extends ConsumerState<ExperienceFormScreen> {
                         maxLines: 4,
                         errorFr: v?.errorFor('description.fr'),
                         errorEn: v?.errorFor('description.en'),
+                        onChanged: (value) {
+                          setState(() => _description = value);
+                          _markDirty();
+                        },
+                      ),
+                      MentionButton(
+                        value: _description,
                         onChanged: (value) {
                           setState(() => _description = value);
                           _markDirty();
