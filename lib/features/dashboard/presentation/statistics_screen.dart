@@ -216,6 +216,11 @@ class _StatisticsBody extends ConsumerWidget {
               caption: '${dashboard.blog.reactionsTotal} au total',
             ),
             StatTile(
+              value: dashboard.blog.sharesPeriod,
+              label: 'Partages',
+              caption: '${dashboard.blog.sharesTotal} au total',
+            ),
+            StatTile(
               value: dashboard.blog.commentsPeriod,
               label: 'Commentaires',
               caption: '${dashboard.blog.commentsTotal} au total',
@@ -232,6 +237,16 @@ class _StatisticsBody extends ConsumerWidget {
           _BarListCard(
             title: 'Réactions',
             items: [for (final r in dashboard.blog.reactionsByType) (label: _reactionLabel(r.label), count: r.count)],
+          ),
+        ],
+        if (dashboard.blog.sharesByNetwork.any((s) => s.count > 0)) ...[
+          const SizedBox(height: 10),
+          _BarListCard(
+            title: 'Partages par réseau',
+            items: [
+              for (final s in dashboard.blog.sharesByNetwork)
+                if (s.count > 0) (label: PostShareNetwork.labelOf(s.label), count: s.count),
+            ],
           ),
         ],
         if (dashboard.blog.topPosts.isNotEmpty) ...[
@@ -515,6 +530,7 @@ class _BlogTopPostsCard extends StatelessWidget {
                           Text(post.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                           Text(
                             '${post.reactions} réaction${post.reactions > 1 ? 's' : ''} · '
+                            '${post.shares} partage${post.shares > 1 ? 's' : ''} · '
                             '${post.comments} commentaire${post.comments > 1 ? 's' : ''}',
                             style: muted,
                           ),

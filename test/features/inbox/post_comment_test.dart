@@ -73,6 +73,8 @@ void main() {
       'preview_url': 'https://armeldev.xyz/fr/blog/mon-article?signature=abc',
       'reactions': {'like': 4, 'love': 1, 'fire': 0, 'idea': 2, 'think': 0},
       'pending_comments_count': 2,
+      'shares': {'linkedin': 3, 'x': 0, 'whatsapp': 1, 'facebook': 0, 'email': 0, 'copy': 2, 'native': 0},
+      'shares_count': 6,
       'created_at': null,
       'updated_at': null,
     });
@@ -82,5 +84,7 @@ void main() {
     expect(post.reactionsTotal, 7);
     expect(post.previewUrl, contains('signature'));
     expect(post.pendingCommentsCount, 2);
+    expect(post.sharesCount, 6);
+    expect(post.shares[PostShareNetwork.copy], 2);
   });
 }

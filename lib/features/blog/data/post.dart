@@ -26,6 +26,8 @@ class Post {
     this.previewUrl,
     this.reactions = const {},
     this.pendingCommentsCount = 0,
+    this.shares = const {},
+    this.sharesCount = 0,
     required this.updatedAt,
   });
 
@@ -51,6 +53,11 @@ class Post {
         for (final type in PostReactionType.values) type: map[type.wireValue] as int? ?? 0,
     },
     pendingCommentsCount: json['pending_comments_count'] as int? ?? 0,
+    shares: {
+      if (json['shares'] case final Map<String, dynamic> map)
+        for (final network in PostShareNetwork.values) network: map[network.wireValue] as int? ?? 0,
+    },
+    sharesCount: json['shares_count'] as int? ?? 0,
     updatedAt: _date(json['updated_at']),
   );
 
@@ -90,6 +97,10 @@ class Post {
   final String? previewUrl;
   final Map<PostReactionType, int> reactions;
   final int pendingCommentsCount;
+
+  /// Partages depuis le site, par réseau (un par session toutes les 30 minutes).
+  final Map<PostShareNetwork, int> shares;
+  final int sharesCount;
 
   int get reactionsTotal => reactions.values.fold(0, (a, b) => a + b);
   final DateTime? updatedAt;
@@ -177,5 +188,30 @@ enum PostReactionType {
       }
     }
     return null;
+  }
+}
+
+/// Moyen utilisé par un lecteur pour partager un article.
+enum PostShareNetwork {
+  linkedin('linkedin', 'LinkedIn'),
+  x('x', 'X'),
+  whatsapp('whatsapp', 'WhatsApp'),
+  facebook('facebook', 'Facebook'),
+  email('email', 'E-mail'),
+  copy('copy', 'Lien copié'),
+  native('native', 'Partage du téléphone');
+
+  const PostShareNetwork(this.wireValue, this.label);
+
+  final String wireValue;
+  final String label;
+
+  static String labelOf(String wire) {
+    for (final network in values) {
+      if (network.wireValue == wire) {
+        return network.label;
+      }
+    }
+    return wire;
   }
 }

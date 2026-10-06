@@ -106,6 +106,7 @@ class PostsListScreen extends ConsumerWidget {
           [
             '${post.viewsCount} lecture${post.viewsCount > 1 ? 's' : ''}',
             if (post.reactionsTotal > 0) '${post.reactionsTotal} réaction${post.reactionsTotal > 1 ? 's' : ''}',
+            if (post.sharesCount > 0) '${post.sharesCount} partage${post.sharesCount > 1 ? 's' : ''}',
             if (post.pendingCommentsCount > 0) '${post.pendingCommentsCount} comm. à modérer',
             if (post.tags.isNotEmpty) post.tags.take(2).join(', '),
           ].join(' · '),

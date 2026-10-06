@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:me_mobile/core/api/api_client.dart';
+import 'package:me_mobile/features/blog/data/post.dart';
 import 'package:me_mobile/features/dashboard/data/dashboard.dart';
 import 'package:me_mobile/features/dashboard/data/dashboard_repository.dart';
 
@@ -50,9 +51,25 @@ Map<String, dynamic> _dashboard({int? periodDays, String? since, String granular
         {'label': 'idea', 'count': 4},
       ],
     },
+    'shares': {
+      'total': 15,
+      'period': 5,
+      'by_network': [
+        {'label': 'linkedin', 'count': 3},
+        {'label': 'native', 'count': 2},
+      ],
+    },
     'comments': {'total': 9, 'period': 3, 'pending': 2, 'approved': 6, 'rejected': 1},
     'top_posts': [
-      {'id': 3, 'title': 'Mon article', 'url': '/fr/blog/mon-article', 'views': 800, 'reactions': 10, 'comments': 2},
+      {
+        'id': 3,
+        'title': 'Mon article',
+        'url': '/fr/blog/mon-article',
+        'views': 800,
+        'reactions': 10,
+        'shares': 4,
+        'comments': 2,
+      },
     ],
   },
 };
@@ -114,6 +131,10 @@ void main() {
     expect(blog.reactionsByType.first.label, 'like');
     expect(blog.commentsPending, 2);
     expect(blog.topPosts.single.views, 800);
+    expect(blog.topPosts.single.shares, 4);
+    expect(blog.sharesPeriod, 5);
+    expect(blog.sharesTotal, 15);
+    expect(PostShareNetwork.labelOf(blog.sharesByNetwork.last.label), 'Partage du téléphone');
     expect(blog.periodLabel, '30 derniers jours');
   });
 }

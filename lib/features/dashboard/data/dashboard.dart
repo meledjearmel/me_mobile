@@ -59,6 +59,9 @@ class DashboardBlog {
     this.reactionsTotal = 0,
     this.reactionsPeriod = 0,
     this.reactionsByType = const [],
+    this.sharesTotal = 0,
+    this.sharesPeriod = 0,
+    this.sharesByNetwork = const [],
     this.commentsTotal = 0,
     this.commentsPeriod = 0,
     this.commentsPending = 0,
@@ -70,6 +73,7 @@ class DashboardBlog {
   factory DashboardBlog.fromJson(Map<String, dynamic> json) {
     final reactions = json['reactions'] as Map<String, dynamic>? ?? const {};
     final comments = json['comments'] as Map<String, dynamic>? ?? const {};
+    final shares = json['shares'] as Map<String, dynamic>? ?? const {};
     return DashboardBlog(
       periodDays: json['period_days'] as int?,
       since: _parseDate(json['since']),
@@ -78,6 +82,12 @@ class DashboardBlog {
       reactionsPeriod: reactions['period'] as int? ?? 0,
       reactionsByType: [
         for (final item in reactions['by_type'] as List<dynamic>? ?? const [])
+          CategoryCount.fromJson(item as Map<String, dynamic>),
+      ],
+      sharesTotal: shares['total'] as int? ?? 0,
+      sharesPeriod: shares['period'] as int? ?? 0,
+      sharesByNetwork: [
+        for (final item in shares['by_network'] as List<dynamic>? ?? const [])
           CategoryCount.fromJson(item as Map<String, dynamic>),
       ],
       commentsTotal: comments['total'] as int? ?? 0,
@@ -102,6 +112,12 @@ class DashboardBlog {
 
   /// Sur la période : `label` vaut `like`, `love`, `fire`, `idea` ou `think`.
   final List<CategoryCount> reactionsByType;
+  final int sharesTotal;
+  final int sharesPeriod;
+
+  /// Sur la période : `label` vaut `linkedin`, `x`, `whatsapp`, `facebook`,
+  /// `email`, `copy` ou `native`.
+  final List<CategoryCount> sharesByNetwork;
   final int commentsTotal;
   final int commentsPeriod;
   final int commentsPending;
@@ -114,7 +130,8 @@ class DashboardBlog {
   String get periodLabel => describePeriod(periodDays, since);
 }
 
-/// Article parmi les plus engagés (un commentaire pèse comme trois réactions).
+/// Article parmi les plus engagés (un partage pèse comme deux réactions, un
+/// commentaire comme trois).
 @immutable
 class BlogTopPost {
   const BlogTopPost({
@@ -123,6 +140,7 @@ class BlogTopPost {
     required this.url,
     required this.views,
     required this.reactions,
+    this.shares = 0,
     required this.comments,
   });
 
@@ -132,6 +150,7 @@ class BlogTopPost {
     url: json['url'] as String? ?? '',
     views: json['views'] as int? ?? 0,
     reactions: json['reactions'] as int? ?? 0,
+    shares: json['shares'] as int? ?? 0,
     comments: json['comments'] as int? ?? 0,
   );
 
@@ -144,6 +163,7 @@ class BlogTopPost {
 
   /// Réactions et commentaires sur la période.
   final int reactions;
+  final int shares;
   final int comments;
 }
 

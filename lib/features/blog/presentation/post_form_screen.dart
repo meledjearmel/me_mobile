@@ -439,7 +439,7 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
                       ),
                   ],
                 ),
-                if (post.reactionsTotal > 0 || post.pendingCommentsCount > 0) ...[
+                if (post.reactionsTotal > 0 || post.sharesCount > 0 || post.pendingCommentsCount > 0) ...[
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 12,
@@ -448,6 +448,14 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
                       for (final type in PostReactionType.values)
                         if ((post.reactions[type] ?? 0) > 0)
                           Tooltip(message: type.label, child: Text('${type.emoji} ${post.reactions[type]}')),
+                      if (post.sharesCount > 0)
+                        Tooltip(
+                          message: [
+                            for (final network in PostShareNetwork.values)
+                              if ((post.shares[network] ?? 0) > 0) '${network.label} : ${post.shares[network]}',
+                          ].join('\n'),
+                          child: Text('↗ ${post.sharesCount} partage${post.sharesCount > 1 ? 's' : ''}'),
+                        ),
                       if (post.pendingCommentsCount > 0)
                         Text(
                           '${post.pendingCommentsCount} commentaire${post.pendingCommentsCount > 1 ? 's' : ''} à modérer',
