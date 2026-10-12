@@ -12,6 +12,7 @@ import '../../dashboard/data/dashboard_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../projects/presentation/projects_list_screen.dart';
 import '../../revisions/presentation/revisions_screen.dart';
+import '../../mcp/presentation/mcp_commands_screen.dart';
 import '../certifications/presentation/certifications_list_screen.dart';
 import '../domains/presentation/domains_list_screen.dart';
 import '../github/presentation/github_screen.dart';
@@ -73,6 +74,7 @@ class ContentScreen extends ConsumerWidget {
       sections: [
         (icon: Icons.article_outlined, label: 'Blog', builder: _postsScreen),
         (icon: Icons.rate_review_outlined, label: 'Révisions IA', builder: _revisionsScreen),
+        (icon: Icons.smart_toy_outlined, label: 'Serveur MCP', builder: _mcpScreen),
         (icon: Icons.devices_other_outlined, label: 'Uses', builder: _usesScreen),
         (icon: Icons.code_rounded, label: 'Dépôts GitHub', builder: _gitHubScreen),
         (icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen),
@@ -94,6 +96,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
   static Widget _postsScreen(BuildContext context) => const PostsListScreen();
   static Widget _revisionsScreen(BuildContext context) => const RevisionsScreen();
+  static Widget _mcpScreen(BuildContext context) => const McpCommandsScreen();
   static Widget _usesScreen(BuildContext context) => const UsesItemsListScreen();
   static Widget _gitHubScreen(BuildContext context) => const GitHubScreen();
   static Widget _appointmentTypesScreen(BuildContext context) => const AppointmentTypesListScreen();

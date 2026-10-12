@@ -9,12 +9,18 @@ const _accents = {
   'œ': 'oe', 'æ': 'ae',
 };
 
+/// Minuscules sans accents, pour une recherche insensible à la casse et aux accents.
+String foldAccents(String input) {
+  var result = input.toLowerCase();
+  _accents.forEach((accented, plain) => result = result.replaceAll(accented, plain));
+  return result;
+}
+
 /// Slug simple à partir d'un titre français : minuscules, sans accents,
 /// espaces et symboles réduits à des tirets (§4.3 : « propose de le générer
 /// depuis le titre FR »).
 String slugify(String input) {
-  var result = input.toLowerCase();
-  _accents.forEach((accented, plain) => result = result.replaceAll(accented, plain));
+  var result = foldAccents(input);
   result = result.replaceAll(RegExp(r'[^a-z0-9]+'), '-');
   result = result.replaceAll(RegExp(r'^-+|-+$'), '');
   return result;
