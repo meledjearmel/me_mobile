@@ -95,6 +95,7 @@ class Project {
     this.teamSize,
     required this.accentColor,
     required this.repoUrl,
+    this.githubRepository,
     required this.demoUrl,
     required this.isFeatured,
     required this.isOpenSource,
@@ -134,6 +135,7 @@ class Project {
     teamSize: json['team_size'] as int?,
     accentColor: json['accent_color'] as String?,
     repoUrl: json['repo_url'] as String?,
+    githubRepository: json['github_repository'] as String?,
     demoUrl: json['demo_url'] as String?,
     isFeatured: json['is_featured'] as bool? ?? false,
     isOpenSource: json['is_open_source'] as bool? ?? false,
@@ -189,6 +191,10 @@ class Project {
   final int? teamSize;
   final String? accentColor;
   final String? repoUrl;
+
+  /// Dépôt GitHub lié (« propriétaire/nom », privé compris), pris dans
+  /// `available` de `GET /v1/github`. Jamais publié tel quel.
+  final String? githubRepository;
   final String? demoUrl;
   final bool isFeatured;
   final bool isOpenSource;

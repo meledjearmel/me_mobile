@@ -43,8 +43,12 @@ void main() {
     );
   });
 
-  Future<void> saveArgs({int? id, List<KeyFigure> keyFigures = const [], List<Decision> decisions = const []}) =>
-      repository.save(
+  Future<void> saveArgs({
+    int? id,
+    List<KeyFigure> keyFigures = const [],
+    List<Decision> decisions = const [],
+    String? githubRepository,
+  }) => repository.save(
     id: id,
     title: const Translated(fr: 'Mon projet', en: 'My project'),
     slug: 'mon-projet',
@@ -72,6 +76,7 @@ void main() {
     jobProfiles: [3],
     technologies: [4, 5],
     relatedProjects: [6],
+    githubRepository: githubRepository,
   );
 
   test('list envoie les 3 filtres et la recherche', () async {
@@ -223,5 +228,20 @@ void main() {
     expect(project.endedOn, isNull);
     expect(project.teamSize, 3);
     expect(Project.fromJson(_projectJson).decisions, isEmpty);
+  });
+
+  test('github_repository : lu, envoyé, et vide quand aucun dépôt', () async {
+    expect(Project.fromJson(_projectJson).githubRepository, isNull);
+    expect(
+      Project.fromJson({..._projectJson, 'github_repository': 'neocodesupport/fne-client'}).githubRepository,
+      'neocodesupport/fne-client',
+    );
+
+    adapter.whenRequest('POST', '/v1/projects/1', statusCode: 200, body: _projectJson);
+    await saveArgs(id: 1, githubRepository: 'neocodesupport/fne-client');
+    await saveArgs(id: 1);
+
+    expect(_fieldMap(adapter.requests.first.data as FormData)['github_repository'], 'neocodesupport/fne-client');
+    expect(_fieldMap(adapter.requests.last.data as FormData)['github_repository'], '');
   });
 }

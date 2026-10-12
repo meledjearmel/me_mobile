@@ -44,12 +44,53 @@ class GitHubRepository {
   final bool isContribution;
 }
 
+/// Dépôt travaillé un jour donné.
+@immutable
+class ContributionRepository {
+  const ContributionRepository({required this.fullName, required this.isPrivate, required this.count});
+
+  factory ContributionRepository.fromJson(Map<String, dynamic> json) => ContributionRepository(
+    fullName: json['full_name'] as String,
+    isPrivate: json['private'] as bool? ?? false,
+    count: json['count'] as int? ?? 0,
+  );
+
+  final String fullName;
+  final bool isPrivate;
+  final int count;
+}
+
+/// Jour du calendrier de contributions.
+@immutable
+class ContributionDay {
+  const ContributionDay({required this.date, required this.count, required this.level, this.repositories = const []});
+
+  factory ContributionDay.fromJson(Map<String, dynamic> json) => ContributionDay(
+    date: DateTime.parse(json['date'] as String),
+    count: json['count'] as int? ?? 0,
+    level: (json['level'] as int? ?? 0).clamp(0, 4),
+    repositories: [
+      for (final item in json['repositories'] as List<dynamic>? ?? const [])
+        if (item is Map<String, dynamic>) ContributionRepository.fromJson(item),
+    ],
+  );
+
+  /// Jour local à minuit (`AAAA-MM-JJ`).
+  final DateTime date;
+  final int count;
+
+  /// Intensité de 0 à 4.
+  final int level;
+  final List<ContributionRepository> repositories;
+}
+
 /// `GET|PUT /v1/github`, `POST /v1/github/sync` : dépôts présentés sur la page À propos.
 @immutable
 class GitHubSelection {
   const GitHubSelection({
     required this.available,
     required this.selected,
+    this.calendar,
     required this.syncedAt,
     required this.hasToken,
   });
@@ -60,6 +101,12 @@ class GitHubSelection {
         if (item is Map<String, dynamic>) GitHubRepository.fromJson(item),
     ],
     selected: [for (final name in json['selected'] as List<dynamic>? ?? const []) '$name'],
+    calendar: json['calendar'] is List
+        ? [
+            for (final item in json['calendar'] as List<dynamic>)
+              if (item is Map<String, dynamic>) ContributionDay.fromJson(item),
+          ]
+        : null,
     syncedAt: json['synced_at'] == null ? null : DateTime.tryParse(json['synced_at'] as String)?.toLocal(),
     hasToken: json['has_token'] as bool? ?? false,
   );
@@ -72,6 +119,10 @@ class GitHubSelection {
   /// Noms complets choisis, dans l'ordre d'affichage. Vide : choix automatique
   /// parmi mes dépôts publics.
   final List<String> selected;
+
+  /// Contributions jour par jour, du plus ancien au plus récent (~365 jours).
+  /// `null` sans jeton GitHub.
+  final List<ContributionDay>? calendar;
   final DateTime? syncedAt;
 
   /// Un jeton GitHub est configuré : contributions et dépôts privés disponibles.

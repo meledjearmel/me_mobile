@@ -121,11 +121,7 @@ class _Thumbnail extends StatelessWidget {
                   child: heroTag != null ? Hero(tag: heroTag!, child: thumbnail) : thumbnail,
                 ),
           if (isPending)
-            const Positioned(
-              left: 4,
-              bottom: 4,
-              child: Icon(Icons.upload_rounded, size: 16, color: Colors.white),
-            ),
+            const Positioned(left: 4, bottom: 4, child: Icon(Icons.upload_rounded, size: 16, color: Colors.white)),
           Positioned(
             right: -8,
             top: -8,
@@ -138,7 +134,10 @@ class _Thumbnail extends StatelessWidget {
                 minimumSize: const Size(44, 44),
               ),
               icon: removing
-                  ? const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox.square(
+                      dimension: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
                   : const Icon(Icons.close_rounded, size: 16),
             ),
           ),

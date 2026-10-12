@@ -11,7 +11,9 @@ final projectListProvider = AsyncNotifierProvider<ProjectListController, ListSta
 class ProjectListController extends PaginatedListController<Project> {
   @override
   Future<Paginated<Project>> fetchPage({required int page, required ListQuery query}) {
-    return ref.read(projectRepositoryProvider).list(
+    return ref
+        .read(projectRepositoryProvider)
+        .list(
           page: page,
           search: query.search,
           status: query.filters['status'] as String?,

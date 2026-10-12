@@ -26,6 +26,8 @@ import 'widgets/month_field.dart';
 import '../data/project_repository.dart';
 import '../../../shared/widgets/color_picker_field.dart';
 import 'widgets/gallery_grid.dart';
+import 'widgets/github_repository_field.dart';
+import '../../content/github/data/github_repositories.dart';
 import '../../../shared/widgets/mention_button.dart';
 
 const _maxImageBytes = 5 * 1024 * 1024;
@@ -65,6 +67,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   late final _demoUrl = TextEditingController();
   late final _sortOrder = TextEditingController(text: '0');
   String? _accentColor;
+  String? _githubRepository;
+  List<GitHubRepository> _githubAvailable = const [];
   bool _isFeatured = false;
   bool _isOpenSource = false;
   ProjectStatus _status = ProjectStatus.published;
@@ -90,10 +94,14 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   bool get _isEditing => widget.id != null;
 
   Future<void> _load() async {
+    // Dépôts proposés : un échec laisse seulement « Aucun » (et le dépôt enregistré).
+    final github = ref.read(gitHubRepositoryProvider).get().then<GitHubSelection?>((s) => s, onError: (_) => null);
     if (widget.id == null) {
+      _githubAvailable = (await github)?.available ?? const [];
       return;
     }
     final project = await ref.read(projectRepositoryProvider).get(widget.id!);
+    _githubAvailable = (await github)?.available ?? const [];
     _title = project.title;
     _projectContext = project.context;
     _realization = project.realization;
@@ -111,6 +119,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     _slug.text = project.slug;
     _repoUrl.text = project.repoUrl ?? '';
     _demoUrl.text = project.demoUrl ?? '';
+    _githubRepository = project.githubRepository;
     _sortOrder.text = '${project.sortOrder}';
     _accentColor = project.accentColor;
     _isFeatured = project.isFeatured;
@@ -290,6 +299,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
             accentColor: _accentColor?.isEmpty ?? true ? null : _accentColor,
             repoUrl: _repoUrl.text.trim().isEmpty ? null : _repoUrl.text.trim(),
             demoUrl: _demoUrl.text.trim().isEmpty ? null : _demoUrl.text.trim(),
+            githubRepository: _githubRepository,
             isFeatured: _isFeatured,
             isOpenSource: _isOpenSource,
             status: _status,
@@ -825,7 +835,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                 FormSection(
                   title: 'Liens et affichage',
                   initiallyExpanded: false,
-                  hasError: anyError(['accent_color', 'repo_url', 'demo_url', 'sort_order']),
+                  hasError: anyError(['accent_color', 'repo_url', 'github_repository', 'demo_url', 'sort_order']),
                   children: [
                     ColorPickerField(
                       value: _accentColor,
@@ -840,6 +850,15 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                       keyboardType: TextInputType.url,
                       onChanged: (_) => _markDirty(),
                       decoration: InputDecoration(labelText: 'Dépôt de code (URL)', errorText: v?.errorFor('repo_url')),
+                    ),
+                    GitHubRepositoryField(
+                      available: _githubAvailable,
+                      value: _githubRepository,
+                      error: v?.errorFor('github_repository'),
+                      onChanged: (value) {
+                        setState(() => _githubRepository = value);
+                        _markDirty();
+                      },
                     ),
                     TextField(
                       controller: _demoUrl,

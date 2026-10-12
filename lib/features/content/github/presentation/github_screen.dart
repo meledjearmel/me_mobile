@@ -8,6 +8,7 @@ import '../../../../shared/widgets/form_layout.dart';
 import '../../../../shared/widgets/glass.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../data/github_repositories.dart';
+import 'widgets/contribution_activity_card.dart';
 
 /// Dépôts GitHub présentés sur la page À propos : choix, ordre et
 /// synchronisation. Sans sélection, le site choisit parmi mes dépôts publics.
@@ -152,6 +153,8 @@ class _GitHubScreenState extends ConsumerState<GitHubScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 4),
                 child: FormHeader(title: 'Dépôts GitHub', subtitle: 'Présentés sur la page À propos.'),
               ),
+              const SizedBox(height: 12),
+              ContributionActivityCard(calendar: data.calendar),
               const SizedBox(height: 12),
               Text(
                 [
