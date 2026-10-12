@@ -14,5 +14,10 @@ class CertificationListController extends PaginatedListController<Certification>
   @override
   Future<Paginated<Certification>> fetchPage({required int page, required ListQuery query}) => ref
       .read(certificationRepositoryProvider)
-      .list(page: page, search: query.search, kind: query.filters['kind'] as String?);
+      .list(
+        page: page,
+        search: query.search,
+        kind: query.filters['kind'] as String?,
+        status: query.filters['status'] as String?,
+      );
 }

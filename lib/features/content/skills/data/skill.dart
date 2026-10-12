@@ -16,22 +16,24 @@ class Skill {
     required this.technologies,
     required this.sortOrder,
     required this.status,
+    this.draftedBy,
   });
 
   factory Skill.fromJson(Map<String, dynamic> json) => Skill(
-        id: json['id'] as int,
-        domainId: json['domain_id'] as int,
-        domain: json['domain'] == null ? null : DomainRef.fromJson(json['domain'] as Map<String, dynamic>),
-        name: Translated.fromJson(json['name']),
-        description: Translated.fromJson(json['description']),
-        details: Translated.fromJson(json['details']),
-        technologies: [
-          for (final item in (json['technologies'] as List<dynamic>? ?? const []))
-            TechnologyRef.fromJson(item as Map<String, dynamic>),
-        ],
-        sortOrder: json['sort_order'] as int? ?? 0,
-        status: PublicationStatus.fromWire(json['status'] as String?),
-      );
+    id: json['id'] as int,
+    domainId: json['domain_id'] as int,
+    domain: json['domain'] == null ? null : DomainRef.fromJson(json['domain'] as Map<String, dynamic>),
+    name: Translated.fromJson(json['name']),
+    description: Translated.fromJson(json['description']),
+    details: Translated.fromJson(json['details']),
+    technologies: [
+      for (final item in (json['technologies'] as List<dynamic>? ?? const []))
+        TechnologyRef.fromJson(item as Map<String, dynamic>),
+    ],
+    sortOrder: json['sort_order'] as int? ?? 0,
+    status: PublicationStatus.fromWire(json['status'] as String?),
+    draftedBy: json['drafted_by'] as String?,
+  );
 
   final int id;
   final int domainId;
@@ -44,4 +46,7 @@ class Skill {
   final List<TechnologyRef> technologies;
   final int sortOrder;
   final PublicationStatus status;
+
+  /// Client IA qui a rédigé le brouillon (« Claude Code », « Codex »…), sinon `null`.
+  final String? draftedBy;
 }

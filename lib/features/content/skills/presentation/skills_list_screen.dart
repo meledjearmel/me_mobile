@@ -5,6 +5,7 @@ import '../../../../core/models/publication_status.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/ai_badge.dart';
 import '../../data/reference_repository.dart';
 import '../application/skill_list_controller.dart';
 import '../data/skill.dart';
@@ -78,7 +79,11 @@ class SkillsListScreen extends ConsumerWidget {
             : const Icon(Icons.psychology_outlined),
         title: Text(skill.name.display),
         subtitle: Text(skill.domain?.label.display ?? ''),
-        trailing: StatusBadge(skill.status.label, prominent: skill.status == PublicationStatus.draft),
+        trailing: StatusWithAiBadge(
+          draftedBy: skill.draftedBy,
+          isDraft: skill.status == PublicationStatus.draft,
+          status: StatusBadge(skill.status.label, prominent: skill.status == PublicationStatus.draft),
+        ),
       ),
     );
   }

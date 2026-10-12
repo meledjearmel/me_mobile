@@ -16,19 +16,21 @@ class Education {
     required this.description,
     required this.sortOrder,
     required this.status,
+    this.draftedBy,
   });
 
   factory Education.fromJson(Map<String, dynamic> json) => Education(
-        id: json['id'] as int,
-        institution: json['institution'] as String,
-        degree: Translated.fromJson(json['degree']),
-        field: Translated.fromJson(json['field']),
-        startDate: parseDateOnly(json['start_date'] as String?) ?? DateTime.now(),
-        endDate: parseDateOnly(json['end_date'] as String?),
-        description: Translated.fromJson(json['description']),
-        sortOrder: json['sort_order'] as int? ?? 0,
-        status: PublicationStatus.fromWire(json['status'] as String?),
-      );
+    id: json['id'] as int,
+    institution: json['institution'] as String,
+    degree: Translated.fromJson(json['degree']),
+    field: Translated.fromJson(json['field']),
+    startDate: parseDateOnly(json['start_date'] as String?) ?? DateTime.now(),
+    endDate: parseDateOnly(json['end_date'] as String?),
+    description: Translated.fromJson(json['description']),
+    sortOrder: json['sort_order'] as int? ?? 0,
+    status: PublicationStatus.fromWire(json['status'] as String?),
+    draftedBy: json['drafted_by'] as String?,
+  );
 
   final int id;
   final String institution;
@@ -41,4 +43,7 @@ class Education {
   final Translated description;
   final int sortOrder;
   final PublicationStatus status;
+
+  /// Client IA qui a rédigé le brouillon (« Claude Code », « Codex »…), sinon `null`.
+  final String? draftedBy;
 }

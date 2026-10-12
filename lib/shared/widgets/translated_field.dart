@@ -72,7 +72,10 @@ class _TranslatedFieldState extends ConsumerState<TranslatedField> {
     }
   }
 
-  bool _isMissing(String locale) => widget.value[locale].trim().isEmpty && !(widget.optional && widget.value.isEmpty);
+  bool _isMissing(String locale) =>
+      widget.value[locale].trim().isEmpty &&
+      !(widget.optional && widget.value.isEmpty) &&
+      !(locale == 'en' && EnglishOptional.of(context));
 
   @override
   void dispose() {
@@ -380,4 +383,19 @@ class _ImproveOptionsSheetState extends State<_ImproveOptionsSheet> {
       ),
     );
   }
+}
+
+/// Rend l'anglais facultatif pour les [TranslatedField] du sous-arbre : un
+/// brouillon peut n'avoir que le français, l'anglais n'est exigé qu'à la
+/// publication. L'onglet EN vide n'est alors plus signalé.
+class EnglishOptional extends InheritedWidget {
+  const EnglishOptional({super.key, required this.enabled, required super.child});
+
+  final bool enabled;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<EnglishOptional>()?.enabled ?? false;
+
+  @override
+  bool updateShouldNotify(EnglishOptional oldWidget) => enabled != oldWidget.enabled;
 }

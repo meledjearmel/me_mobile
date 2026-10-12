@@ -30,6 +30,7 @@ class Certification {
     required this.credentialUrl,
     required this.badgeUrl,
     required this.status,
+    this.draftedBy,
     required this.sortOrder,
   });
 
@@ -44,6 +45,7 @@ class Certification {
     credentialUrl: json['credential_url'] as String?,
     badgeUrl: json['badge_url'] as String?,
     status: PublicationStatus.fromWire(json['status'] as String?),
+    draftedBy: json['drafted_by'] as String?,
     sortOrder: json['sort_order'] as int? ?? 0,
   );
 
@@ -65,6 +67,9 @@ class Certification {
   final String? credentialUrl;
   final String? badgeUrl;
   final PublicationStatus status;
+
+  /// Client IA qui a rédigé le brouillon (« Claude Code », « Codex »…), sinon `null`.
+  final String? draftedBy;
   final int sortOrder;
 
   bool get isExpired => expiresOn != null && expiresOn!.isBefore(DateTime.now());

@@ -30,6 +30,7 @@ class UsesItem {
     required this.description,
     required this.url,
     required this.status,
+    this.draftedBy,
     required this.sortOrder,
   });
 
@@ -40,6 +41,7 @@ class UsesItem {
     description: Translated.fromJson(json['description']),
     url: json['url'] as String?,
     status: PublicationStatus.fromWire(json['status'] as String?),
+    draftedBy: json['drafted_by'] as String?,
     sortOrder: json['sort_order'] as int? ?? 0,
   );
 
@@ -53,5 +55,8 @@ class UsesItem {
   /// Lien officiel (facultatif).
   final String? url;
   final PublicationStatus status;
+
+  /// Client IA qui a rédigé le brouillon (« Claude Code », « Codex »…), sinon `null`.
+  final String? draftedBy;
   final int sortOrder;
 }

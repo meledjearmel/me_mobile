@@ -29,6 +29,9 @@ import 'widgets/gallery_grid.dart';
 import 'widgets/github_repository_field.dart';
 import '../../content/github/data/github_repositories.dart';
 import '../../../shared/widgets/mention_button.dart';
+import '../../../core/ai/ai_assist_repository.dart';
+import '../../../shared/widgets/ai_badge.dart';
+import 'widgets/ai_draft_sheet.dart';
 
 const _maxImageBytes = 5 * 1024 * 1024;
 
@@ -72,6 +75,10 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   bool _isFeatured = false;
   bool _isOpenSource = false;
   ProjectStatus _status = ProjectStatus.published;
+  String? _draftedBy;
+
+  /// Traduction en cours : champ traité / nombre de champs.
+  ({int done, int total})? _translation;
   List<int> _domainIds = [];
   List<int> _jobProfileIds = [];
   List<int> _technologyIds = [];
@@ -125,6 +132,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     _isFeatured = project.isFeatured;
     _isOpenSource = project.isOpenSource;
     _status = project.status;
+    _draftedBy = project.draftedBy;
     _domainIds = project.domains.map((d) => d.id).toList();
     _jobProfileIds = project.jobProfiles.map((j) => j.id).toList();
     _technologyIds = project.technologies.map((t) => t.id).toList();
@@ -267,6 +275,141 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
 
   void _removePendingGalleryImage(int index) {
     setState(() => _galleryPending.removeAt(index));
+  }
+
+  /// Injecte la proposition de l'IA (en français) dans le formulaire, sans
+  /// rien enregistrer. Le projet passe en brouillon : l'anglais reste à traduire.
+  Future<void> _prefillWithAi() async {
+    final draft = await showAiDraftSheet(context, repositories: _githubAvailable);
+    if (draft == null || !mounted) {
+      return;
+    }
+    Translated fr(String? text) => Translated(fr: text ?? '');
+    setState(() {
+      _title = fr(draft.title);
+      _slug.text = draft.slug;
+      _tagline = fr(draft.tagline);
+      _role = fr(draft.role);
+      _client = fr(draft.client);
+      _platform = fr(draft.platform);
+      _projectContext = fr(draft.context);
+      _challenges = fr(draft.challenges);
+      _realization = fr(draft.realization);
+      _result = fr(draft.result);
+      _decisions = draft.decisions.take(Decision.maxCount).toList();
+      _keyFigures = draft.keyFigures.take(KeyFigure.maxCount).toList();
+      _startedOn = draft.startedOn;
+      _endedOn = draft.endedOn;
+      _teamSize.text = draft.teamSize?.toString() ?? '';
+      _technologyIds = List.of(draft.technologies);
+      _domainIds = List.of(draft.domains);
+      _jobProfileIds = List.of(draft.jobProfiles);
+      if (draft.githubRepository != null) {
+        _githubRepository = draft.githubRepository;
+      }
+      if (draft.repoUrl != null) {
+        _repoUrl.text = draft.repoUrl!;
+      }
+      if (draft.demoUrl != null) {
+        _demoUrl.text = draft.demoUrl!;
+      }
+      if (draft.isOpenSource != null) {
+        _isOpenSource = draft.isOpenSource!;
+      }
+      _status = ProjectStatus.draft;
+    });
+    _markDirty();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Formulaire pré-rempli. Relis, traduis en anglais, puis enregistre.')));
+  }
+
+  /// Champs dont le français est rempli et l'anglais vide, chacun avec de
+  /// quoi poser sa traduction (relue sur l'état courant, qui a pu changer).
+  List<({String fr, void Function(String en) apply})> _missingEnglish() {
+    final entries = <({String fr, void Function(String en) apply})>[];
+    void add(Translated value, void Function(String en) apply) {
+      if (value.fr.trim().isNotEmpty && value.en.trim().isEmpty) {
+        entries.add((fr: value.fr, apply: apply));
+      }
+    }
+
+    add(_title, (en) => _title = _title.copyWith(en: en));
+    add(_tagline, (en) => _tagline = _tagline.copyWith(en: en));
+    add(_role, (en) => _role = _role.copyWith(en: en));
+    add(_client, (en) => _client = _client.copyWith(en: en));
+    add(_platform, (en) => _platform = _platform.copyWith(en: en));
+    add(_projectContext, (en) => _projectContext = _projectContext.copyWith(en: en));
+    add(_challenges, (en) => _challenges = _challenges.copyWith(en: en));
+    add(_realization, (en) => _realization = _realization.copyWith(en: en));
+    add(_result, (en) => _result = _result.copyWith(en: en));
+    for (final (i, figure) in _keyFigures.indexed) {
+      add(figure.label, (en) {
+        if (i < _keyFigures.length) {
+          final current = _keyFigures[i];
+          _keyFigures = [..._keyFigures]
+            ..[i] = KeyFigure(
+              value: current.value,
+              label: current.label.copyWith(en: en),
+            );
+        }
+      });
+    }
+    for (final (i, decision) in _decisions.indexed) {
+      add(decision.choice, (en) {
+        if (i < _decisions.length) {
+          final current = _decisions[i];
+          _decisions = [..._decisions]
+            ..[i] = Decision(
+              choice: current.choice.copyWith(en: en),
+              reason: current.reason,
+            );
+        }
+      });
+      add(decision.reason, (en) {
+        if (i < _decisions.length) {
+          final current = _decisions[i];
+          _decisions = [..._decisions]
+            ..[i] = Decision(
+              choice: current.choice,
+              reason: current.reason.copyWith(en: en),
+            );
+        }
+      });
+    }
+    return entries;
+  }
+
+  /// « Traduire en anglais » : remplit chaque champ anglais vide, un appel
+  /// `POST /v1/ai/translate` par champ. S'arrête à la première erreur.
+  Future<void> _translateToEnglish() async {
+    final entries = _missingEnglish();
+    if (entries.isEmpty) {
+      return;
+    }
+    final ai = ref.read(aiAssistRepositoryProvider);
+    setState(() => _translation = (done: 0, total: entries.length));
+    try {
+      for (final (i, entry) in entries.indexed) {
+        final en = await ai.translate(text: entry.fr, sourceLocale: 'fr', targetLocale: 'en');
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          entry.apply(en);
+          _translation = (done: i + 1, total: entries.length);
+        });
+        _markDirty();
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _translation = null);
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -432,453 +575,475 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
             final galleryCount = _galleryImages.length + _galleryPending.length;
             const gap = SizedBox(height: 12);
 
-            return ListView(
-              padding: pageInsets(context),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: FormHeader(
-                    title: _isEditing && _title.display.isNotEmpty ? _title.display : 'Nouveau projet',
-                    subtitle: _isEditing ? 'Projet' : 'Complète au moins le titre et le slug',
+            // Brouillon : le français suffit, l'anglais n'est exigé qu'à la publication.
+            return EnglishOptional(
+              enabled: _status == ProjectStatus.draft,
+              child: ListView(
+                padding: pageInsets(context),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FormHeader(
+                      title: _isEditing && _title.display.isNotEmpty ? _title.display : 'Nouveau projet',
+                      subtitle: _isEditing ? 'Projet' : 'Complète au moins le titre et le slug',
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                KeyFacts(
-                  facts: [
-                    (value: _status.label, label: 'Statut'),
-                    (value: '${_technologyIds.length}', label: 'Technologies'),
-                    (value: '$galleryCount', label: 'Images'),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (_error != null) ...[ErrorBanner(_error!), gap],
-                FormSection(
-                  title: 'Couverture',
-                  children: [
-                    _CoverPicker(
-                      url: _coverUrl,
-                      pending: _coverPending,
-                      onPick: _pickCover,
-                      onRemove: _isEditing && _coverUrl != null && _coverPending == null ? _removeCover : null,
-                      removing: _removingCover,
+                  const SizedBox(height: 16),
+                  KeyFacts(
+                    facts: [
+                      (value: _status.label, label: 'Statut'),
+                      (value: '${_technologyIds.length}', label: 'Technologies'),
+                      (value: '$galleryCount', label: 'Images'),
+                    ],
+                  ),
+                  if (AiBadge.shows(_draftedBy, _status == ProjectStatus.draft)) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AiBadge(draftedBy: _draftedBy, isDraft: true),
                     ),
                   ],
-                ),
-                gap,
-                FormSection(
-                  title: 'Général',
-                  hasError: anyError(['title.fr', 'title.en', 'slug']),
-                  children: [
-                    TranslatedField(
-                      label: 'Titre',
-                      value: _title,
-                      maxLength: 255,
-                      errorFr: v?.errorFor('title.fr'),
-                      errorEn: v?.errorFor('title.en'),
-                      onChanged: (value) {
-                        setState(() => _title = value);
-                        _markDirty();
-                      },
-                    ),
-                    TextField(
-                      controller: _slug,
-                      onChanged: (_) => _markDirty(),
-                      decoration: InputDecoration(
-                        labelText: 'Slug',
-                        errorText: v?.errorFor('slug'),
-                        suffixIcon: IconButton(
-                          tooltip: 'Générer depuis le titre FR',
-                          icon: const Icon(Icons.auto_fix_high_rounded),
-                          onPressed: _generateSlug,
+                  const SizedBox(height: 12),
+                  _AiActions(
+                    showPrefill: !_isEditing,
+                    onPrefill: _translation != null ? null : _prefillWithAi,
+                    onTranslate: _translation != null || _missingEnglish().isEmpty ? null : _translateToEnglish,
+                    translation: _translation,
+                  ),
+                  const SizedBox(height: 12),
+                  if (_error != null) ...[ErrorBanner(_error!), gap],
+                  FormSection(
+                    title: 'Couverture',
+                    children: [
+                      _CoverPicker(
+                        url: _coverUrl,
+                        pending: _coverPending,
+                        onPick: _pickCover,
+                        onRemove: _isEditing && _coverUrl != null && _coverPending == null ? _removeCover : null,
+                        removing: _removingCover,
+                      ),
+                    ],
+                  ),
+                  gap,
+                  FormSection(
+                    title: 'Général',
+                    hasError: anyError(['title.fr', 'title.en', 'slug']),
+                    children: [
+                      TranslatedField(
+                        label: 'Titre',
+                        value: _title,
+                        maxLength: 255,
+                        errorFr: v?.errorFor('title.fr'),
+                        errorEn: v?.errorFor('title.en'),
+                        onChanged: (value) {
+                          setState(() => _title = value);
+                          _markDirty();
+                        },
+                      ),
+                      TextField(
+                        controller: _slug,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Slug',
+                          errorText: v?.errorFor('slug'),
+                          suffixIcon: IconButton(
+                            tooltip: 'Générer depuis le titre FR',
+                            icon: const Icon(Icons.auto_fix_high_rounded),
+                            onPressed: _generateSlug,
+                          ),
                         ),
                       ),
-                    ),
-                    SegmentedButton<ProjectStatus>(
-                      segments: const [
-                        ButtonSegment(value: ProjectStatus.published, label: Text('Publié')),
-                        ButtonSegment(value: ProjectStatus.archived, label: Text('Archivé')),
-                      ],
-                      selected: {_status},
-                      onSelectionChanged: (selection) {
-                        setState(() => _status = selection.first);
-                        _markDirty();
-                      },
-                    ),
-                    Column(
-                      children: [
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('À la une'),
-                          value: _isFeatured,
-                          onChanged: (value) {
-                            setState(() => _isFeatured = value);
-                            _markDirty();
-                          },
-                        ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Open source'),
-                          value: _isOpenSource,
-                          onChanged: (value) {
-                            setState(() => _isOpenSource = value);
-                            _markDirty();
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                gap,
-                FormSection(
-                  title: 'Étude de cas',
-                  summary: _keyFigures.isEmpty
-                      ? null
-                      : '${_keyFigures.length} chiffre${_keyFigures.length > 1 ? 's' : ''}',
-                  hasError:
-                      anyError([
-                        for (final field in ['tagline', 'role', 'client', 'platform']) ...['$field.fr', '$field.en'],
-                        'started_on',
-                        'ended_on',
-                        'team_size',
-                      ]) ||
-                      (v?.errors.keys.any((key) => key.startsWith('key_figures')) ?? false),
-                  children: [
-                    TranslatedField(
-                      label: 'Accroche',
-                      optional: true,
-                      value: _tagline,
-                      maxLines: 2,
-                      maxLength: 160,
-                      errorFr: v?.errorFor('tagline.fr'),
-                      errorEn: v?.errorFor('tagline.en'),
-                      onChanged: (value) {
-                        setState(() => _tagline = value);
-                        _markDirty();
-                      },
-                    ),
-                    const _FieldHint('Vide : le site reprend la première phrase du contexte.'),
-                    const _SubHeading("Fiche d'identité"),
-                    TranslatedField(
-                      label: 'Rôle',
-                      optional: true,
-                      value: _role,
-                      maxLength: 120,
-                      errorFr: v?.errorFor('role.fr'),
-                      errorEn: v?.errorFor('role.en'),
-                      onChanged: (value) {
-                        setState(() => _role = value);
-                        _markDirty();
-                      },
-                    ),
-                    TranslatedField(
-                      label: 'Client',
-                      optional: true,
-                      value: _client,
-                      maxLength: 120,
-                      errorFr: v?.errorFor('client.fr'),
-                      errorEn: v?.errorFor('client.en'),
-                      onChanged: (value) {
-                        setState(() => _client = value);
-                        _markDirty();
-                      },
-                    ),
-                    const _FieldHint('Anonymisé : « Organisme public », « Projet personnel »…'),
-                    TranslatedField(
-                      label: 'Plateforme',
-                      optional: true,
-                      value: _platform,
-                      maxLength: 120,
-                      errorFr: v?.errorFor('platform.fr'),
-                      errorEn: v?.errorFor('platform.en'),
-                      onChanged: (value) {
-                        setState(() => _platform = value);
-                        _markDirty();
-                      },
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: MonthField(
-                            label: 'Début',
-                            value: _startedOn,
-                            errorText: v?.errorFor('started_on'),
+                      SegmentedButton<ProjectStatus>(
+                        segments: const [
+                          ButtonSegment(value: ProjectStatus.draft, label: Text('Brouillon')),
+                          ButtonSegment(value: ProjectStatus.published, label: Text('Publié')),
+                          ButtonSegment(value: ProjectStatus.archived, label: Text('Archivé')),
+                        ],
+                        selected: {_status},
+                        onSelectionChanged: (selection) {
+                          setState(() => _status = selection.first);
+                          _markDirty();
+                        },
+                      ),
+                      Column(
+                        children: [
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('À la une'),
+                            value: _isFeatured,
                             onChanged: (value) {
-                              setState(() => _startedOn = value);
+                              setState(() => _isFeatured = value);
                               _markDirty();
                             },
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: MonthField(
-                            label: 'Fin',
-                            value: _endedOn,
-                            emptyText: _startedOn == null ? 'Non renseigné' : 'En cours',
-                            errorText: v?.errorFor('ended_on'),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Open source'),
+                            value: _isOpenSource,
                             onChanged: (value) {
-                              setState(() => _endedOn = value);
+                              setState(() => _isOpenSource = value);
                               _markDirty();
                             },
                           ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  gap,
+                  FormSection(
+                    title: 'Étude de cas',
+                    summary: _keyFigures.isEmpty
+                        ? null
+                        : '${_keyFigures.length} chiffre${_keyFigures.length > 1 ? 's' : ''}',
+                    hasError:
+                        anyError([
+                          for (final field in ['tagline', 'role', 'client', 'platform']) ...['$field.fr', '$field.en'],
+                          'started_on',
+                          'ended_on',
+                          'team_size',
+                        ]) ||
+                        (v?.errors.keys.any((key) => key.startsWith('key_figures')) ?? false),
+                    children: [
+                      TranslatedField(
+                        label: 'Accroche',
+                        optional: true,
+                        value: _tagline,
+                        maxLines: 2,
+                        maxLength: 160,
+                        errorFr: v?.errorFor('tagline.fr'),
+                        errorEn: v?.errorFor('tagline.en'),
+                        onChanged: (value) {
+                          setState(() => _tagline = value);
+                          _markDirty();
+                        },
+                      ),
+                      const _FieldHint('Vide : le site reprend la première phrase du contexte.'),
+                      const _SubHeading("Fiche d'identité"),
+                      TranslatedField(
+                        label: 'Rôle',
+                        optional: true,
+                        value: _role,
+                        maxLength: 120,
+                        errorFr: v?.errorFor('role.fr'),
+                        errorEn: v?.errorFor('role.en'),
+                        onChanged: (value) {
+                          setState(() => _role = value);
+                          _markDirty();
+                        },
+                      ),
+                      TranslatedField(
+                        label: 'Client',
+                        optional: true,
+                        value: _client,
+                        maxLength: 120,
+                        errorFr: v?.errorFor('client.fr'),
+                        errorEn: v?.errorFor('client.en'),
+                        onChanged: (value) {
+                          setState(() => _client = value);
+                          _markDirty();
+                        },
+                      ),
+                      const _FieldHint('Anonymisé : « Organisme public », « Projet personnel »…'),
+                      TranslatedField(
+                        label: 'Plateforme',
+                        optional: true,
+                        value: _platform,
+                        maxLength: 120,
+                        errorFr: v?.errorFor('platform.fr'),
+                        errorEn: v?.errorFor('platform.en'),
+                        onChanged: (value) {
+                          setState(() => _platform = value);
+                          _markDirty();
+                        },
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: MonthField(
+                              label: 'Début',
+                              value: _startedOn,
+                              errorText: v?.errorFor('started_on'),
+                              onChanged: (value) {
+                                setState(() => _startedOn = value);
+                                _markDirty();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: MonthField(
+                              label: 'Fin',
+                              value: _endedOn,
+                              emptyText: _startedOn == null ? 'Non renseigné' : 'En cours',
+                              errorText: v?.errorFor('ended_on'),
+                              onChanged: (value) {
+                                setState(() => _endedOn = value);
+                                _markDirty();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _teamSize,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Taille de l\'équipe (facultatif)',
+                          helperText: 'Vous compris.',
+                          errorText: v?.errorFor('team_size'),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _teamSize,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      onChanged: (_) => _markDirty(),
-                      decoration: InputDecoration(
-                        labelText: 'Taille de l\'équipe (facultatif)',
-                        helperText: 'Vous compris.',
-                        errorText: v?.errorFor('team_size'),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    KeyFiguresEditor(
-                      value: _keyFigures,
-                      errorFor: (key) => v?.errorFor(key),
-                      onChanged: (figures) {
-                        setState(() => _keyFigures = figures);
-                        _markDirty();
-                      },
-                    ),
-                  ],
-                ),
-                gap,
-                FormSection(
-                  title: 'Description',
-                  hasError:
-                      anyError([
-                        'context.fr',
-                        'context.en',
-                        'challenges.fr',
-                        'challenges.en',
-                        'realization.fr',
-                        'realization.en',
-                        'result.fr',
-                        'result.en',
-                      ]) ||
-                      (v?.errors.keys.any((key) => key.startsWith('decisions')) ?? false),
-                  children: [
-                    TranslatedField(
-                      label: 'Contexte',
-                      value: _projectContext,
-                      maxLines: 5,
-                      errorFr: v?.errorFor('context.fr'),
-                      errorEn: v?.errorFor('context.en'),
-                      onChanged: (value) {
-                        setState(() => _projectContext = value);
-                        _markDirty();
-                      },
-                    ),
-                    MentionButton(
-                      value: _projectContext,
-                      onChanged: (value) {
-                        setState(() => _projectContext = value);
-                        _markDirty();
-                      },
-                    ),
-                    TranslatedField(
-                      label: 'Défis et contraintes',
-                      optional: true,
-                      value: _challenges,
-                      maxLines: 5,
-                      errorFr: v?.errorFor('challenges.fr'),
-                      errorEn: v?.errorFor('challenges.en'),
-                      onChanged: (value) {
-                        setState(() => _challenges = value);
-                        _markDirty();
-                      },
-                    ),
-                    MentionButton(
-                      value: _challenges,
-                      onChanged: (value) {
-                        setState(() => _challenges = value);
-                        _markDirty();
-                      },
-                    ),
-                    TranslatedField(
-                      label: 'Réalisation',
-                      value: _realization,
-                      maxLines: 5,
-                      errorFr: v?.errorFor('realization.fr'),
-                      errorEn: v?.errorFor('realization.en'),
-                      onChanged: (value) {
-                        setState(() => _realization = value);
-                        _markDirty();
-                      },
-                    ),
-                    MentionButton(
-                      value: _realization,
-                      onChanged: (value) {
-                        setState(() => _realization = value);
-                        _markDirty();
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    DecisionsEditor(
-                      value: _decisions,
-                      errorFor: (key) => v?.errorFor(key),
-                      onChanged: (decisions) {
-                        setState(() => _decisions = decisions);
-                        _markDirty();
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TranslatedField(
-                      label: 'Résultat',
-                      value: _result,
-                      maxLines: 5,
-                      errorFr: v?.errorFor('result.fr'),
-                      errorEn: v?.errorFor('result.en'),
-                      onChanged: (value) {
-                        setState(() => _result = value);
-                        _markDirty();
-                      },
-                    ),
-                    MentionButton(
-                      value: _result,
-                      onChanged: (value) {
-                        setState(() => _result = value);
-                        _markDirty();
-                      },
-                    ),
-                  ],
-                ),
-                gap,
-                FormSection(
-                  title: 'Classement',
-                  summary:
-                      '${_domainIds.length + _jobProfileIds.length + _technologyIds.length + _relatedProjectIds.length}',
-                  initiallyExpanded: false,
-                  children: [
-                    domains.when(
-                      loading: () => const LinearProgressIndicator(),
-                      error: (error, _) =>
-                          Text('Domaines indisponibles : ${error is ApiException ? error.message : error}'),
-                      data: (list) => MultiSelectField(
-                        label: 'Domaines',
-                        options: [
-                          for (final d in list) (id: d.id, label: d.label.display, color: parseHexColor(d.color)),
-                        ],
-                        selectedIds: _domainIds,
-                        onChanged: (ids) {
-                          setState(() => _domainIds = ids);
+                      const SizedBox(height: 8),
+                      KeyFiguresEditor(
+                        value: _keyFigures,
+                        errorFor: (key) => v?.errorFor(key),
+                        onChanged: (figures) {
+                          setState(() => _keyFigures = figures);
                           _markDirty();
                         },
                       ),
-                    ),
-                    jobProfiles.when(
-                      loading: () => const LinearProgressIndicator(),
-                      error: (error, _) => const SizedBox.shrink(),
-                      data: (list) => MultiSelectField(
-                        label: 'Profils métier',
-                        options: [for (final p in list) (id: p.id, label: p.label.display, color: null)],
-                        selectedIds: _jobProfileIds,
-                        onChanged: (ids) {
-                          setState(() => _jobProfileIds = ids);
+                    ],
+                  ),
+                  gap,
+                  FormSection(
+                    title: 'Description',
+                    hasError:
+                        anyError([
+                          'context.fr',
+                          'context.en',
+                          'challenges.fr',
+                          'challenges.en',
+                          'realization.fr',
+                          'realization.en',
+                          'result.fr',
+                          'result.en',
+                        ]) ||
+                        (v?.errors.keys.any((key) => key.startsWith('decisions')) ?? false),
+                    children: [
+                      TranslatedField(
+                        label: 'Contexte',
+                        value: _projectContext,
+                        maxLines: 5,
+                        errorFr: v?.errorFor('context.fr'),
+                        errorEn: v?.errorFor('context.en'),
+                        onChanged: (value) {
+                          setState(() => _projectContext = value);
                           _markDirty();
                         },
                       ),
-                    ),
-                    technologies.when(
-                      loading: () => const LinearProgressIndicator(),
-                      error: (error, _) => const SizedBox.shrink(),
-                      data: (list) => MultiSelectField(
-                        label: 'Technologies',
-                        options: [for (final t in list) (id: t.id, label: t.name, color: null)],
-                        selectedIds: _technologyIds,
-                        onChanged: (ids) {
-                          setState(() => _technologyIds = ids);
+                      MentionButton(
+                        value: _projectContext,
+                        onChanged: (value) {
+                          setState(() => _projectContext = value);
                           _markDirty();
                         },
                       ),
-                    ),
-                    relatedProjects.when(
-                      loading: () => const LinearProgressIndicator(),
-                      error: (error, _) => const SizedBox.shrink(),
-                      data: (list) => MultiSelectField(
-                        label: 'Projets liés',
-                        options: [
-                          for (final p in list)
-                            if (p.id != widget.id) (id: p.id, label: p.title.display, color: null),
-                        ],
-                        selectedIds: _relatedProjectIds,
-                        onChanged: (ids) {
-                          setState(() => _relatedProjectIds = ids);
+                      TranslatedField(
+                        label: 'Défis et contraintes',
+                        optional: true,
+                        value: _challenges,
+                        maxLines: 5,
+                        errorFr: v?.errorFor('challenges.fr'),
+                        errorEn: v?.errorFor('challenges.en'),
+                        onChanged: (value) {
+                          setState(() => _challenges = value);
                           _markDirty();
                         },
                       ),
-                    ),
-                  ],
-                ),
-                gap,
-                FormSection(
-                  title: 'Galerie',
-                  summary: '$galleryCount',
-                  initiallyExpanded: false,
-                  children: [
-                    GalleryGrid(
-                      images: _galleryImages,
-                      pendingFiles: _galleryPending,
-                      onAdd: _addGalleryImages,
-                      onRemove: _removeGalleryImage,
-                      onRemovePending: _removePendingGalleryImage,
-                      removingId: _removingGalleryId,
-                    ),
-                  ],
-                ),
-                gap,
-                FormSection(
-                  title: 'Liens et affichage',
-                  initiallyExpanded: false,
-                  hasError: anyError(['accent_color', 'repo_url', 'github_repository', 'demo_url', 'sort_order']),
-                  children: [
-                    ColorPickerField(
-                      value: _accentColor,
-                      error: v?.errorFor('accent_color'),
-                      onChanged: (value) {
-                        setState(() => _accentColor = value);
-                        _markDirty();
-                      },
-                    ),
-                    TextField(
-                      controller: _repoUrl,
-                      keyboardType: TextInputType.url,
-                      onChanged: (_) => _markDirty(),
-                      decoration: InputDecoration(labelText: 'Dépôt de code (URL)', errorText: v?.errorFor('repo_url')),
-                    ),
-                    GitHubRepositoryField(
-                      available: _githubAvailable,
-                      value: _githubRepository,
-                      error: v?.errorFor('github_repository'),
-                      onChanged: (value) {
-                        setState(() => _githubRepository = value);
-                        _markDirty();
-                      },
-                    ),
-                    TextField(
-                      controller: _demoUrl,
-                      keyboardType: TextInputType.url,
-                      onChanged: (_) => _markDirty(),
-                      decoration: InputDecoration(labelText: 'Démo (URL)', errorText: v?.errorFor('demo_url')),
-                    ),
-                    TextField(
-                      controller: _sortOrder,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      onChanged: (_) => _markDirty(),
-                      decoration: InputDecoration(
-                        labelText: 'Ordre d\'affichage',
-                        errorText: v?.errorFor('sort_order'),
+                      MentionButton(
+                        value: _challenges,
+                        onChanged: (value) {
+                          setState(() => _challenges = value);
+                          _markDirty();
+                        },
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      TranslatedField(
+                        label: 'Réalisation',
+                        value: _realization,
+                        maxLines: 5,
+                        errorFr: v?.errorFor('realization.fr'),
+                        errorEn: v?.errorFor('realization.en'),
+                        onChanged: (value) {
+                          setState(() => _realization = value);
+                          _markDirty();
+                        },
+                      ),
+                      MentionButton(
+                        value: _realization,
+                        onChanged: (value) {
+                          setState(() => _realization = value);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      DecisionsEditor(
+                        value: _decisions,
+                        errorFor: (key) => v?.errorFor(key),
+                        onChanged: (decisions) {
+                          setState(() => _decisions = decisions);
+                          _markDirty();
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      TranslatedField(
+                        label: 'Résultat',
+                        value: _result,
+                        maxLines: 5,
+                        errorFr: v?.errorFor('result.fr'),
+                        errorEn: v?.errorFor('result.en'),
+                        onChanged: (value) {
+                          setState(() => _result = value);
+                          _markDirty();
+                        },
+                      ),
+                      MentionButton(
+                        value: _result,
+                        onChanged: (value) {
+                          setState(() => _result = value);
+                          _markDirty();
+                        },
+                      ),
+                    ],
+                  ),
+                  gap,
+                  FormSection(
+                    title: 'Classement',
+                    summary:
+                        '${_domainIds.length + _jobProfileIds.length + _technologyIds.length + _relatedProjectIds.length}',
+                    initiallyExpanded: false,
+                    children: [
+                      domains.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) =>
+                            Text('Domaines indisponibles : ${error is ApiException ? error.message : error}'),
+                        data: (list) => MultiSelectField(
+                          label: 'Domaines',
+                          options: [
+                            for (final d in list) (id: d.id, label: d.label.display, color: parseHexColor(d.color)),
+                          ],
+                          selectedIds: _domainIds,
+                          onChanged: (ids) {
+                            setState(() => _domainIds = ids);
+                            _markDirty();
+                          },
+                        ),
+                      ),
+                      jobProfiles.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) => const SizedBox.shrink(),
+                        data: (list) => MultiSelectField(
+                          label: 'Profils métier',
+                          options: [for (final p in list) (id: p.id, label: p.label.display, color: null)],
+                          selectedIds: _jobProfileIds,
+                          onChanged: (ids) {
+                            setState(() => _jobProfileIds = ids);
+                            _markDirty();
+                          },
+                        ),
+                      ),
+                      technologies.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) => const SizedBox.shrink(),
+                        data: (list) => MultiSelectField(
+                          label: 'Technologies',
+                          options: [for (final t in list) (id: t.id, label: t.name, color: null)],
+                          selectedIds: _technologyIds,
+                          onChanged: (ids) {
+                            setState(() => _technologyIds = ids);
+                            _markDirty();
+                          },
+                        ),
+                      ),
+                      relatedProjects.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (error, _) => const SizedBox.shrink(),
+                        data: (list) => MultiSelectField(
+                          label: 'Projets liés',
+                          options: [
+                            for (final p in list)
+                              if (p.id != widget.id) (id: p.id, label: p.title.display, color: null),
+                          ],
+                          selectedIds: _relatedProjectIds,
+                          onChanged: (ids) {
+                            setState(() => _relatedProjectIds = ids);
+                            _markDirty();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  gap,
+                  FormSection(
+                    title: 'Galerie',
+                    summary: '$galleryCount',
+                    initiallyExpanded: false,
+                    children: [
+                      GalleryGrid(
+                        images: _galleryImages,
+                        pendingFiles: _galleryPending,
+                        onAdd: _addGalleryImages,
+                        onRemove: _removeGalleryImage,
+                        onRemovePending: _removePendingGalleryImage,
+                        removingId: _removingGalleryId,
+                      ),
+                    ],
+                  ),
+                  gap,
+                  FormSection(
+                    title: 'Liens et affichage',
+                    initiallyExpanded: false,
+                    hasError: anyError(['accent_color', 'repo_url', 'github_repository', 'demo_url', 'sort_order']),
+                    children: [
+                      ColorPickerField(
+                        value: _accentColor,
+                        error: v?.errorFor('accent_color'),
+                        onChanged: (value) {
+                          setState(() => _accentColor = value);
+                          _markDirty();
+                        },
+                      ),
+                      TextField(
+                        controller: _repoUrl,
+                        keyboardType: TextInputType.url,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Dépôt de code (URL)',
+                          errorText: v?.errorFor('repo_url'),
+                        ),
+                      ),
+                      GitHubRepositoryField(
+                        available: _githubAvailable,
+                        value: _githubRepository,
+                        error: v?.errorFor('github_repository'),
+                        onChanged: (value) {
+                          setState(() => _githubRepository = value);
+                          _markDirty();
+                        },
+                      ),
+                      TextField(
+                        controller: _demoUrl,
+                        keyboardType: TextInputType.url,
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(labelText: 'Démo (URL)', errorText: v?.errorFor('demo_url')),
+                      ),
+                      TextField(
+                        controller: _sortOrder,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        onChanged: (_) => _markDirty(),
+                        decoration: InputDecoration(
+                          labelText: 'Ordre d\'affichage',
+                          errorText: v?.errorFor('sort_order'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -975,6 +1140,49 @@ class _SubHeading extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+    );
+  }
+}
+
+/// « Pré-remplir avec l'IA » (création seulement) et « Traduire en anglais ».
+class _AiActions extends StatelessWidget {
+  const _AiActions({
+    required this.showPrefill,
+    required this.onPrefill,
+    required this.onTranslate,
+    required this.translation,
+  });
+
+  final bool showPrefill;
+  final VoidCallback? onPrefill;
+
+  /// `null` : rien à traduire, ou traduction en cours.
+  final VoidCallback? onTranslate;
+  final ({int done, int total})? translation;
+
+  @override
+  Widget build(BuildContext context) {
+    final translation = this.translation;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (showPrefill)
+          FilledButton.tonalIcon(
+            onPressed: onPrefill,
+            icon: const Icon(Icons.auto_awesome_rounded),
+            label: const Text('Pré-remplir avec l\'IA'),
+          ),
+        OutlinedButton.icon(
+          onPressed: onTranslate,
+          icon: translation == null
+              ? const Icon(Icons.translate_rounded)
+              : const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+          label: Text(
+            translation == null ? 'Traduire en anglais' : 'Traduction ${translation.done}/${translation.total}…',
+          ),
+        ),
+      ],
     );
   }
 }

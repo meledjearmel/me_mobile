@@ -5,6 +5,7 @@ import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/hex_color.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/ai_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../application/project_list_controller.dart';
 import '../data/project.dart';
@@ -47,6 +48,12 @@ class ProjectsListScreen extends ConsumerWidget {
       emptyTitle: 'Aucun projet pour l\'instant',
       emptyDescription: 'Créez votre premier projet avec le bouton +.',
       filterChips: [
+        ChoiceChip(
+          label: const Text('Brouillon'),
+          selected: filters['status'] == 'draft',
+          onSelected: (_) => _toggleFilter(ref, 'status', 'draft'),
+          showCheckmark: false,
+        ),
         ChoiceChip(
           label: const Text('Publié'),
           selected: filters['status'] == 'published',
@@ -142,14 +149,19 @@ class _ProjectCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 StatusBadge(
                   project.status.label,
                   color: project.status == ProjectStatus.published ? context.appColors.success : null,
+                  prominent: project.status == ProjectStatus.draft,
                 ),
-                if (project.isFeatured) ...[const SizedBox(width: 6), const StatusBadge('À la une')],
-                if (project.isOpenSource) ...[const SizedBox(width: 6), const StatusBadge('Open source')],
+                if (AiBadge.shows(project.draftedBy, project.status == ProjectStatus.draft))
+                  AiBadge(draftedBy: project.draftedBy, isDraft: true),
+                if (project.isFeatured) const StatusBadge('À la une'),
+                if (project.isOpenSource) const StatusBadge('Open source'),
               ],
             ),
           ],

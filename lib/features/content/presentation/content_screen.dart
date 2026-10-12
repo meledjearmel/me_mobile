@@ -11,6 +11,7 @@ import '../../dashboard/data/dashboard.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../projects/presentation/projects_list_screen.dart';
+import '../../revisions/presentation/revisions_screen.dart';
 import '../certifications/presentation/certifications_list_screen.dart';
 import '../domains/presentation/domains_list_screen.dart';
 import '../github/presentation/github_screen.dart';
@@ -71,6 +72,7 @@ class ContentScreen extends ConsumerWidget {
       label: 'Site',
       sections: [
         (icon: Icons.article_outlined, label: 'Blog', builder: _postsScreen),
+        (icon: Icons.rate_review_outlined, label: 'Révisions IA', builder: _revisionsScreen),
         (icon: Icons.devices_other_outlined, label: 'Uses', builder: _usesScreen),
         (icon: Icons.code_rounded, label: 'Dépôts GitHub', builder: _gitHubScreen),
         (icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen),
@@ -91,26 +93,32 @@ class ContentScreen extends ConsumerWidget {
   static Widget _musicScreen(BuildContext context) => const MusicScreen();
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
   static Widget _postsScreen(BuildContext context) => const PostsListScreen();
+  static Widget _revisionsScreen(BuildContext context) => const RevisionsScreen();
   static Widget _usesScreen(BuildContext context) => const UsesItemsListScreen();
   static Widget _gitHubScreen(BuildContext context) => const GitHubScreen();
   static Widget _appointmentTypesScreen(BuildContext context) => const AppointmentTypesListScreen();
   static Widget _availabilityScreen(BuildContext context) => const AvailabilityScreen();
 
   /// Nombre d'éléments par section, tiré du tableau de bord (absent si non fourni).
-  static int? _countFor(String label, DashboardContent? content) => switch (label) {
-    'Expériences' => content?.experiences,
-    'Formations' => content?.educations,
-    'Compétences' => content?.skills,
-    'Projets' => content == null ? null : content.projects.published + content.projects.archived,
-    'Technologies' => content?.technologies,
-    'Domaines' => content?.domains,
-    _ => null,
-  };
+  static int? _countFor(String label, Dashboard? dashboard) {
+    final content = dashboard?.content;
+    return switch (label) {
+      'Révisions IA' => dashboard?.todo.revisions,
+      'Expériences' => content?.experiences,
+      'Formations' => content?.educations,
+      'Compétences' => content?.skills,
+      'Projets' =>
+        content == null ? null : content.projects.draft + content.projects.published + content.projects.archived,
+      'Technologies' => content?.technologies,
+      'Domaines' => content?.domains,
+      _ => null,
+    };
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final content = ref.watch(dashboardProvider).value?.content;
+    final dashboard = ref.watch(dashboardProvider).value;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -131,7 +139,7 @@ class ContentScreen extends ConsumerWidget {
                     _SectionTile(
                       icon: section.icon,
                       label: section.label,
-                      count: _countFor(section.label, content),
+                      count: _countFor(section.label, dashboard),
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: section.builder)),
                     ),
                 ],

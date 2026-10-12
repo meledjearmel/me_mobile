@@ -6,6 +6,7 @@ import '../../../app/theme/app_palette.dart';
 import '../../../core/models/publication_status.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/ai_badge.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
 import 'post_form_screen.dart';
@@ -113,7 +114,11 @@ class PostsListScreen extends ConsumerWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: StatusBadge(_stateLabel(post), prominent: post.status == PublicationStatus.draft),
+        trailing: StatusWithAiBadge(
+          draftedBy: post.draftedBy,
+          isDraft: post.status == PublicationStatus.draft,
+          status: StatusBadge(_stateLabel(post), prominent: post.status == PublicationStatus.draft),
+        ),
       ),
     );
   }

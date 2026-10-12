@@ -11,10 +11,10 @@ class Highlight {
   const Highlight({this.id, required this.text, required this.sortOrder});
 
   factory Highlight.fromJson(Map<String, dynamic> json) => Highlight(
-        id: json['id'] as int?,
-        text: Translated.fromJson(json['text']),
-        sortOrder: json['sort_order'] as int? ?? 0,
-      );
+    id: json['id'] as int?,
+    text: Translated.fromJson(json['text']),
+    sortOrder: json['sort_order'] as int? ?? 0,
+  );
 
   final int? id;
   final Translated text;
@@ -37,24 +37,26 @@ class Experience {
     required this.description,
     required this.sortOrder,
     required this.status,
+    this.draftedBy,
     required this.highlights,
   });
 
   factory Experience.fromJson(Map<String, dynamic> json) => Experience(
-        id: json['id'] as int,
-        company: json['company'] as String,
-        role: Translated.fromJson(json['role']),
-        location: json['location'] as String?,
-        startDate: parseDateOnly(json['start_date'] as String?) ?? DateTime.now(),
-        endDate: parseDateOnly(json['end_date'] as String?),
-        description: Translated.fromJson(json['description']),
-        sortOrder: json['sort_order'] as int? ?? 0,
-        status: PublicationStatus.fromWire(json['status'] as String?),
-        highlights: [
-          for (final item in (json['highlights'] as List<dynamic>? ?? const []))
-            Highlight.fromJson(item as Map<String, dynamic>),
-        ],
-      );
+    id: json['id'] as int,
+    company: json['company'] as String,
+    role: Translated.fromJson(json['role']),
+    location: json['location'] as String?,
+    startDate: parseDateOnly(json['start_date'] as String?) ?? DateTime.now(),
+    endDate: parseDateOnly(json['end_date'] as String?),
+    description: Translated.fromJson(json['description']),
+    sortOrder: json['sort_order'] as int? ?? 0,
+    status: PublicationStatus.fromWire(json['status'] as String?),
+    draftedBy: json['drafted_by'] as String?,
+    highlights: [
+      for (final item in (json['highlights'] as List<dynamic>? ?? const []))
+        Highlight.fromJson(item as Map<String, dynamic>),
+    ],
+  );
 
   final int id;
   final String company;
@@ -65,5 +67,8 @@ class Experience {
   final Translated description;
   final int sortOrder;
   final PublicationStatus status;
+
+  /// Client IA qui a rédigé le brouillon (« Claude Code », « Codex »…), sinon `null`.
+  final String? draftedBy;
   final List<Highlight> highlights;
 }

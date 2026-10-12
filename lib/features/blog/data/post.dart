@@ -16,6 +16,7 @@ class Post {
     required this.readingMinutes,
     required this.isFeatured,
     required this.status,
+    this.draftedBy,
     required this.publishedAt,
     required this.isLive,
     required this.coverUrl,
@@ -40,6 +41,7 @@ class Post {
     readingMinutes: json['reading_minutes'] as int? ?? 0,
     isFeatured: json['is_featured'] as bool? ?? false,
     status: PublicationStatus.fromWire(json['status'] as String?),
+    draftedBy: json['drafted_by'] as String?,
     publishedAt: _date(json['published_at']),
     isLive: json['is_live'] as bool? ?? false,
     coverUrl: json['cover_url'] as String?,
@@ -73,6 +75,9 @@ class Post {
   final int readingMinutes;
   final bool isFeatured;
   final PublicationStatus status;
+
+  /// Client IA qui a rédigé le brouillon (« Claude Code », « Codex »…), sinon `null`.
+  final String? draftedBy;
 
   /// Publié sans date : paraît tout de suite. Une date future programme l'article.
   final DateTime? publishedAt;

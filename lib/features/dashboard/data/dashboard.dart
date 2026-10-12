@@ -272,6 +272,10 @@ class DashboardTodo {
     required this.testimonials,
     this.appointments = 0,
     this.comments = 0,
+    this.projectDrafts = 0,
+    this.postDrafts = 0,
+    this.contentDrafts = 0,
+    this.revisions = 0,
   });
 
   factory DashboardTodo.fromJson(Map<String, dynamic> json) => DashboardTodo(
@@ -280,6 +284,10 @@ class DashboardTodo {
     testimonials: json['testimonials'] as int? ?? 0,
     appointments: json['appointments'] as int? ?? 0,
     comments: json['comments'] as int? ?? 0,
+    projectDrafts: json['project_drafts'] as int? ?? 0,
+    postDrafts: json['post_drafts'] as int? ?? 0,
+    contentDrafts: json['content_drafts'] as int? ?? 0,
+    revisions: json['revisions'] as int? ?? 0,
   );
 
   final int contacts;
@@ -292,6 +300,18 @@ class DashboardTodo {
   /// Commentaires du blog à modérer.
   final int comments;
 
+  /// Brouillons à relire, souvent proposés par l'IA : projets, articles, et
+  /// expériences, formations, certifications, page « Uses », compétences.
+  final int projectDrafts;
+  final int postDrafts;
+  final int contentDrafts;
+
+  /// Révisions de contenus en ligne proposées par l'IA, en attente.
+  final int revisions;
+
+  int get drafts => projectDrafts + postDrafts + contentDrafts;
+
+  /// Éléments de la boîte de réception (les brouillons et révisions ont leurs cartes).
   int get total => contacts + engagements + testimonials + appointments + comments;
 }
 
@@ -433,6 +453,7 @@ class TopContent {
 @immutable
 class ProjectsStats {
   const ProjectsStats({
+    this.draft = 0,
     required this.published,
     required this.archived,
     required this.featured,
@@ -440,12 +461,14 @@ class ProjectsStats {
   });
 
   factory ProjectsStats.fromJson(Map<String, dynamic> json) => ProjectsStats(
+    draft: json['draft'] as int? ?? 0,
     published: json['published'] as int? ?? 0,
     archived: json['archived'] as int? ?? 0,
     featured: json['featured'] as int? ?? 0,
     openSource: json['open_source'] as int? ?? 0,
   );
 
+  final int draft;
   final int published;
   final int archived;
   final int featured;

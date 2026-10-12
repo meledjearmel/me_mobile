@@ -22,6 +22,7 @@ import 'widgets/health_checklist.dart';
 import 'widgets/recent_section.dart';
 import 'statistics_screen.dart';
 import 'widgets/stat_tile.dart';
+import 'widgets/review_cards.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -212,6 +213,8 @@ class _DashboardBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _TodoCard(todo: dashboard.todo, onTap: onTodoTap),
+        const SizedBox(height: 10),
+        ReviewCards(todo: dashboard.todo),
         gap,
         SectionHeader(
           'En bref',

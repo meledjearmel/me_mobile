@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/ai_badge.dart';
 import '../application/education_list_controller.dart';
 import '../data/education.dart';
 import 'education_form_screen.dart';
@@ -39,9 +40,8 @@ class EducationsListScreen extends ConsumerWidget {
           ChoiceChip(
             label: Text(status.label),
             selected: currentStatus == status.wireValue,
-            onSelected: (_) => notifier.setFilters(
-              currentStatus == status.wireValue ? const {} : {'status': status.wireValue},
-            ),
+            onSelected: (_) =>
+                notifier.setFilters(currentStatus == status.wireValue ? const {} : {'status': status.wireValue}),
             showCheckmark: false,
           ),
       ],
@@ -50,7 +50,11 @@ class EducationsListScreen extends ConsumerWidget {
         leading: const Icon(Icons.school_outlined),
         title: Text(education.institution),
         subtitle: Text(education.degree.display),
-        trailing: StatusBadge(education.status.label, prominent: education.status == PublicationStatus.draft),
+        trailing: StatusWithAiBadge(
+          draftedBy: education.draftedBy,
+          isDraft: education.status == PublicationStatus.draft,
+          status: StatusBadge(education.status.label, prominent: education.status == PublicationStatus.draft),
+        ),
       ),
     );
   }

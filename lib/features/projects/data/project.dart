@@ -4,6 +4,7 @@ import '../../../core/models/translated.dart';
 import '../../content/data/refs.dart';
 
 enum ProjectStatus {
+  draft('draft', 'Brouillon'),
   published('published', 'Publié'),
   archived('archived', 'Archivé');
 
@@ -100,6 +101,7 @@ class Project {
     required this.isFeatured,
     required this.isOpenSource,
     required this.status,
+    this.draftedBy,
     required this.sortOrder,
     required this.coverUrl,
     required this.gallery,
@@ -140,6 +142,7 @@ class Project {
     isFeatured: json['is_featured'] as bool? ?? false,
     isOpenSource: json['is_open_source'] as bool? ?? false,
     status: ProjectStatus.fromWire(json['status'] as String?),
+    draftedBy: json['drafted_by'] as String?,
     sortOrder: json['sort_order'] as int? ?? 0,
     coverUrl: json['cover_url'] as String?,
     gallery: [
@@ -199,6 +202,9 @@ class Project {
   final bool isFeatured;
   final bool isOpenSource;
   final ProjectStatus status;
+
+  /// Client IA qui a rédigé le brouillon (« Claude Code », « Codex »…), sinon `null`.
+  final String? draftedBy;
   final int sortOrder;
   final String? coverUrl;
   final List<GalleryImage> gallery;

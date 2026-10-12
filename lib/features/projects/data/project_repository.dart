@@ -7,6 +7,7 @@ import '../../../core/api/multipart.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/models/translated.dart';
 import 'project.dart';
+import 'project_draft.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>((ref) => ProjectRepository(ref.watch(apiClientProvider)));
 
@@ -123,4 +124,19 @@ class ProjectRepository {
 
   Future<Project> deleteGalleryImage(int id, String imageId) async =>
       Project.fromJson(await _api.delete('/v1/projects/$id/gallery/$imageId') as Map<String, dynamic>);
+
+  /// Pré-remplissage par l'IA (`POST /v1/ai/draft-project`) depuis un dépôt
+  /// GitHub public et/ou des notes. Rien n'est enregistré. 422 : dépôt privé
+  /// ou introuvable ; 503 : IA indisponible. Peut prendre jusqu'à une minute.
+  Future<ProjectDraft> draftWithAi({String? githubRepository, String? notes}) async {
+    final json = await _api.post(
+      '/v1/ai/draft-project',
+      data: {
+        if (githubRepository != null && githubRepository.isNotEmpty) 'github_repository': githubRepository,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      },
+      receiveTimeout: const Duration(seconds: 90),
+    ) as Map<String, dynamic>;
+    return ProjectDraft.fromJson(json['project'] as Map<String, dynamic>);
+  }
 }

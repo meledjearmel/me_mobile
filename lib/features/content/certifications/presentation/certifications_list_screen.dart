@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/ai_badge.dart';
 import '../application/certification_list_controller.dart';
 import '../data/certification.dart';
 import 'certification_form_screen.dart';
@@ -22,6 +23,7 @@ class CertificationsListScreen extends ConsumerWidget {
     final state = ref.watch(certificationListProvider);
     final notifier = ref.read(certificationListProvider.notifier);
     final currentKind = state.value?.query.filters['kind'] as String?;
+    final isDraftFilter = state.value?.query.filters['status'] == 'draft';
 
     return ResourceListScaffold<Certification>(
       title: 'Certifications',
@@ -43,6 +45,12 @@ class CertificationsListScreen extends ConsumerWidget {
             onSelected: (_) => notifier.setFilters(currentKind == kind.wireValue ? const {} : {'kind': kind.wireValue}),
             showCheckmark: false,
           ),
+        ChoiceChip(
+          label: const Text('Brouillon'),
+          selected: isDraftFilter,
+          onSelected: (_) => notifier.setFilters(isDraftFilter ? const {} : const {'status': 'draft'}),
+          showCheckmark: false,
+        ),
       ],
       itemBuilder: (context, certification) => ListTile(
         onTap: () => _openForm(context, ref, id: certification.id),
@@ -65,7 +73,11 @@ class CertificationsListScreen extends ConsumerWidget {
           '${certification.isExpired ? ' · expirée' : ''}',
         ),
         trailing: certification.status == PublicationStatus.draft
-            ? const StatusBadge('Brouillon', prominent: true)
+            ? StatusWithAiBadge(
+                draftedBy: certification.draftedBy,
+                isDraft: true,
+                status: const StatusBadge('Brouillon', prominent: true),
+              )
             : null,
       ),
     );

@@ -15,15 +15,15 @@ import 'api_exception.dart';
 /// Les chemins sont relatifs à l'URL de base, qui se termine par `/api` : `get('/v1/dashboard')`.
 class ApiClient {
   ApiClient({required String baseUrl, required TokenStorage tokens, HttpClientAdapter? adapter})
-      : _tokens = tokens,
-        _dio = Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 15),
-            receiveTimeout: const Duration(seconds: 30),
-            headers: {'Accept': 'application/json'},
-          ),
-        ) {
+    : _tokens = tokens,
+      _dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 30),
+          headers: {'Accept': 'application/json'},
+        ),
+      ) {
     if (adapter != null) {
       _dio.httpClientAdapter = adapter;
     }
@@ -50,7 +50,14 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _send(() => _dio.get<dynamic>(path, queryParameters: _cleanQuery(query)));
 
-  Future<dynamic> post(String path, {Object? data}) => _send(() => _dio.post<dynamic>(path, data: data));
+  /// [receiveTimeout] : pour les appels longs (génération IA).
+  Future<dynamic> post(String path, {Object? data, Duration? receiveTimeout}) => _send(
+    () => _dio.post<dynamic>(
+      path,
+      data: data,
+      options: receiveTimeout == null ? null : Options(receiveTimeout: receiveTimeout),
+    ),
+  );
 
   Future<dynamic> put(String path, {Object? data}) => _send(() => _dio.put<dynamic>(path, data: data));
 
@@ -61,13 +68,13 @@ class ApiClient {
   /// Envoi multipart. Toujours en `POST` : PHP ne lit pas les fichiers d'un `PUT`/`PATCH`,
   /// le vrai verbe passe dans le champ `_method` du [FormData] (voir `buildFormData`).
   Future<dynamic> upload(String path, FormData form, {ProgressCallback? onProgress}) => _send(
-        () => _dio.post<dynamic>(
-          path,
-          data: form,
-          onSendProgress: onProgress,
-          options: Options(receiveTimeout: const Duration(minutes: 2)),
-        ),
-      );
+    () => _dio.post<dynamic>(
+      path,
+      data: form,
+      onSendProgress: onProgress,
+      options: Options(receiveTimeout: const Duration(minutes: 2)),
+    ),
+  );
 
   Future<dynamic> _send(Future<Response<dynamic>> Function() request) async {
     try {

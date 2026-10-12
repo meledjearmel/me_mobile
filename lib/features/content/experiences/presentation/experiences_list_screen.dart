@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/ai_badge.dart';
 import '../application/experience_list_controller.dart';
 import '../data/experience.dart';
 import 'experience_form_screen.dart';
@@ -39,9 +40,8 @@ class ExperiencesListScreen extends ConsumerWidget {
           ChoiceChip(
             label: Text(status.label),
             selected: currentStatus == status.wireValue,
-            onSelected: (_) => notifier.setFilters(
-              currentStatus == status.wireValue ? const {} : {'status': status.wireValue},
-            ),
+            onSelected: (_) =>
+                notifier.setFilters(currentStatus == status.wireValue ? const {} : {'status': status.wireValue}),
             showCheckmark: false,
           ),
       ],
@@ -50,7 +50,11 @@ class ExperiencesListScreen extends ConsumerWidget {
         leading: const Icon(Icons.timeline_rounded),
         title: Text(experience.company),
         subtitle: Text(experience.role.display),
-        trailing: StatusBadge(experience.status.label, prominent: experience.status == PublicationStatus.draft),
+        trailing: StatusWithAiBadge(
+          draftedBy: experience.draftedBy,
+          isDraft: experience.status == PublicationStatus.draft,
+          status: StatusBadge(experience.status.label, prominent: experience.status == PublicationStatus.draft),
+        ),
       ),
     );
   }

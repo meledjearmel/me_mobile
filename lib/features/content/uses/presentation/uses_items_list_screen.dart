@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/ai_badge.dart';
 import '../application/uses_item_list_controller.dart';
 import '../data/uses_item.dart';
 import 'uses_item_form_screen.dart';
@@ -55,7 +56,13 @@ class UsesItemsListScreen extends ConsumerWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: item.status == PublicationStatus.draft ? const StatusBadge('Brouillon', prominent: true) : null,
+        trailing: item.status == PublicationStatus.draft
+            ? StatusWithAiBadge(
+                draftedBy: item.draftedBy,
+                isDraft: true,
+                status: const StatusBadge('Brouillon', prominent: true),
+              )
+            : null,
       ),
     );
   }
