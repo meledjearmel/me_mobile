@@ -6,6 +6,8 @@ import '../../blog/presentation/posts_list_screen.dart';
 import '../../booking/presentation/appointment_types_list_screen.dart';
 import '../../booking/presentation/availability_screen.dart';
 import '../../celebrations/presentation/celebrations_list_screen.dart';
+import '../../billing/presentation/billing_settings_screen.dart';
+import '../../billing/presentation/documents_list_screen.dart';
 import '../../estimator/presentation/estimator_screen.dart';
 import '../../services/presentation/services_list_screen.dart';
 import '../../weekly_report/presentation/weekly_report_screen.dart';
@@ -59,8 +61,10 @@ class ContentScreen extends ConsumerWidget {
     (
       label: 'Commercial',
       sections: [
+        (icon: Icons.receipt_long_outlined, label: 'Devis et factures', builder: _documentsScreen),
         (icon: Icons.storefront_outlined, label: 'Services', builder: _servicesScreen),
         (icon: Icons.calculate_outlined, label: 'Estimateur', builder: _estimatorScreen),
+        (icon: Icons.account_balance_outlined, label: 'Facturation', builder: _billingSettingsScreen),
       ],
     ),
     (
@@ -114,6 +118,8 @@ class ContentScreen extends ConsumerWidget {
   static Widget _revisionsScreen(BuildContext context) => const RevisionsScreen();
   static Widget _mcpScreen(BuildContext context) => const McpCommandsScreen();
   static Widget _estimatorScreen(BuildContext context) => const EstimatorScreen();
+  static Widget _billingSettingsScreen(BuildContext context) => const BillingSettingsScreen();
+  static Widget _documentsScreen(BuildContext context) => const DocumentsListScreen();
   static Widget _servicesScreen(BuildContext context) => const ServicesListScreen();
   static Widget _weeklyReportScreen(BuildContext context) => const WeeklyReportScreen();
   static Widget _mcpActivityScreen(BuildContext context) => const McpActivityScreen();

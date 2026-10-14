@@ -237,6 +237,10 @@ class _EngagementBody extends StatelessWidget {
           const SizedBox(height: 12),
           EngagementEstimateCard(estimate: engagement.estimate!),
         ],
+        if (!isHiring) ...[
+          const SizedBox(height: 12),
+          EngagementOutcomeCard(engagement: engagement, onUpdated: onUpdated),
+        ],
         if (!isHiring || engagement.aiAnalysis != null) ...[
           const SizedBox(height: 12),
           EngagementAnalysisCard(engagement: engagement, onUpdated: onUpdated),

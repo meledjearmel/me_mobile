@@ -128,6 +128,33 @@ void main() {
     expect(engagement.aiAnalysis, isNull);
   });
 
+  test('l\'issue se lit depuis la demande', () {
+    final engagement = Engagement.fromJson({
+      ..._engagementJson,
+      'outcome': 'won',
+      'outcome_amount': 4500,
+      'outcome_currency': 'CHF',
+      'outcome_at': '2026-10-14T10:00:00Z',
+    });
+
+    expect(engagement.outcome, EngagementOutcome.won);
+    expect(engagement.outcomeAmount, 4500);
+    expect(engagement.copyWith(status: EngagementStatus.handled).outcomeCurrency, 'CHF');
+    expect(Engagement.fromJson(_engagementJson).outcome, isNull);
+  });
+
+  test('setOutcome : gagnée avec montant, perdue ou effacée sans montant', () async {
+    adapter.whenRequest('PUT', '/v1/engagements/5/outcome', statusCode: 200, body: _engagementJson);
+
+    await repository.setOutcome(5, EngagementOutcome.won, amount: 4500, currency: 'CHF');
+    await repository.setOutcome(5, EngagementOutcome.lost, amount: 4500, currency: 'CHF');
+    await repository.setOutcome(5, null);
+
+    expect(adapter.requests[0].data, {'outcome': 'won', 'outcome_amount': 4500, 'outcome_currency': 'CHF'});
+    expect(adapter.requests[1].data, {'outcome': 'lost', 'outcome_amount': null, 'outcome_currency': null});
+    expect(adapter.requests[2].data, {'outcome': null, 'outcome_amount': null, 'outcome_currency': null});
+  });
+
   test('analyze relance l\'analyse IA et renvoie la demande à jour', () async {
     adapter.whenRequest(
       'POST',

@@ -21,6 +21,19 @@ enum EngagementType {
   }
 }
 
+/// Issue d'une demande : signée ou perdue.
+enum EngagementOutcome {
+  won('won', 'Gagnée'),
+  lost('lost', 'Perdue');
+
+  const EngagementOutcome(this.wireValue, this.label);
+
+  final String wireValue;
+  final String label;
+
+  static EngagementOutcome? fromWire(String? value) => values.where((o) => o.wireValue == value).firstOrNull;
+}
+
 enum EngagementStatus {
   newRequest('new', 'Nouvelle'),
   handled('handled', 'Traitée');
@@ -170,6 +183,10 @@ class Engagement {
     this.estimateLabel,
     this.aiAnalysis,
     this.aiAnalyzedAt,
+    this.outcome,
+    this.outcomeAmount,
+    this.outcomeCurrency,
+    this.outcomeAt,
     required this.timeline,
     required this.message,
     required this.locale,
@@ -200,6 +217,10 @@ class Engagement {
             ? EngagementAnalysis.fromJson(json['ai_analysis'] as Map<String, dynamic>)
             : null,
         aiAnalyzedAt: json['ai_analyzed_at'] == null ? null : DateTime.parse(json['ai_analyzed_at'] as String),
+        outcome: EngagementOutcome.fromWire(json['outcome'] as String?),
+        outcomeAmount: json['outcome_amount'] as int?,
+        outcomeCurrency: json['outcome_currency'] as String?,
+        outcomeAt: json['outcome_at'] == null ? null : DateTime.parse(json['outcome_at'] as String),
         timeline: json['timeline'] as String?,
         message: json['message'] as String?,
         locale: json['locale'] as String? ?? 'fr',
@@ -229,6 +250,14 @@ class Engagement {
   /// Analyse de l'IA pour chiffrer la demande ; faite d'office pour une demande de l'estimateur.
   final EngagementAnalysis? aiAnalysis;
   final DateTime? aiAnalyzedAt;
+
+  /// Issue : signée ou perdue ; `null` tant qu'elle n'en a pas.
+  final EngagementOutcome? outcome;
+
+  /// Montant signé hors taxes (demande gagnée) et sa devise.
+  final int? outcomeAmount;
+  final String? outcomeCurrency;
+  final DateTime? outcomeAt;
   final String? timeline;
   final String? message;
   final String locale;
@@ -252,6 +281,10 @@ class Engagement {
         estimateLabel: estimateLabel,
         aiAnalysis: aiAnalysis,
         aiAnalyzedAt: aiAnalyzedAt,
+        outcome: outcome,
+        outcomeAmount: outcomeAmount,
+        outcomeCurrency: outcomeCurrency,
+        outcomeAt: outcomeAt,
         timeline: timeline,
         message: message,
         locale: locale,
