@@ -127,6 +127,36 @@ String htmlToPlainText(String html) {
   return text.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
 }
 
+/// Découpe un corps HTML en morceaux de [maxLength] caractères au plus, sans
+/// couper une balise de bloc (`</p>`, `</h2>`, `</ul>`…). Un bloc seul plus
+/// long que la limite reste entier : l'API le refusera avec un message clair.
+List<String> splitHtmlBlocks(String html, {required int maxLength}) {
+  final blockEnd = RegExp(r'</(p|h[1-6]|ul|ol|pre|blockquote|figure|table|div|section)>', caseSensitive: false);
+  final blocks = <String>[];
+  var start = 0;
+  for (final match in blockEnd.allMatches(html)) {
+    blocks.add(html.substring(start, match.end));
+    start = match.end;
+  }
+  if (start < html.length && html.substring(start).trim().isNotEmpty) {
+    blocks.add(html.substring(start));
+  }
+
+  final chunks = <String>[];
+  final current = StringBuffer();
+  for (final block in blocks) {
+    if (current.isNotEmpty && current.length + block.length > maxLength) {
+      chunks.add(current.toString());
+      current.clear();
+    }
+    current.write(block);
+  }
+  if (current.isNotEmpty) {
+    chunks.add(current.toString());
+  }
+  return chunks;
+}
+
 /// Premier jet saisi dans l'app → HTML : un paragraphe par bloc séparé
 /// d'une ligne vide, retours à la ligne simples en `<br>`.
 String plainTextToHtml(String text) {

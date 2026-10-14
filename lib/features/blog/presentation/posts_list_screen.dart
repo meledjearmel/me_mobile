@@ -6,6 +6,7 @@ import '../../../app/theme/app_palette.dart';
 import '../../../core/models/publication_status.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
 import '../../../shared/widgets/ai_badge.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
@@ -88,6 +89,17 @@ class PostsListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, post) => ListTile(
         onTap: () => _openForm(context, ref, id: post.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'post',
+          id: post.id,
+          title: post.title.display,
+          current: post.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(postListProvider),
+        ),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: SizedBox.square(
