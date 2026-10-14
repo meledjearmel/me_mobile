@@ -6,6 +6,7 @@ import '../../blog/presentation/posts_list_screen.dart';
 import '../../booking/presentation/appointment_types_list_screen.dart';
 import '../../booking/presentation/availability_screen.dart';
 import '../../celebrations/presentation/celebrations_list_screen.dart';
+import '../../job_applications/presentation/job_applications_list_screen.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -48,6 +49,7 @@ class ContentScreen extends ConsumerWidget {
       sections: [
         (icon: Icons.work_outline_rounded, label: 'Projets', builder: _projectsScreen),
         (icon: Icons.handshake_outlined, label: 'Références', builder: _referencesScreen),
+        (icon: Icons.send_outlined, label: 'Candidatures', builder: _jobApplicationsScreen),
       ],
     ),
     (
@@ -92,6 +94,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _domainsScreen(BuildContext context) => const DomainsListScreen();
   static Widget _jobProfilesScreen(BuildContext context) => const JobProfilesListScreen();
   static Widget _referencesScreen(BuildContext context) => const ProfessionalReferencesListScreen();
+  static Widget _jobApplicationsScreen(BuildContext context) => const JobApplicationsListScreen();
   static Widget _musicScreen(BuildContext context) => const MusicScreen();
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
   static Widget _postsScreen(BuildContext context) => const PostsListScreen();
