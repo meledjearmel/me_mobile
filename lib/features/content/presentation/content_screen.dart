@@ -8,6 +8,7 @@ import '../../booking/presentation/availability_screen.dart';
 import '../../celebrations/presentation/celebrations_list_screen.dart';
 import '../../estimator/presentation/estimator_screen.dart';
 import '../../services/presentation/services_list_screen.dart';
+import '../../weekly_report/presentation/weekly_report_screen.dart';
 import '../../job_applications/presentation/job_applications_list_screen.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard.dart';
@@ -88,6 +89,7 @@ class ContentScreen extends ConsumerWidget {
         (icon: Icons.rate_review_outlined, label: 'Révisions IA', builder: _revisionsScreen),
         (icon: Icons.smart_toy_outlined, label: 'Serveur MCP', builder: _mcpScreen),
         (icon: Icons.history_rounded, label: 'Activité MCP', builder: _mcpActivityScreen),
+        (icon: Icons.summarize_outlined, label: 'Rapport de la semaine', builder: _weeklyReportScreen),
         (icon: Icons.devices_other_outlined, label: 'Uses', builder: _usesScreen),
         (icon: Icons.code_rounded, label: 'Dépôts GitHub', builder: _gitHubScreen),
         (icon: Icons.celebration_outlined, label: 'Surprises', builder: _celebrationsScreen),
@@ -113,6 +115,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _mcpScreen(BuildContext context) => const McpCommandsScreen();
   static Widget _estimatorScreen(BuildContext context) => const EstimatorScreen();
   static Widget _servicesScreen(BuildContext context) => const ServicesListScreen();
+  static Widget _weeklyReportScreen(BuildContext context) => const WeeklyReportScreen();
   static Widget _mcpActivityScreen(BuildContext context) => const McpActivityScreen();
   static Widget _usesScreen(BuildContext context) => const UsesItemsListScreen();
   static Widget _gitHubScreen(BuildContext context) => const GitHubScreen();
