@@ -63,7 +63,7 @@ class _AppointmentDetailScreenState extends ConsumerState<AppointmentDetailScree
       title: 'Confirmer le rendez-vous',
       label: 'Détails de la réunion',
       hint: hint,
-      help: help,
+      help: '$help\nUn e-mail de confirmation part aussitôt au visiteur.',
       action: 'Confirmer',
     );
     if (details == null) {
@@ -81,7 +81,7 @@ class _AppointmentDetailScreenState extends ConsumerState<AppointmentDetailScree
       title: 'Refuser le rendez-vous',
       label: 'Motif (facultatif)',
       hint: 'Ex. je ne suis pas disponible ce jour-là',
-      help: 'Envoyé au visiteur. Le créneau est libéré.',
+      help: 'Un e-mail part aussitôt au visiteur, avec ce motif. Le créneau est libéré.',
       action: 'Refuser',
       destructive: true,
     );
@@ -113,7 +113,8 @@ class _AppointmentDetailScreenState extends ConsumerState<AppointmentDetailScree
           autofocus: true,
           minLines: 1,
           maxLines: 4,
-          decoration: InputDecoration(labelText: label, hintText: hint, helperText: help, helperMaxLines: 3),
+          maxLength: 2000,
+          decoration: InputDecoration(labelText: label, hintText: hint, helperText: help, helperMaxLines: 4),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
