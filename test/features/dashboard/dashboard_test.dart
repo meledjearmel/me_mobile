@@ -171,4 +171,111 @@ void main() {
     expect(legacy.visits.bySource, isEmpty);
     expect(legacy.conversions.goals, isEmpty);
   });
+
+  test("estimator : visiteurs, demandes, montants par devise et écart avec l'IA", () {
+    final dashboard = Dashboard.fromJson({
+      ...json,
+      'estimator': {
+        'period_days': 30,
+        'since': '2026-09-14',
+        'page_visitors': 40,
+        'requests': 6,
+        'conversion_rate': 15.0,
+        'by_currency': [
+          {
+            'currency': 'XOF',
+            'count': 4,
+            'price_min': 2000000,
+            'price_max': 3200000,
+            'average_min': 500000,
+            'average_max': 800000,
+          },
+        ],
+        'billing': {'fixed': 5, 'hourly': 1},
+        'project_types': [
+          {'label': 'Site vitrine', 'count': 4},
+        ],
+        'features': [
+          {'label': 'Multilingue', 'count': 3},
+        ],
+        'rate_grids': [
+          {'label': 'Taux global ou propre', 'count': 6},
+        ],
+        'ai_gap': {'analysed': 5, 'hours_gap_percent': 18.4},
+      },
+    });
+
+    final estimator = dashboard.estimator;
+    expect(estimator.isEmpty, isFalse);
+    expect(estimator.conversionRate, 15.0);
+    expect(estimator.byCurrency.single.averageMax, 800000);
+    expect(estimator.fixed, 5);
+    expect(estimator.projectTypes.single.label, 'Site vitrine');
+    expect(estimator.aiHoursGapPercent, 18.4);
+
+    // Sans le bloc (API plus ancienne) : vide, la section ne s'affiche pas.
+    expect(Dashboard.fromJson(json).estimator.isEmpty, isTrue);
+  });
+
+  test('outcomes, appointments et billing : résultats, rendez-vous et facturation', () {
+    final dashboard = Dashboard.fromJson({
+      ...json,
+      'outcomes': {
+        'period_days': 30,
+        'won': 3,
+        'lost': 1,
+        'win_rate': 75.0,
+        'by_currency': [
+          {'currency': 'XOF', 'count': 3, 'amount': 2400000, 'average': 800000},
+        ],
+        'estimate_gap': {'compared': 2, 'gap_percent': -8.5},
+      },
+      'appointments': {
+        'period_days': 30,
+        'total': 6,
+        'by_status': {'pending': 1, 'confirmed': 3, 'declined': 1, 'cancelled': 1},
+        'confirmation_rate': 75.0,
+        'response_hours': 0.5,
+        'by_type': [
+          {'label': 'Appel découverte', 'count': 6},
+        ],
+        'by_location': [
+          {'label': 'video', 'count': 4},
+          {'label': 'phone', 'count': 2},
+        ],
+      },
+      'billing': {
+        'period_days': 30,
+        'by_currency': [
+          {'currency': 'EUR', 'invoiced': 5000, 'collected': 3000, 'outstanding': 2000, 'overdue': 500},
+        ],
+        'quotes': {'issued': 4, 'accepted': 2, 'declined': 1, 'acceptance_rate': 66.7},
+        'overdue_invoices': [
+          {
+            'id': 9,
+            'number': 'F-2026-012',
+            'client': 'Acme',
+            'total': 500,
+            'currency': 'EUR',
+            'due_at': '2026-10-01',
+            'days_late': 13,
+          },
+        ],
+      },
+    });
+
+    expect(dashboard.outcomes.winRate, 75.0);
+    expect(dashboard.outcomes.byCurrency.single.average, 800000);
+    expect(dashboard.outcomes.estimateGapPercent, -8.5);
+    expect(dashboard.appointments.confirmed, 3);
+    expect(dashboard.appointments.responseHours, 0.5);
+    expect(dashboard.appointments.byLocation.first.label, 'video');
+    expect(dashboard.billing.byCurrency.single.overdue, 500);
+    expect(dashboard.billing.acceptanceRate, 66.7);
+    expect(dashboard.billing.overdueInvoices.single.dueAt, DateTime(2026, 10, 1));
+
+    // Sans ces blocs (API plus ancienne) : sections masquées.
+    final legacy = Dashboard.fromJson(json);
+    expect(legacy.outcomes.isEmpty && legacy.appointments.isEmpty && legacy.billing.isEmpty, isTrue);
+  });
 }
