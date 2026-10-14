@@ -56,10 +56,11 @@ class ApiClient {
   ) as List<int>;
 
   /// [receiveTimeout] : pour les appels longs (génération IA).
-  Future<dynamic> post(String path, {Object? data, Duration? receiveTimeout}) => _send(
+  Future<dynamic> post(String path, {Object? data, Map<String, dynamic>? query, Duration? receiveTimeout}) => _send(
     () => _dio.post<dynamic>(
       path,
       data: data,
+      queryParameters: _cleanQuery(query),
       options: receiveTimeout == null ? null : Options(receiveTimeout: receiveTimeout),
     ),
   );

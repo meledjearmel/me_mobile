@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/surfaces.dart';
+import '../../../billing/data/commercial_document.dart';
+import '../../../billing/presentation/document_detail_screen.dart';
 import '../../data/engagement.dart';
 import '../../data/engagement_repository.dart';
 
@@ -218,6 +220,27 @@ class _EngagementOutcomeCardState extends ConsumerState<EngagementOutcomeCard> {
     }
   }
 
+  /// Brouillon de devis qui reprend le client et les lignes de l'estimation, puis sa fiche.
+  Future<void> _createQuote() async {
+    setState(() => _saving = true);
+    try {
+      final document = await ref.read(commercialDocumentRepositoryProvider).fromEngagement(widget.engagement.id);
+      if (mounted) {
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (context) => DocumentDetailScreen(id: document.id)));
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+
   /// Montant et devise signés ; préremplis depuis l'estimation (milieu de la fourchette).
   Future<void> _markWon() async {
     final engagement = widget.engagement;
@@ -318,6 +341,12 @@ class _EngagementOutcomeCardState extends ConsumerState<EngagementOutcomeCard> {
                 ),
               if (outcome != null)
                 TextButton(onPressed: _saving ? null : () => _save(null), child: const Text('Effacer l\'issue')),
+              if (outcome != EngagementOutcome.lost)
+                TextButton.icon(
+                  onPressed: _saving ? null : _createQuote,
+                  icon: const Icon(Icons.request_quote_outlined, size: 18),
+                  label: const Text('Créer un devis'),
+                ),
             ],
           ),
         ],
