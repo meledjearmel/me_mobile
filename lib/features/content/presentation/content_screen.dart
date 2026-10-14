@@ -6,6 +6,7 @@ import '../../blog/presentation/posts_list_screen.dart';
 import '../../booking/presentation/appointment_types_list_screen.dart';
 import '../../booking/presentation/availability_screen.dart';
 import '../../celebrations/presentation/celebrations_list_screen.dart';
+import '../../estimator/presentation/estimator_screen.dart';
 import '../../job_applications/presentation/job_applications_list_screen.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard.dart';
@@ -51,6 +52,12 @@ class ContentScreen extends ConsumerWidget {
         (icon: Icons.work_outline_rounded, label: 'Projets', builder: _projectsScreen),
         (icon: Icons.handshake_outlined, label: 'Références', builder: _referencesScreen),
         (icon: Icons.send_outlined, label: 'Candidatures', builder: _jobApplicationsScreen),
+      ],
+    ),
+    (
+      label: 'Commercial',
+      sections: [
+        (icon: Icons.calculate_outlined, label: 'Estimateur', builder: _estimatorScreen),
       ],
     ),
     (
@@ -102,6 +109,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _postsScreen(BuildContext context) => const PostsListScreen();
   static Widget _revisionsScreen(BuildContext context) => const RevisionsScreen();
   static Widget _mcpScreen(BuildContext context) => const McpCommandsScreen();
+  static Widget _estimatorScreen(BuildContext context) => const EstimatorScreen();
   static Widget _mcpActivityScreen(BuildContext context) => const McpActivityScreen();
   static Widget _usesScreen(BuildContext context) => const UsesItemsListScreen();
   static Widget _gitHubScreen(BuildContext context) => const GitHubScreen();
