@@ -148,6 +148,10 @@ class _StatisticsBody extends ConsumerWidget {
             ],
           ),
         ],
+        if (!dashboard.estimator.isEmpty) ...[gap, _EstimatorSection(estimator: dashboard.estimator)],
+        if (!dashboard.outcomes.isEmpty) ...[gap, _OutcomesSection(outcomes: dashboard.outcomes)],
+        if (!dashboard.billing.isEmpty) ...[gap, _BillingSection(billing: dashboard.billing)],
+        if (!dashboard.appointments.isEmpty) ...[gap, _AppointmentsSection(appointments: dashboard.appointments)],
         gap,
         const SectionHeader('Contenu'),
         small,
@@ -301,6 +305,384 @@ String _deviceLabel(String device) => switch (device) {
 
 /// « 2,5 % », à la française.
 String _percent(double rate) => '${NumberFormat('#,##0.#', 'fr_FR').format(rate)} %';
+
+final _money = NumberFormat.decimalPattern('fr_FR');
+
+String _hours(double hours) =>
+    hours < 1 ? '${(hours * 60).round()} min' : '${NumberFormat('#,##0.#', 'fr_FR').format(hours)} h';
+
+/// Ligne « libellé … valeur » des cartes de synthèse.
+Widget _valueRow(BuildContext context, String label, String value, {Color? color}) => Padding(
+  padding: const EdgeInsets.only(top: 6),
+  child: Row(
+    children: [
+      Expanded(child: Text(label)),
+      Text(value, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color)),
+    ],
+  ),
+);
+
+/// Issue des demandes : gagnées, perdues, montants signés et écart avec l'estimation.
+class _OutcomesSection extends StatelessWidget {
+  const _OutcomesSection({required this.outcomes});
+
+  final DashboardOutcomes outcomes;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final gap = outcomes.estimateGapPercent;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader('Résultats'),
+        const SizedBox(height: 4),
+        Text('Demandes gagnées ou perdues sur la période', style: muted),
+        const SizedBox(height: 10),
+        _Grid(
+          children: [
+            StatTile(
+              value: outcomes.won,
+              label: 'Gagnées',
+              caption: outcomes.winRate == null ? null : '${_percent(outcomes.winRate!)} des décidées',
+              positive: true,
+            ),
+            StatTile(value: outcomes.lost, label: 'Perdues'),
+          ],
+        ),
+        if (outcomes.byCurrency.isNotEmpty || gap != null) ...[
+          const SizedBox(height: 10),
+          SurfaceCard(
+            radius: 22,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Montants signés', style: theme.textTheme.titleSmall),
+                for (final total in outcomes.byCurrency) ...[
+                  const SizedBox(height: 10),
+                  Text('${_money.format(total.amount)} ${total.currency}', style: theme.textTheme.titleMedium),
+                  Text(
+                    '${total.count} projet${total.count > 1 ? 's' : ''} · en moyenne ${_money.format(total.average)} ${total.currency}',
+                    style: muted,
+                  ),
+                ],
+                if (gap != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    gap.abs() < 5
+                        ? 'Signé au niveau de l\'estimation'
+                        : 'Signé ${_percent(gap.abs())} ${gap > 0 ? 'au-dessus' : 'en dessous'} de l\'estimation',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  Text(
+                    'En moyenne sur ${outcomes.compared} projet${outcomes.compared > 1 ? 's' : ''} estimé'
+                    '${outcomes.compared > 1 ? 's' : ''} dans la même devise.',
+                    style: muted,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Devis et factures : facturé, encaissé, reste dû, devis acceptés et retards.
+class _BillingSection extends StatelessWidget {
+  const _BillingSection({required this.billing});
+
+  final DashboardBilling billing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final error = theme.colorScheme.error;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader('Facturation'),
+        const SizedBox(height: 4),
+        Text('Facturé et encaissé sur la période · reste dû à ce jour', style: muted),
+        for (final total in billing.byCurrency) ...[
+          const SizedBox(height: 10),
+          SurfaceCard(
+            radius: 22,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(total.currency, style: theme.textTheme.titleSmall),
+                _valueRow(context, 'Facturé', _money.format(total.invoiced)),
+                _valueRow(context, 'Encaissé', _money.format(total.collected)),
+                _valueRow(context, 'Reste dû', _money.format(total.outstanding)),
+                if (total.overdue > 0) _valueRow(context, 'Dont en retard', _money.format(total.overdue), color: error),
+              ],
+            ),
+          ),
+        ],
+        if (billing.quotesIssued > 0) ...[
+          const SizedBox(height: 10),
+          _Grid(
+            children: [
+              StatTile(value: billing.quotesIssued, label: 'Devis émis'),
+              StatTile(
+                value: billing.quotesAccepted,
+                label: 'Devis acceptés',
+                caption: billing.acceptanceRate == null
+                    ? '${billing.quotesDeclined} refusés'
+                    : '${_percent(billing.acceptanceRate!)} des tranchés · ${billing.quotesDeclined} refusés',
+                positive: true,
+              ),
+            ],
+          ),
+        ],
+        if (billing.overdueInvoices.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SurfaceCard(
+            radius: 22,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Factures en retard', style: theme.textTheme.titleSmall?.copyWith(color: error)),
+                for (final invoice in billing.overdueInvoices) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(invoice.client, style: theme.textTheme.titleSmall),
+                            Text(
+                              [
+                                if (invoice.number != null) invoice.number!,
+                                '${invoice.daysLate} jour${invoice.daysLate > 1 ? 's' : ''} de retard',
+                              ].join(' · '),
+                              style: muted,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text('${_money.format(invoice.total)} ${invoice.currency}', style: theme.textTheme.titleSmall),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Rendez-vous : demandes, statuts, taux de confirmation, délai de réponse,
+/// types et lieux.
+class _AppointmentsSection extends StatelessWidget {
+  const _AppointmentsSection({required this.appointments});
+
+  final DashboardAppointments appointments;
+
+  static String _locationLabel(String value) => switch (value) {
+    'video' => 'Visio',
+    'phone' => 'Téléphone',
+    'whatsapp' => 'WhatsApp',
+    'in_person' => 'En personne',
+    _ => 'Inconnu',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader('Rendez-vous'),
+        const SizedBox(height: 4),
+        Text('Demandes reçues sur la période', style: muted),
+        const SizedBox(height: 10),
+        _Grid(
+          children: [
+            StatTile(
+              value: appointments.total,
+              label: 'Demandes',
+              caption: appointments.pending > 0 ? '${appointments.pending} en attente' : null,
+            ),
+            StatTile(
+              value: appointments.confirmed,
+              label: 'Confirmés',
+              caption: appointments.confirmationRate == null
+                  ? null
+                  : '${_percent(appointments.confirmationRate!)} des tranchés',
+              positive: true,
+            ),
+            StatTile(value: appointments.declined, label: 'Refusés'),
+            StatTile(value: appointments.cancelled, label: 'Annulés par le visiteur'),
+          ],
+        ),
+        if (appointments.responseHours != null) ...[
+          const SizedBox(height: 10),
+          SurfaceCard(
+            radius: 22,
+            child: Row(
+              children: [
+                Icon(Icons.timer_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Délai moyen de confirmation', style: theme.textTheme.titleSmall)),
+                Text(_hours(appointments.responseHours!), style: theme.textTheme.titleMedium),
+              ],
+            ),
+          ),
+        ],
+        if (appointments.byType.length > 1) ...[
+          const SizedBox(height: 10),
+          _BarListCard(
+            title: 'Par type',
+            items: [for (final c in appointments.byType) (label: c.label, count: c.count)],
+          ),
+        ],
+        if (appointments.byLocation.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _BarListCard(
+            title: 'Par lieu',
+            items: [for (final c in appointments.byLocation) (label: _locationLabel(c.label), count: c.count)],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Estimateur de projet : fréquentation de la page, demandes, montants par
+/// devise, ce qui est le plus demandé et écart avec l'analyse de l'IA.
+class _EstimatorSection extends StatelessWidget {
+  const _EstimatorSection({required this.estimator});
+
+  final DashboardEstimator estimator;
+
+  static String _range(int min, int max) =>
+      min == max ? _money.format(min) : '${_money.format(min)} – ${_money.format(max)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final gap = estimator.aiHoursGapPercent;
+    const small = SizedBox(height: 10);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader('Estimateur'),
+        const SizedBox(height: 4),
+        Text('${estimator.periodLabel} · demandes rapportées aux visiteurs de la page', style: muted),
+        small,
+        _Grid(
+          children: [
+            StatTile(value: estimator.pageVisitors, label: 'Visiteurs de la page'),
+            StatTile(
+              value: estimator.requests,
+              label: 'Estimations envoyées',
+              caption: '${_percent(estimator.conversionRate)} des visiteurs',
+            ),
+            StatTile(value: estimator.fixed, label: 'Au forfait'),
+            StatTile(value: estimator.hourly, label: 'À l\'heure'),
+          ],
+        ),
+        if (estimator.byCurrency.isNotEmpty) ...[
+          small,
+          SurfaceCard(
+            radius: 22,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Montants estimés', style: theme.textTheme.titleSmall),
+                for (final total in estimator.byCurrency) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${_range(total.priceMin, total.priceMax)} ${total.currency}',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ),
+                      Text('${total.count} estimation${total.count > 1 ? 's' : ''}', style: muted),
+                    ],
+                  ),
+                  Text('En moyenne ${_range(total.averageMin, total.averageMax)} ${total.currency}', style: muted),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (estimator.projectTypes.isNotEmpty) ...[
+          small,
+          _BarListCard(
+            title: 'Types de projet demandés',
+            items: [for (final c in estimator.projectTypes) (label: c.label, count: c.count)],
+          ),
+        ],
+        if (estimator.features.isNotEmpty) ...[
+          small,
+          _BarListCard(
+            title: 'Options choisies',
+            items: [for (final c in estimator.features) (label: c.label, count: c.count)],
+          ),
+        ],
+        if (estimator.rateGrids.length > 1) ...[
+          small,
+          _BarListCard(
+            title: 'Grilles tarifaires',
+            items: [for (final c in estimator.rateGrids) (label: c.label, count: c.count)],
+          ),
+        ],
+        if (estimator.aiAnalysed > 0) ...[
+          small,
+          SurfaceCard(
+            radius: 22,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 20, color: theme.colorScheme.tertiary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        gap == null
+                            ? 'Écart avec l\'IA indisponible'
+                            : gap.abs() < 5
+                            ? 'L\'IA confirme tes estimations'
+                            : 'L\'IA estime ${_percent(gap.abs())} d\'heures en ${gap > 0 ? 'plus' : 'moins'}',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'En moyenne sur ${estimator.aiAnalysed} demande${estimator.aiAnalysed > 1 ? 's' : ''} analysée'
+                        '${estimator.aiAnalysed > 1 ? 's' : ''}, marge comprise.'
+                        '${gap != null && gap >= 15 ? ' Ta grille sous-estime peut-être certains projets.' : ''}',
+                        style: muted,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
 
 class _VisitsCard extends StatelessWidget {
   const _VisitsCard({required this.visits});
