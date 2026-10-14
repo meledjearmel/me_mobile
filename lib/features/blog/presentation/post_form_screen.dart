@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,12 +15,15 @@ import '../../../core/models/translated.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/form_layout.dart';
 import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/image_source_sheet.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../../shared/widgets/translated_field.dart';
 import '../../profile/presentation/widgets/photo_picker_tile.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
 import '../data/post_repository.dart';
+import 'post_distribution_screen.dart';
+import 'widgets/write_post_sheet.dart';
 
 const _maxTags = 8;
 
@@ -52,6 +57,18 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
 
   /// Le slug suit le titre tant qu'il n'a pas été modifié à la main.
   bool _slugEdited = false;
+
+  /// Premier jet en HTML après « Rédiger avec l'IA » (garde titres, listes, code) ;
+  /// `null` dès qu'on retouche le texte à la main, qui repart alors en paragraphes simples.
+  String? _draftHtml;
+
+  /// Images ajoutées au premier jet (adresses publiques), insérées à la fin du contenu.
+  final List<String> _draftImages = [];
+  bool _uploadingImage = false;
+
+  /// Corps modifié dans l'app (traduction anglaise), envoyé à la place du corps chargé.
+  Translated? _bodyOverride;
+  double? _translateProgress;
 
   bool _dirty = false;
   bool _saving = false;
@@ -92,6 +109,111 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
 
   void _markDirty() => setState(() => _dirty = true);
 
+  String get _draftBodyHtml => [
+    _draftHtml ?? plainTextToHtml(_draft.text),
+    for (final url in _draftImages)
+      '<figure><img src="${const HtmlEscape(HtmlEscapeMode.attribute).convert(url)}" alt=""></figure>',
+  ].join();
+
+  Future<void> _writeWithAi() async {
+    final html = await showWritePostSheet(
+      context,
+      title: _title.fr,
+      excerpt: _excerpt.fr,
+      draftHtml: _draftHtml ?? plainTextToHtml(_draft.text),
+    );
+    if (html == null) {
+      return;
+    }
+    setState(() {
+      _draftHtml = '${_draftHtml ?? plainTextToHtml(_draft.text)}$html';
+      _draft.text = htmlToPlainText(_draftHtml!);
+    });
+    _markDirty();
+  }
+
+  Future<void> _addDraftImage() async {
+    final source = await pickImageSource(context);
+    if (source == null) {
+      return;
+    }
+    final file = await ImagePicker().pickImage(source: source, maxWidth: 2400, imageQuality: 85);
+    if (file == null) {
+      return;
+    }
+    if (await file.length() > 5 * 1024 * 1024) {
+      _toast('Image trop lourde (5 Mo maximum).');
+      return;
+    }
+    setState(() => _uploadingImage = true);
+    try {
+      final url = await ref
+          .read(postRepositoryProvider)
+          .uploadImage(await dio.MultipartFile.fromFile(file.path, filename: file.name));
+      setState(() => _draftImages.add(url));
+      _markDirty();
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingImage = false);
+      }
+    }
+  }
+
+  /// Traduit le corps français en anglais, bloc par bloc ; à enregistrer ensuite.
+  Future<void> _translateBody() async {
+    final body = _bodyOverride ?? _post!.body;
+    if (body.en.trim().isNotEmpty) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Remplacer la version anglaise ?'),
+          content: const Text(
+            'L\'IA traduit à nouveau tout le contenu français. Rien n\'est enregistré avant que tu valides.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Traduire')),
+          ],
+        ),
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+    setState(() => _translateProgress = 0);
+    try {
+      final english = await ref
+          .read(postRepositoryProvider)
+          .translateHtml(
+            html: body.fr,
+            sourceLocale: 'fr',
+            targetLocale: 'en',
+            onProgress: (done, total) {
+              if (mounted && total > 0) {
+                setState(() => _translateProgress = done / total);
+              }
+            },
+          );
+      setState(() => _bodyOverride = body.copyWith(en: english));
+      _markDirty();
+      _toast('Version anglaise prête : enregistre pour la garder.');
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } finally {
+      if (mounted) {
+        setState(() => _translateProgress = null);
+      }
+    }
+  }
+
+  void _toast(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   Future<void> _handlePopAttempt() async {
     final leave = await showDialog<bool>(
       context: context,
@@ -125,8 +247,8 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
             title: _title,
             slug: _slug.text.trim(),
             excerpt: _excerpt,
-            // Corps existant renvoyé tel quel ; nouveau : le premier jet.
-            body: _post?.body ?? Translated(fr: plainTextToHtml(_draft.text)),
+            // Corps existant renvoyé tel quel (ou traduit) ; nouveau : le premier jet.
+            body: _bodyOverride ?? _post?.body ?? Translated(fr: _draftBodyHtml),
             isFeatured: _isFeatured,
             status: _status,
             publishedAt: _publishedAt,
@@ -258,6 +380,19 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
         appBar: GlassAppBar(
           actions: [
             if (_isEditing) ...[
+              IconButton(
+                tooltip: 'Diffusion : republication et partage',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => PostDistributionScreen(
+                      postId: widget.id!,
+                      title: _title.display,
+                      isPublished: _status == PublicationStatus.published,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.campaign_outlined),
+              ),
               IconButton(
                 tooltip: 'Rédiger dans l\'admin web',
                 onPressed: _openAdmin,
@@ -400,15 +535,73 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
                   controller: _draft,
                   minLines: 5,
                   maxLines: 12,
-                  onChanged: (_) => _markDirty(),
+                  onChanged: (_) {
+                    // Une retouche à la main repasse le texte en paragraphes simples.
+                    _draftHtml = null;
+                    _markDirty();
+                  },
                   decoration: InputDecoration(
                     labelText: 'Premier jet',
                     hintText: 'Idées, plan, premiers paragraphes…',
                     alignLabelWithHint: true,
-                    helperText: 'Une ligne vide sépare deux paragraphes. La mise en forme se fait dans l\'admin web.',
+                    helperText: _draftHtml != null
+                        ? 'Mise en forme de l\'IA conservée ; une retouche ici la remplace par des paragraphes simples.'
+                        : 'Une ligne vide sépare deux paragraphes. La mise en forme se fait dans l\'admin web.',
                     helperMaxLines: 2,
                     errorText: v?.errorFor('body.fr'),
                   ),
+                ),
+                if (_draftImages.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final url in _draftImages)
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(url, width: 88, height: 88, fit: BoxFit.cover),
+                            ),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: IconButton.filledTonal(
+                                visualDensity: VisualDensity.compact,
+                                tooltip: 'Retirer du texte',
+                                onPressed: () {
+                                  setState(() => _draftImages.remove(url));
+                                  _markDirty();
+                                },
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Les images sont ajoutées à la fin du contenu.', style: muted),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.tonalIcon(
+                      onPressed: _writeWithAi,
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      label: const Text('Rédiger avec l\'IA'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _uploadingImage ? null : _addDraftImage,
+                      icon: _uploadingImage
+                          ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                      label: const Text('Ajouter une image'),
+                    ),
+                  ],
                 ),
               ] else ...[
                 Text(
@@ -418,14 +611,28 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  post.body.en.trim().isEmpty ? 'Pas encore de version anglaise.' : 'Version anglaise rédigée.',
+                  _bodyOverride != null
+                      ? 'Version anglaise traduite par l\'IA : enregistre pour la garder.'
+                      : post.body.en.trim().isEmpty
+                      ? 'Pas encore de version anglaise.'
+                      : 'Version anglaise rédigée.',
                   style: muted,
                 ),
+                if (_translateProgress != null) ...[
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(value: _translateProgress),
+                ],
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (post.body.fr.trim().isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: _translateProgress != null || _saving ? null : _translateBody,
+                        icon: const Icon(Icons.translate_rounded, size: 18),
+                        label: Text(post.body.en.trim().isEmpty ? 'Traduire en anglais' : 'Retraduire en anglais'),
+                      ),
                     FilledButton.tonalIcon(
                       onPressed: _openAdmin,
                       icon: const Icon(Icons.edit_note_rounded),

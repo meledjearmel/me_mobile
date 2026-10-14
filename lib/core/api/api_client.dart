@@ -50,6 +50,11 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _send(() => _dio.get<dynamic>(path, queryParameters: _cleanQuery(query)));
 
+  /// Réponse binaire (PDF…) : les octets bruts, sans décodage JSON.
+  Future<List<int>> getBytes(String path) async => await _send(
+    () => _dio.get<List<int>>(path, options: Options(responseType: ResponseType.bytes)),
+  ) as List<int>;
+
   /// [receiveTimeout] : pour les appels longs (génération IA).
   Future<dynamic> post(String path, {Object? data, Duration? receiveTimeout}) => _send(
     () => _dio.post<dynamic>(

@@ -1,4 +1,5 @@
-/// Liste paginée Laravel : `{ data: [...], links: {...}, meta: {...} }`.
+/// Liste paginée Laravel : `{ data: [...], links: {...}, meta: {...} }`, ou
+/// `{ data: [...], current_page, last_page, … }` pour un paginateur renvoyé tel quel.
 class Paginated<T> {
   const Paginated({
     required this.items,
@@ -9,7 +10,8 @@ class Paginated<T> {
   });
 
   factory Paginated.fromJson(Map<String, dynamic> json, T Function(Map<String, dynamic>) fromItem) {
-    final meta = json['meta'] as Map<String, dynamic>? ?? const {};
+    // Ressources Laravel : pagination dans `meta` ; paginateur brut (`/mcp-activity`) : à la racine.
+    final meta = json['meta'] as Map<String, dynamic>? ?? json;
     return Paginated(
       items: [for (final item in json['data'] as List<dynamic>) fromItem(item as Map<String, dynamic>)],
       currentPage: meta['current_page'] as int? ?? 1,

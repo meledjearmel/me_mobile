@@ -28,7 +28,7 @@ class MentionButton extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => const _MentionSheet(),
+      builder: (context) => const _MentionSheet(showLocales: true),
     );
     if (result == null) {
       return;
@@ -55,8 +55,22 @@ class MentionButton extends StatelessWidget {
   }
 }
 
+/// Feuille de recherche seule, pour un champ dans une seule langue : renvoie
+/// l'élément choisi, ou `null` si on ferme.
+Future<Mentionable?> showMentionPicker(BuildContext context) async {
+  final result = await showModalBottomSheet<({Mentionable item, Set<String> locales})>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => const _MentionSheet(showLocales: false),
+  );
+  return result?.item;
+}
+
 class _MentionSheet extends ConsumerStatefulWidget {
-  const _MentionSheet();
+  const _MentionSheet({required this.showLocales});
+
+  final bool showLocales;
 
   @override
   ConsumerState<_MentionSheet> createState() => _MentionSheetState();
@@ -116,6 +130,7 @@ class _MentionSheetState extends ConsumerState<_MentionSheet> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (widget.showLocales)
                     Row(
                       children: [
                         Text('Ajouter en', style: muted),

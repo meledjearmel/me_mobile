@@ -5,6 +5,7 @@ import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/hex_color.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
 import '../../../shared/widgets/ai_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../application/project_list_controller.dart';
@@ -82,6 +83,17 @@ class ProjectsListScreen extends ConsumerWidget {
       itemBuilder: (context, project) => _ProjectCard(
         project: project,
         onTap: () => _openForm(context, ref, id: project.id),
+        // Appui long : changer le statut sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'project',
+          id: project.id,
+          title: project.title.display,
+          current: project.status.wireValue,
+          options: [for (final s in ProjectStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(projectListProvider),
+        ),
       ),
     );
   }
@@ -89,10 +101,11 @@ class ProjectsListScreen extends ConsumerWidget {
 
 /// Carte projet : titre et technologies, visuel de couverture, statut et badges.
 class _ProjectCard extends StatelessWidget {
-  const _ProjectCard({required this.project, required this.onTap});
+  const _ProjectCard({required this.project, required this.onTap, required this.onLongPress});
 
   final Project project;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +116,7 @@ class _ProjectCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(

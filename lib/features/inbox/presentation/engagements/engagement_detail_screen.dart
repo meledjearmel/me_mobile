@@ -13,6 +13,7 @@ import '../../../../core/utils/relative_date.dart';
 import '../../application/engagement_list_controller.dart';
 import '../../data/engagement.dart';
 import '../../data/engagement_repository.dart';
+import 'engagement_estimate_cards.dart';
 
 class EngagementDetailScreen extends ConsumerStatefulWidget {
   const EngagementDetailScreen({super.key, required this.id});
@@ -26,6 +27,12 @@ class EngagementDetailScreen extends ConsumerStatefulWidget {
 class _EngagementDetailScreenState extends ConsumerState<EngagementDetailScreen> {
   late Future<Engagement> _future = ref.read(engagementRepositoryProvider).get(widget.id);
   bool _updating = false;
+
+  /// Après une analyse IA : la réponse remplace la fiche et la ligne de liste.
+  void _replace(Engagement updated) {
+    ref.read(engagementListProvider.notifier).updateItem((e) => e.id == updated.id, (e) => updated);
+    setState(() => _future = Future.value(updated));
+  }
 
   Future<void> _toggleHandled(Engagement engagement) async {
     setState(() => _updating = true);
@@ -152,7 +159,7 @@ class _EngagementDetailScreenState extends ConsumerState<EngagementDetailScreen>
                 ],
               ),
             ),
-            _ => _EngagementBody(engagement: engagement!, muted: muted),
+            _ => _EngagementBody(engagement: engagement!, muted: muted, onUpdated: _replace),
           },
         );
       },
@@ -161,10 +168,11 @@ class _EngagementDetailScreenState extends ConsumerState<EngagementDetailScreen>
 }
 
 class _EngagementBody extends StatelessWidget {
-  const _EngagementBody({required this.engagement, required this.muted});
+  const _EngagementBody({required this.engagement, required this.muted, required this.onUpdated});
 
   final Engagement engagement;
   final Color muted;
+  final ValueChanged<Engagement> onUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -225,6 +233,14 @@ class _EngagementBody extends StatelessWidget {
             ],
           ),
         ),
+        if (engagement.estimate != null) ...[
+          const SizedBox(height: 12),
+          EngagementEstimateCard(estimate: engagement.estimate!),
+        ],
+        if (!isHiring || engagement.aiAnalysis != null) ...[
+          const SizedBox(height: 12),
+          EngagementAnalysisCard(engagement: engagement, onUpdated: onUpdated),
+        ],
         if (engagement.message?.isNotEmpty == true) ...[
           const SizedBox(height: 12),
           SurfaceCard(

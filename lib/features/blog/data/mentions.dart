@@ -58,3 +58,33 @@ class MentionRepository {
     ];
   }
 }
+
+/// Morceau d'un texte avec mentions : texte simple, ou mention si [mention] est renseigné.
+typedef MentionSegment = ({String text, Mentionable? mention});
+
+final _mentionToken = RegExp(r'@\[([^\]]+)\]\((project|post|technology|experience):(\d+)\)');
+
+/// Découpe un texte en morceaux pour afficher chaque jeton `@[Titre](type:id)`
+/// comme un lien, sans jamais montrer le jeton brut.
+List<MentionSegment> parseMentions(String text) {
+  final segments = <MentionSegment>[];
+  var cursor = 0;
+  for (final match in _mentionToken.allMatches(text)) {
+    if (match.start > cursor) {
+      segments.add((text: text.substring(cursor, match.start), mention: null));
+    }
+    final label = match.group(1)!;
+    segments.add((
+      text: label,
+      mention: Mentionable(kind: match.group(2)!, id: int.parse(match.group(3)!), label: label),
+    ));
+    cursor = match.end;
+  }
+  if (cursor < text.length) {
+    segments.add((text: text.substring(cursor), mention: null));
+  }
+  return segments;
+}
+
+/// Le texte tel qu'un lecteur le voit : chaque jeton remplacé par son titre.
+String stripMentions(String text) => parseMentions(text).map((s) => s.text).join();

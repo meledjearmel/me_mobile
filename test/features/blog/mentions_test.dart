@@ -35,4 +35,18 @@ void main() {
     expect(results.single.markup, '@[Laravel](technology:4)');
     expect(results.single.hint, 'Framework PHP');
   });
+
+  test('parseMentions découpe le texte et ne garde que le titre des jetons', () {
+    final segments = parseMentions('Voir @[App Station](project:12) et @[Laravel](technology:4).');
+
+    expect(segments.map((s) => s.text).toList(), ['Voir ', 'App Station', ' et ', 'Laravel', '.']);
+    expect(segments[1].mention!.kind, 'project');
+    expect(segments[1].mention!.id, 12);
+    expect(segments[3].mention!.markup, '@[Laravel](technology:4)');
+  });
+
+  test('stripMentions rend le texte lisible ; un texte sans jeton reste tel quel', () {
+    expect(stripMentions('Bonjour @[App Station](project:12) !'), 'Bonjour App Station !');
+    expect(stripMentions('Rien [ici](lien)'), 'Rien [ici](lien)');
+  });
 }

@@ -44,7 +44,12 @@ class _AppointmentsTabState extends ConsumerState<AppointmentsTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(appointmentListProvider);
     final notifier = ref.read(appointmentListProvider.notifier);
-    final current = state.value?.query.filters['status'] as String?;
+    final filters = state.value?.query.filters ?? const {};
+    final current = filters['status'] as String?;
+    final currentLocation = filters['location'] as String?;
+
+    // Statut et lieu se combinent : changer l'un garde l'autre.
+    void setFilter(String key, String? value) => notifier.setFilters({...filters, key: value});
 
     return ResourceListView<Appointment>(
       searchHint: 'Nom, e-mail, société…',
@@ -62,7 +67,13 @@ class _AppointmentsTabState extends ConsumerState<AppointmentsTab> {
           PillFilterChip(
             label: _statusLabel(status),
             selected: current == status,
-            onTap: () => notifier.setFilters({'status': status}),
+            onTap: () => setFilter('status', status),
+          ),
+        for (final location in AppointmentLocation.values)
+          PillFilterChip(
+            label: location.label,
+            selected: currentLocation == location.wireValue,
+            onTap: () => setFilter('location', currentLocation == location.wireValue ? null : location.wireValue),
           ),
       ],
       itemBuilder: (context, item) => _AppointmentTile(appointment: item, onTap: () => _openDetail(item.id)),

@@ -6,6 +6,7 @@ import '../../../app/theme/app_palette.dart';
 import '../../../core/models/publication_status.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
 import '../../../shared/widgets/ai_badge.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
@@ -13,6 +14,7 @@ import 'post_form_screen.dart';
 import 'post_series_screen.dart';
 import 'post_tags_screen.dart';
 import 'subscribers_screen.dart';
+import 'syndication_settings_screen.dart';
 
 class PostsListScreen extends ConsumerWidget {
   const PostsListScreen({super.key});
@@ -60,6 +62,12 @@ class PostsListScreen extends ConsumerWidget {
               Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PostSeriesScreen())),
         ),
         IconButton(
+          tooltip: 'Republication',
+          icon: const Icon(Icons.share_outlined),
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SyndicationSettingsScreen())),
+        ),
+        IconButton(
           tooltip: 'Abonnés à la newsletter',
           icon: const Icon(Icons.mark_email_read_outlined),
           onPressed: () =>
@@ -81,6 +89,17 @@ class PostsListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, post) => ListTile(
         onTap: () => _openForm(context, ref, id: post.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'post',
+          id: post.id,
+          title: post.title.display,
+          current: post.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(postListProvider),
+        ),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: SizedBox.square(
