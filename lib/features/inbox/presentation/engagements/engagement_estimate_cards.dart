@@ -181,3 +181,147 @@ class _EngagementAnalysisCardState extends ConsumerState<EngagementAnalysisCard>
     );
   }
 }
+
+/// Issue de la demande : signée (montant hors taxes et devise) ou perdue. Une
+/// issue range aussi la demande parmi les traitées et alimente les statistiques.
+class EngagementOutcomeCard extends ConsumerStatefulWidget {
+  const EngagementOutcomeCard({super.key, required this.engagement, required this.onUpdated});
+
+  final Engagement engagement;
+  final ValueChanged<Engagement> onUpdated;
+
+  @override
+  ConsumerState<EngagementOutcomeCard> createState() => _EngagementOutcomeCardState();
+}
+
+class _EngagementOutcomeCardState extends ConsumerState<EngagementOutcomeCard> {
+  static const _currencies = ['XOF', 'EUR', 'USD', 'CHF'];
+
+  bool _saving = false;
+
+  Future<void> _save(EngagementOutcome? outcome, {int? amount, String? currency}) async {
+    setState(() => _saving = true);
+    try {
+      widget.onUpdated(
+        await ref
+            .read(engagementRepositoryProvider)
+            .setOutcome(widget.engagement.id, outcome, amount: amount, currency: currency),
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  /// Montant et devise signés ; préremplis depuis l'estimation (milieu de la fourchette).
+  Future<void> _markWon() async {
+    final engagement = widget.engagement;
+    final estimate = engagement.estimate;
+    final amount = TextEditingController(
+      text: engagement.outcomeAmount?.toString() ??
+          (estimate == null ? '' : '${((estimate.priceMin + estimate.priceMax) / 2).round()}'),
+    );
+    var currency = engagement.outcomeCurrency ?? estimate?.currency ?? 'XOF';
+    if (!_currencies.contains(currency)) {
+      currency = 'XOF';
+    }
+    final result = await showDialog<({int amount, String currency})>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Demande gagnée'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amount,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Montant signé, hors taxes'),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: [for (final c in _currencies) ButtonSegment(value: c, label: Text(c))],
+                selected: {currency},
+                onSelectionChanged: (selection) => setDialogState(() => currency = selection.first),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            FilledButton(
+              onPressed: () {
+                final value = int.tryParse(amount.text.replaceAll(RegExp(r'\s'), ''));
+                if (value != null) {
+                  Navigator.pop(context, (amount: value, currency: currency));
+                }
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(amount.dispose);
+    if (result != null) {
+      await _save(EngagementOutcome.won, amount: result.amount, currency: result.currency);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final engagement = widget.engagement;
+    final outcome = engagement.outcome;
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flag_outlined, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Issue', style: theme.textTheme.titleSmall)),
+              if (engagement.outcomeAt != null) Text(relativeDate(engagement.outcomeAt!.toLocal()), style: muted),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(switch (outcome) {
+            EngagementOutcome.won when engagement.outcomeAmount != null =>
+              'Gagnée : ${_number.format(engagement.outcomeAmount)} ${engagement.outcomeCurrency ?? ''} HT',
+            EngagementOutcome.won => 'Gagnée',
+            EngagementOutcome.lost => 'Perdue',
+            null => 'Pas encore décidée.',
+          }, style: outcome == null ? muted : theme.textTheme.titleMedium),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: _saving ? null : _markWon,
+                icon: const Icon(Icons.emoji_events_outlined, size: 18),
+                label: Text(outcome == EngagementOutcome.won ? 'Modifier le montant' : 'Gagnée'),
+              ),
+              if (outcome != EngagementOutcome.lost)
+                OutlinedButton.icon(
+                  onPressed: _saving ? null : () => _save(EngagementOutcome.lost),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: const Text('Perdue'),
+                ),
+              if (outcome != null)
+                TextButton(onPressed: _saving ? null : () => _save(null), child: const Text('Effacer l\'issue')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -94,7 +94,12 @@ class _EngagementTile extends StatelessWidget {
           ? (engagement.estimate == null
                 ? null
                 : StatusBadge('Estimation', color: Theme.of(context).colorScheme.primary))
-          : StatusBadge(engagement.status.label),
+          // Une issue enregistrée dit plus que « Traitée ».
+          : switch (engagement.outcome) {
+              EngagementOutcome.won => StatusBadge('Gagnée', color: Theme.of(context).colorScheme.primary),
+              EngagementOutcome.lost => const StatusBadge('Perdue'),
+              null => StatusBadge(engagement.status.label),
+            },
     );
   }
 }

@@ -37,6 +37,24 @@ class EngagementRepository {
 
   Future<void> delete(int id) => _api.delete('/v1/engagements/$id');
 
+  /// `PUT /v1/engagements/{id}/outcome` : [outcome] `null` efface l'issue. Le
+  /// montant (hors taxes) et sa devise ne valent que pour une demande gagnée.
+  /// Une issue range aussi la demande parmi les traitées.
+  Future<Engagement> setOutcome(int id, EngagementOutcome? outcome, {int? amount, String? currency}) async {
+    final won = outcome == EngagementOutcome.won;
+    return Engagement.fromJson(
+      await _api.put(
+            '/v1/engagements/$id/outcome',
+            data: {
+              'outcome': outcome?.wireValue,
+              'outcome_amount': won ? amount : null,
+              'outcome_currency': won ? currency : null,
+            },
+          )
+          as Map<String, dynamic>,
+    );
+  }
+
   /// `POST /v1/ai/engagements/{id}/analyze` : relance l'analyse IA ; 503 si
   /// l'assistance est indisponible.
   Future<Engagement> analyze(int id) async => Engagement.fromJson(
