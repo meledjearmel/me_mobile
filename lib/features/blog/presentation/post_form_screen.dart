@@ -19,6 +19,7 @@ import '../../profile/presentation/widgets/photo_picker_tile.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
 import '../data/post_repository.dart';
+import 'post_distribution_screen.dart';
 
 const _maxTags = 8;
 
@@ -258,6 +259,19 @@ class _PostFormScreenState extends ConsumerState<PostFormScreen> {
         appBar: GlassAppBar(
           actions: [
             if (_isEditing) ...[
+              IconButton(
+                tooltip: 'Diffusion : republication et partage',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => PostDistributionScreen(
+                      postId: widget.id!,
+                      title: _title.display,
+                      isPublished: _status == PublicationStatus.published,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.campaign_outlined),
+              ),
               IconButton(
                 tooltip: 'Rédiger dans l\'admin web',
                 onPressed: _openAdmin,

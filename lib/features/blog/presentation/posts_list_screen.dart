@@ -13,6 +13,7 @@ import 'post_form_screen.dart';
 import 'post_series_screen.dart';
 import 'post_tags_screen.dart';
 import 'subscribers_screen.dart';
+import 'syndication_settings_screen.dart';
 
 class PostsListScreen extends ConsumerWidget {
   const PostsListScreen({super.key});
@@ -58,6 +59,12 @@ class PostsListScreen extends ConsumerWidget {
           icon: const Icon(Icons.collections_bookmark_outlined),
           onPressed: () =>
               Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PostSeriesScreen())),
+        ),
+        IconButton(
+          tooltip: 'Republication',
+          icon: const Icon(Icons.share_outlined),
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SyndicationSettingsScreen())),
         ),
         IconButton(
           tooltip: 'Abonnés à la newsletter',
