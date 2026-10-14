@@ -36,4 +36,11 @@ class EngagementRepository {
       );
 
   Future<void> delete(int id) => _api.delete('/v1/engagements/$id');
+
+  /// `POST /v1/ai/engagements/{id}/analyze` : relance l'analyse IA ; 503 si
+  /// l'assistance est indisponible.
+  Future<Engagement> analyze(int id) async => Engagement.fromJson(
+        await _api.post('/v1/ai/engagements/$id/analyze', receiveTimeout: const Duration(seconds: 90))
+            as Map<String, dynamic>,
+      );
 }

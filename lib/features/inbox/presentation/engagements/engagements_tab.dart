@@ -89,7 +89,12 @@ class _EngagementTile extends StatelessWidget {
         if (engagement.company?.isNotEmpty == true) engagement.company,
         engagement.subject,
       ].whereType<String>().join(' · '),
-      badge: isNew ? null : StatusBadge(engagement.status.label),
+      // Une nouvelle demande venue de l'estimateur se repère à son badge.
+      badge: isNew
+          ? (engagement.estimate == null
+                ? null
+                : StatusBadge('Estimation', color: Theme.of(context).colorScheme.primary))
+          : StatusBadge(engagement.status.label),
     );
   }
 }
