@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -14,7 +16,7 @@ if (file("google-services.json").exists()) {
 
 // Clé de release (jamais celle de debug) : sans la même clé d'une version à
 // l'autre, Android refuse d'installer la mise à jour par-dessus l'app. Voir CLAUDE.md.
-val keystoreProperties = java.util.Properties().apply {
+val keystoreProperties = Properties().apply {
     val file = rootProject.file("key.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
