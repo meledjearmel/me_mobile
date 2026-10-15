@@ -38,7 +38,7 @@ claude mcp add --transport http portfolio https://<domaine-du-portfolio>/mcp/por
 ### Récupération quand `android/key.properties` manque
 
 1. Appeler `get-signing-key-backup` (adresse de téléchargement valable 15 min), télécharger le blob avec `curl` dans le scratchpad et vérifier son SHA-256.
-2. Donner à l'utilisateur la commande à lancer lui-même dans Git Bash : `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in <blob> -out me-admin-signing.tar`, puis `tar -xf me-admin-signing.tar`.
+2. Donner à l'utilisateur la commande à lancer lui-même dans PowerShell (son terminal ; `openssl` n'y est pas dans le PATH, d'où le `&` et le chemin de Git) : `& "C:\Program Files\Git\mingw64\bin\openssl.exe" enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in <blob> -out me-admin-signing.tar`, puis `tar -xf me-admin-signing.tar`.
 3. Placer le .jks hors du dépôt (ex. `C:\Users\<vous>\keystores\`), copier `key.properties` dans `android/` et y mettre `storeFile` sur le chemin absolu du .jks (barres `/`).
 4. Vérifier que l'empreinte SHA-256 du certificat restauré est égale au `key_fingerprint` de la sauvegarde, puis supprimer les fichiers temporaires.
 
