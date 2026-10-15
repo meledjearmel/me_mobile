@@ -21,6 +21,8 @@ class Dashboard {
     this.outcomes = const DashboardOutcomes(),
     this.appointments = const DashboardAppointments(),
     this.billing = const DashboardBilling(),
+    this.trends,
+    this.agenda = const [],
   });
 
   factory Dashboard.fromJson(Map<String, dynamic> json) => Dashboard(
@@ -51,6 +53,13 @@ class Dashboard {
     billing: json['billing'] is Map<String, dynamic>
         ? DashboardBilling.fromJson(json['billing'] as Map<String, dynamic>)
         : const DashboardBilling(),
+    trends: json['trends'] is Map<String, dynamic>
+        ? DashboardTrends.fromJson(json['trends'] as Map<String, dynamic>)
+        : null,
+    agenda: [
+      for (final item in json['agenda'] as List<dynamic>? ?? const [])
+        AgendaItem.fromJson(item as Map<String, dynamic>),
+    ],
   );
 
   final DashboardTodo todo;
@@ -66,6 +75,12 @@ class Dashboard {
   final DashboardOutcomes outcomes;
   final DashboardAppointments appointments;
   final DashboardBilling billing;
+
+  /// Période face à la précédente ; `null` sur « tout » ou avec une API plus ancienne.
+  final DashboardTrends? trends;
+
+  /// Les 5 prochains rendez-vous en attente ou confirmés.
+  final List<AgendaItem> agenda;
 }
 
 /// Engagement des lecteurs du blog. Lectures, réactions et commentaires au
@@ -1069,3 +1084,61 @@ String describePeriod(int? days, DateTime? since) => switch (days) {
   null when since != null => 'Depuis le ${DateFormat('d MMMM y', 'fr_FR').format(since)}',
   null => 'Depuis le début',
 };
+
+/// Un volume sur la période et sur la précédente de même durée.
+typedef TrendValue = ({int current, int previous});
+
+/// Bloc `trends` : `metrics` porte `visits`, `visitors`, `contacts`,
+/// `engagements`, `appointments` et `cv_downloads`.
+@immutable
+class DashboardTrends {
+  const DashboardTrends({required this.periodDays, this.metrics = const {}});
+
+  factory DashboardTrends.fromJson(Map<String, dynamic> json) => DashboardTrends(
+    periodDays: json['period_days'] as int? ?? 30,
+    metrics: {
+      for (final MapEntry(:key, :value) in (json['metrics'] as Map<String, dynamic>? ?? const {}).entries)
+        if (value is Map<String, dynamic>)
+          key: (current: value['current'] as int? ?? 0, previous: value['previous'] as int? ?? 0),
+    },
+  );
+
+  final int periodDays;
+  final Map<String, TrendValue> metrics;
+
+  TrendValue? operator [](String key) => metrics[key];
+}
+
+/// Prochain rendez-vous (bloc `agenda`).
+@immutable
+class AgendaItem {
+  const AgendaItem({
+    required this.id,
+    required this.name,
+    this.company,
+    this.type,
+    this.location,
+    required this.isPending,
+    required this.startsAt,
+  });
+
+  factory AgendaItem.fromJson(Map<String, dynamic> json) => AgendaItem(
+    id: json['id'] as int,
+    name: json['name'] as String? ?? '',
+    company: json['company'] as String?,
+    type: json['type'] as String?,
+    location: json['location'] as String?,
+    isPending: json['status'] == 'pending',
+    startsAt: DateTime.parse(json['starts_at'] as String).toLocal(),
+  );
+
+  final int id;
+  final String name;
+  final String? company;
+  final String? type;
+
+  /// `video`, `phone`, `whatsapp` ou `in_person`.
+  final String? location;
+  final bool isPending;
+  final DateTime startsAt;
+}
