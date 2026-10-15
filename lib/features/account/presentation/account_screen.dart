@@ -10,6 +10,7 @@ import '../../../core/biometrics/biometric_authenticator.dart';
 import '../../../core/biometrics/biometric_lock_controller.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/biometrics/biometric_preferences.dart';
+import '../../../core/updates/app_update_service.dart';
 import '../../../shared/widgets/feedback.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../auth/application/session_controller.dart';
@@ -28,6 +29,26 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   bool _loggingOut = false;
   bool _updatingBiometric = false;
   bool _updatingTheme = false;
+  bool _checkingUpdate = false;
+
+  Future<void> _checkForUpdate() async {
+    setState(() => _checkingUpdate = true);
+    final result = await ref
+        .read(appUpdateServiceProvider)
+        .checkForUpdate(() => mounted ? context : null, force: true);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _checkingUpdate = false);
+    final message = switch (result) {
+      UpdateCheckResult.upToDate => 'Vous avez la dernière version.',
+      UpdateCheckResult.failed => 'Vérification impossible. Vérifiez votre connexion et réessayez.',
+      _ => null,
+    };
+    if (message != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
   bool _updatingNotifyDelay = false;
 
   /// Délai minimal entre deux notifications de félicitations d'un même motif
@@ -313,6 +334,37 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     title: const Text('Documentation de l\'API'),
                     subtitle: Text('${Env.siteUrl}/docs/api'),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            const SectionHeader('Application'),
+            const SizedBox(height: 8),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.info_outline_rounded),
+                    title: const Text('Me Admin'),
+                    subtitle: Text(switch (ref.watch(installedVersionProvider)) {
+                      AsyncData(:final value) => 'Version ${value.version} (build ${value.buildNumber})',
+                      AsyncError() => 'Version inconnue',
+                      _ => 'Chargement…',
+                    }),
+                  ),
+                  if (ref.read(appUpdateServiceProvider).isSupported) ...[
+                    const Divider(indent: 20, endIndent: 20),
+                    ListTile(
+                      leading: const Icon(Icons.system_update_rounded),
+                      title: const Text('Rechercher une mise à jour'),
+                      subtitle: const Text('Installée depuis le portfolio, sans passer par un store'),
+                      trailing: _checkingUpdate
+                          ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.chevron_right_rounded),
+                      onTap: _checkingUpdate ? null : _checkForUpdate,
+                    ),
+                  ],
                 ],
               ),
             ),

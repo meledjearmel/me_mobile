@@ -12,6 +12,12 @@ import '../api/api_exception.dart';
 import 'app_release.dart';
 import 'app_update_repository.dart';
 
+/// Issue d'une vérification, pour la vérification manuelle (écran Compte).
+enum UpdateCheckResult { upToDate, updateOffered, failed, skipped }
+
+/// Version installée, affichée dans Compte.
+final installedVersionProvider = FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
+
 final appUpdateServiceProvider = Provider<AppUpdateService>((ref) => AppUpdateService(ref));
 
 /// Mise à jour hors store (Android seulement) : compare le build installé à la
@@ -27,41 +33,46 @@ class AppUpdateService {
   static const checkInterval = Duration(hours: 6);
 
   final Ref _ref;
+
+  /// Android seulement : sur iOS, les mises à jour passent par l'App Store.
+  bool get isSupported => !kIsWeb && Platform.isAndroid;
   DateTime? _lastCheck;
   bool _busy = false;
 
   /// [contextOf] est relu après chaque attente : la route a pu changer.
   /// [force] ignore le délai de [checkInterval] (démarrage, connexion).
-  Future<void> checkForUpdate(BuildContext? Function() contextOf, {bool force = false}) async {
-    if (kIsWeb || !Platform.isAndroid || _busy) {
-      return;
+  Future<UpdateCheckResult> checkForUpdate(BuildContext? Function() contextOf, {bool force = false}) async {
+    if (!isSupported || _busy) {
+      return UpdateCheckResult.skipped;
     }
     final now = DateTime.now();
     if (!force && _lastCheck != null && now.difference(_lastCheck!) < checkInterval) {
-      return;
+      return UpdateCheckResult.skipped;
     }
     _busy = true;
     _lastCheck = now;
     try {
       final release = await _ref.read(appUpdateRepositoryProvider).latest();
       if (release == null) {
-        return;
+        return UpdateCheckResult.upToDate;
       }
       final info = await PackageInfo.fromPlatform();
       if (!release.isNewerThan(parseBuildNumber(info.buildNumber))) {
-        return;
+        return UpdateCheckResult.upToDate;
       }
       final context = contextOf();
       if (context == null || !context.mounted) {
-        return;
+        return UpdateCheckResult.skipped;
       }
       final accepted = await _askToUpdate(context, release);
       if (accepted ?? false) {
         await _downloadAndInstall(contextOf, release);
       }
+      return UpdateCheckResult.updateOffered;
     } on ApiException {
       // Hors ligne ou serveur indisponible : on réessaiera au prochain retour.
       _lastCheck = null;
+      return UpdateCheckResult.failed;
     } finally {
       _busy = false;
     }
