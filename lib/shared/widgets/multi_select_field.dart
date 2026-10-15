@@ -41,8 +41,8 @@ class MultiSelectField extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(label, style: theme.textTheme.labelLarge),
-            const Spacer(),
+            // Un libellé long passe à la ligne au lieu de pousser le bouton hors de l'écran.
+            Expanded(child: Text(label, style: theme.textTheme.labelLarge)),
             TextButton.icon(
               onPressed: options.isEmpty ? null : () => _openPicker(context),
               icon: const Icon(Icons.add_rounded, size: 18),

@@ -204,7 +204,13 @@ class ListCardTile extends StatelessWidget {
                           style: theme.textTheme.bodySmall?.copyWith(color: muted),
                         ),
                       ),
-                      if (badge != null) ...[const SizedBox(width: 8), badge!],
+                      // Plusieurs badges (IA et statut) rétrécissent plutôt que de déborder.
+                      if (badge != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight, child: badge),
+                        ),
+                      ],
                     ],
                   ),
                 ],
