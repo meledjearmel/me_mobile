@@ -10,6 +10,7 @@ import 'package:me_mobile/features/billing/presentation/billing_settings_screen.
 import 'package:me_mobile/features/billing/presentation/document_detail_screen.dart';
 import 'package:me_mobile/features/billing/presentation/document_form_screen.dart';
 import 'package:me_mobile/features/billing/presentation/documents_list_screen.dart';
+import 'package:me_mobile/features/billing/presentation/widgets/reminders_card.dart';
 import 'package:me_mobile/features/blog/presentation/post_distribution_screen.dart';
 import 'package:me_mobile/features/blog/presentation/syndication_settings_screen.dart';
 import 'package:me_mobile/features/estimator/data/estimator.dart';
@@ -302,6 +303,8 @@ void main() {
     'Réglages de facturation': (const BillingSettingsScreen(), 'Facturation'),
     'Republication : réglages': (const SyndicationSettingsScreen(), 'Republication'),
     'Article : diffusion': (const PostDistributionScreen(postId: 9, title: 'Mon article', isPublished: true), 'Diffusion'),
+    // Le devis de la liste simulée a une relance suggérée : la carte s'affiche.
+    'Accueil : carte À relancer': (const Scaffold(body: RemindersCard()), 'À relancer'),
   };
 
   for (final MapEntry(key: name, value: (screen, expected)) in screens.entries) {

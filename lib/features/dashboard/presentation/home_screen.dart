@@ -15,6 +15,7 @@ import '../../auth/application/session_controller.dart';
 import '../../celebrations/presentation/congratulations_screen.dart';
 import '../../blog/presentation/post_form_screen.dart';
 import '../../cv_downloads/presentation/cv_downloads_screen.dart';
+import '../../billing/presentation/widgets/reminders_card.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
 import '../data/health_labels.dart';
@@ -116,7 +117,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // Builder : les marges lues sous le Scaffold tiennent compte des barres flottantes.
       body: Builder(
         builder: (context) => RefreshIndicator(
-          onRefresh: () => ref.refresh(dashboardProvider.future),
+          onRefresh: () {
+            ref.invalidate(documentRemindersProvider);
+            return ref.refresh(dashboardProvider.future);
+          },
           child: ListView(
             padding: pageInsets(context, horizontal: 20, top: 12),
             children: [
@@ -215,6 +219,8 @@ class _DashboardBody extends StatelessWidget {
         _TodoCard(todo: dashboard.todo, onTap: onTodoTap),
         const SizedBox(height: 10),
         ReviewCards(todo: dashboard.todo),
+        // Devis sans réponse et factures en retard ; rien tant qu'aucune relance n'est suggérée.
+        const RemindersCard(),
         gap,
         SectionHeader(
           'En bref',
