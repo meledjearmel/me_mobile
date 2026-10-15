@@ -402,10 +402,13 @@ class _PostDistributionScreenState extends ConsumerState<PostDistributionScreen>
                     label: const Text('Copier'),
                   ),
                   const SizedBox(width: 4),
-                  FilledButton.tonalIcon(
-                    onPressed: _savingTexts || _generating ? null : () => _share(network),
-                    icon: const Icon(Icons.ios_share_rounded, size: 18),
-                    label: Text(network == SocialNetwork.whatsapp ? 'Partager' : 'Ouvrir ${network.label}'),
+                  // Le thème donne aux boutons pleins une largeur infinie : borné dans la ligne.
+                  Flexible(
+                    child: FilledButton.tonalIcon(
+                      onPressed: _savingTexts || _generating ? null : () => _share(network),
+                      icon: const Icon(Icons.ios_share_rounded, size: 18),
+                      label: Text(network == SocialNetwork.whatsapp ? 'Partager' : 'Ouvrir ${network.label}'),
+                    ),
                   ),
                 ],
               ),
