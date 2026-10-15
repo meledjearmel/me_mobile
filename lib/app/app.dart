@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/biometrics/biometric_lock_controller.dart';
 import '../core/push/push_service.dart';
+import '../core/updates/app_update_service.dart';
 import '../features/auth/application/session_controller.dart';
 import '../features/dashboard/data/dashboard_repository.dart';
 import 'router.dart';
@@ -44,11 +45,34 @@ class _MeAdminAppState extends ConsumerState<MeAdminApp> with WidgetsBindingObse
     // Retour au premier plan : les compteurs ont pu bouger pendant l'absence (§5).
     if (state == AppLifecycleState.resumed && ref.read(sessionProvider).value != null) {
       ref.invalidate(dashboardProvider);
+      _checkForUpdate();
     }
+  }
+
+  /// Mise à jour hors store (voir app_update_service.dart). Sans [force], au plus
+  /// une vérification toutes les 6 h. Rien tant que le verrou biométrique est affiché.
+  void _checkForUpdate({bool force = false}) {
+    if (ref.read(biometricLockControllerProvider).value ?? false) {
+      return;
+    }
+    final router = ref.read(routerProvider);
+    ref.read(appUpdateServiceProvider).checkForUpdate(() => router.routerDelegate.navigatorKey.currentContext, force: force);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Démarrage avec une session valide, ou connexion : vérifie tout de suite.
+    ref.listen(sessionProvider, (previous, next) {
+      if (previous?.value == null && next.value != null) {
+        _checkForUpdate(force: true);
+      }
+    });
+    ref.listen(biometricLockControllerProvider, (previous, next) {
+      if ((previous?.value ?? false) && next.value == false && ref.read(sessionProvider).value != null) {
+        _checkForUpdate();
+      }
+    });
+
     // Suit le réglage système par défaut ; l'utilisateur peut le forcer en
     // clair ou sombre depuis Compte > Apparence (voir account_screen.dart).
     final themeMode = ref.watch(themeModeProvider).value ?? ThemeMode.system;
