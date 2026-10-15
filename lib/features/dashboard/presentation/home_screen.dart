@@ -153,11 +153,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 style: theme.textTheme.headlineMedium?.copyWith(color: muted),
               ),
               const SizedBox(height: 20),
+              // Échec d'une actualisation : on garde les dernières données, avec un bandeau.
+              if (dashboard.hasError && dashboard.hasValue)
+                _StaleBanner(onRetry: () => ref.invalidate(dashboardProvider)),
               dashboard.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 64),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+                skipError: true,
+                loading: () => const _DashboardSkeleton(),
                 error: (error, _) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 48),
                   child: Column(
@@ -372,6 +373,85 @@ class _TileGrid extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Bandeau discret quand l'actualisation échoue alors que des données sont affichées.
+class _StaleBanner extends StatelessWidget {
+  const _StaleBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SurfaceCard(
+        padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+        child: Row(
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 18, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 10),
+            Expanded(child: Text('Hors ligne : dernières données affichées.', style: theme.textTheme.bodySmall)),
+            TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Squelette de l'accueil au premier chargement : la forme des cartes, en pulsation.
+class _DashboardSkeleton extends StatefulWidget {
+  const _DashboardSkeleton();
+
+  @override
+  State<_DashboardSkeleton> createState() => _DashboardSkeletonState();
+}
+
+class _DashboardSkeletonState extends State<_DashboardSkeleton> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.surfaceContainerHigh;
+    Widget block(double height, {double radius = 24}) => Container(
+      height: height,
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(radius)),
+    );
+
+    return Semantics(
+      label: 'Chargement en cours',
+      child: FadeTransition(
+        opacity: _controller.drive(Tween(begin: 0.5, end: 1)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            block(190, radius: 28),
+            const SizedBox(height: 10),
+            block(130),
+            const SizedBox(height: 28),
+            block(160),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: block(92, radius: 22)),
+                const SizedBox(width: 10),
+                Expanded(child: block(92, radius: 22)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
