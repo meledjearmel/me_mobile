@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/experience_list_controller.dart';
 import '../data/experience.dart';
@@ -47,6 +48,17 @@ class ExperiencesListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, experience) => ListTile(
         onTap: () => _openForm(context, ref, id: experience.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'experience',
+          id: experience.id,
+          title: experience.role.display,
+          current: experience.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(experienceListProvider),
+        ),
         leading: const Icon(Icons.timeline_rounded),
         title: Text(experience.company),
         subtitle: Text(experience.role.display),

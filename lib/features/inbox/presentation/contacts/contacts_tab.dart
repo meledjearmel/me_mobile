@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../application/contact_list_controller.dart';
@@ -67,7 +68,20 @@ class _ContactsTabState extends ConsumerState<ContactsTab> {
             onTap: () => notifier.setFilters({'status': status}),
           ),
       ],
-      itemBuilder: (context, item) => _ContactTile(contact: item, onTap: () => _openDetail(item.id)),
+      itemBuilder: (context, item) => GestureDetector(
+        // Appui long : changer le statut sans ouvrir la fiche.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'contact',
+          id: item.id,
+          title: item.name,
+          current: item.status.wireValue,
+          options: [for (final s in ContactStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(contactListProvider),
+        ),
+        child: _ContactTile(contact: item, onTap: () => _openDetail(item.id)),
+      ),
     );
   }
 }

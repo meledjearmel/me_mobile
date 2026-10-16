@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/education_list_controller.dart';
 import '../data/education.dart';
@@ -47,6 +48,17 @@ class EducationsListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, education) => ListTile(
         onTap: () => _openForm(context, ref, id: education.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'education',
+          id: education.id,
+          title: education.degree.display,
+          current: education.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(educationListProvider),
+        ),
         leading: const Icon(Icons.school_outlined),
         title: Text(education.institution),
         subtitle: Text(education.degree.display),

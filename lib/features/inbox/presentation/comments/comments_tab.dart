@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../../dashboard/data/dashboard_repository.dart';
@@ -115,7 +116,20 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
         ),
         onDismissed: (direction) =>
             _moderate(item, direction == DismissDirection.startToEnd ? CommentStatus.approved : CommentStatus.rejected),
-        child: _CommentCard(comment: item, onTap: () => _openDetail(item.id)),
+        child: GestureDetector(
+          // Appui long : changer le statut sans ouvrir la fiche.
+          onLongPress: () => showStatusSheet(
+            context,
+            ref,
+            type: 'comment',
+            id: item.id,
+            title: item.authorName,
+            current: item.status.wireValue,
+            options: [for (final s in CommentStatus.values) (value: s.wireValue, label: s.label)],
+            onChanged: () => ref.invalidate(postCommentListProvider),
+          ),
+          child: _CommentCard(comment: item, onTap: () => _openDetail(item.id)),
+        ),
       ),
     );
   }

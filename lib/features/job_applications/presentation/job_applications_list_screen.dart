@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/resource_list_scaffold.dart';
+import '../../../shared/widgets/status_sheet.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../application/job_application_list_controller.dart';
 import '../data/job_application.dart';
@@ -54,15 +55,28 @@ class JobApplicationsListScreen extends ConsumerWidget {
             showCheckmark: false,
           ),
       ],
-      itemBuilder: (context, application) => ListCardTile(
-        onTap: () => _open(context, ref, JobApplicationDetailScreen(id: application.id)),
-        leading: InitialsTile(application.company),
-        title: application.company,
-        subtitle: application.position,
-        meta:
-            '${application.viewsCount} vue${application.viewsCount > 1 ? 's' : ''} · '
-            '${application.cvDownloadsCount} CV',
-        badge: JobApplicationStatusBadge(application),
+      itemBuilder: (context, application) => GestureDetector(
+        // Appui long : mettre en ligne ou archiver sans ouvrir la fiche.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'job_application',
+          id: application.id,
+          title: application.company,
+          current: application.status.wireValue,
+          options: [for (final s in JobApplicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(jobApplicationListProvider),
+        ),
+        child: ListCardTile(
+          onTap: () => _open(context, ref, JobApplicationDetailScreen(id: application.id)),
+          leading: InitialsTile(application.company),
+          title: application.company,
+          subtitle: application.position,
+          meta:
+              '${application.viewsCount} vue${application.viewsCount > 1 ? 's' : ''} · '
+              '${application.cvDownloadsCount} CV',
+          badge: JobApplicationStatusBadge(application),
+        ),
       ),
     );
   }

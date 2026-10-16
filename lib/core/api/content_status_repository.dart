@@ -15,8 +15,7 @@ class ContentStatusRepository {
 
   final ApiClient _api;
 
-  /// [type] : `project`, `post`, `experience`, `education`, `certification`,
-  /// `distinction`, `uses_item`, `skill` ou `service`. Renvoie le statut enregistré.
+  /// [type] : voir `showStatusSheet` (contenus, boîte de réception, documents, révisions).
   Future<String> update(String type, int id, String status) async {
     final json = await _api.patch('/v1/status/$type/$id', data: {'status': status}) as Map<String, dynamic>;
     return (json['data'] as Map<String, dynamic>)['status'] as String;

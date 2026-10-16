@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/uses_item_list_controller.dart';
 import '../data/uses_item.dart';
@@ -49,6 +50,17 @@ class UsesItemsListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, item) => ListTile(
         onTap: () => _openForm(context, ref, id: item.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'uses_item',
+          id: item.id,
+          title: item.name,
+          current: item.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(usesItemListProvider),
+        ),
         leading: Icon(item.category.icon),
         title: Text(item.name),
         subtitle: Text(

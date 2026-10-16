@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/distinction_list_controller.dart';
 import '../data/distinction.dart';
@@ -46,6 +47,17 @@ class DistinctionsListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, distinction) => ListTile(
         onTap: () => _openForm(context, ref, id: distinction.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'distinction',
+          id: distinction.id,
+          title: distinction.title.display,
+          current: distinction.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(distinctionListProvider),
+        ),
         leading: const SizedBox.square(dimension: 40, child: Icon(Icons.emoji_events_outlined)),
         title: Text(distinction.title.display),
         subtitle: Text(

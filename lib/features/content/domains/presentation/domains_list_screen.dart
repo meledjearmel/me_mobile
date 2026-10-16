@@ -5,6 +5,7 @@ import '../../../../core/models/publication_status.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../application/domain_list_controller.dart';
 import '../data/domain.dart';
 import 'domain_form_screen.dart';
@@ -40,14 +41,24 @@ class DomainsListScreen extends ConsumerWidget {
           ChoiceChip(
             label: Text(status.label),
             selected: currentStatus == status.wireValue,
-            onSelected: (_) => notifier.setFilters(
-              currentStatus == status.wireValue ? const {} : {'status': status.wireValue},
-            ),
+            onSelected: (_) =>
+                notifier.setFilters(currentStatus == status.wireValue ? const {} : {'status': status.wireValue}),
             showCheckmark: false,
           ),
       ],
       itemBuilder: (context, domain) => ListTile(
         onTap: () => _openForm(context, ref, id: domain.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'domain',
+          id: domain.id,
+          title: domain.label.display,
+          current: domain.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(domainListProvider),
+        ),
         leading: CircleAvatar(backgroundColor: parseHexColor(domain.color), radius: 14),
         title: Text(domain.label.display),
         subtitle: Text(domain.key),
