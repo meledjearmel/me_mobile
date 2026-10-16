@@ -21,6 +21,7 @@ class Congratulation {
     required this.id,
     required this.source,
     required this.celebrationId,
+    this.distinctionId,
     required this.reason,
     required this.count,
     required this.locale,
@@ -31,6 +32,7 @@ class Congratulation {
     id: json['id'] as int,
     source: CongratulationSource.fromWire(json['source']?.toString()),
     celebrationId: json['celebration_id'] as int?,
+    distinctionId: json['distinction_id'] as int?,
     reason: json['reason'] as String? ?? '',
     count: json['count'] as int? ?? 1,
     locale: json['locale'] as String?,
@@ -42,6 +44,9 @@ class Congratulation {
 
   /// `null` pour la page À propos, ou si la surprise a été supprimée.
   final int? celebrationId;
+
+  /// Distinction félicitée depuis la page À propos, sinon `null`.
+  final int? distinctionId;
 
   /// Motif lisible, figé au moment du clic.
   final String reason;

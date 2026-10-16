@@ -21,6 +21,7 @@ import '../../revisions/presentation/revisions_screen.dart';
 import '../../mcp/presentation/mcp_commands_screen.dart';
 import '../../mcp/presentation/mcp_activity_screen.dart';
 import '../certifications/presentation/certifications_list_screen.dart';
+import '../distinctions/presentation/distinctions_list_screen.dart';
 import '../domains/presentation/domains_list_screen.dart';
 import '../github/presentation/github_screen.dart';
 import '../educations/presentation/educations_list_screen.dart';
@@ -47,6 +48,7 @@ class ContentScreen extends ConsumerWidget {
         (icon: Icons.timeline_rounded, label: 'Expériences', builder: _experiencesScreen),
         (icon: Icons.school_outlined, label: 'Formations', builder: _educationsScreen),
         (icon: Icons.workspace_premium_outlined, label: 'Certifications', builder: _certificationsScreen),
+        (icon: Icons.emoji_events_outlined, label: 'Distinctions', builder: _distinctionsScreen),
         (icon: Icons.psychology_outlined, label: 'Compétences', builder: _skillsScreen),
       ],
     ),
@@ -107,6 +109,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _experiencesScreen(BuildContext context) => const ExperiencesListScreen();
   static Widget _educationsScreen(BuildContext context) => const EducationsListScreen();
   static Widget _certificationsScreen(BuildContext context) => const CertificationsListScreen();
+  static Widget _distinctionsScreen(BuildContext context) => const DistinctionsListScreen();
   static Widget _technologiesScreen(BuildContext context) => const TechnologiesListScreen();
   static Widget _domainsScreen(BuildContext context) => const DomainsListScreen();
   static Widget _jobProfilesScreen(BuildContext context) => const JobProfilesListScreen();

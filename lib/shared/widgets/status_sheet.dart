@@ -9,7 +9,7 @@ typedef StatusOption = ({String value, String label});
 /// Changement de statut rapide depuis une liste (`PATCH /v1/status/{type}/{id}`) :
 /// feuille des statuts possibles, confirmation avant de publier, puis [onChanged].
 /// [type] : `project`, `post`, `experience`, `education`, `certification`,
-/// `uses_item`, `skill` ou `service`.
+/// `distinction`, `uses_item`, `skill` ou `service`.
 Future<void> showStatusSheet(
   BuildContext context,
   WidgetRef ref, {
