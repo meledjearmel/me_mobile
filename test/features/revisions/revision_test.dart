@@ -88,6 +88,24 @@ void main() {
     expect(revision.fields[2].changedSince, isFalse);
   });
 
+  test('image proposée : couverture avec l\'actuelle, sinon null', () {
+    final revision = Revision.fromJson({
+      ..._summary,
+      'fields': <dynamic>[],
+      'image': {'role': 'cover', 'url': 'https://x/new.webp', 'current_url': 'https://x/old.webp'},
+    });
+    expect(revision.fields, isEmpty);
+    expect(revision.image!.isCover, isTrue);
+    expect(revision.image!.currentUrl, 'https://x/old.webp');
+
+    expect(Revision.fromJson({..._summary, 'image': null}).image, isNull);
+    final gallery = Revision.fromJson({
+      ..._summary,
+      'image': {'role': 'gallery', 'url': 'https://x/g.webp', 'current_url': null},
+    });
+    expect(gallery.image!.isCover, isFalse);
+  });
+
   test('apply et reject ; 409 si déjà traitée', () async {
     adapter
       ..whenRequest('POST', '/v1/revisions/7/apply', statusCode: 200, body: _applied)
