@@ -5,6 +5,7 @@ import '../../../../app/theme/app_palette.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../application/testimonial_list_controller.dart';
@@ -132,7 +133,20 @@ class _TestimonialsTabState extends ConsumerState<TestimonialsTab> {
           item,
           direction == DismissDirection.startToEnd ? TestimonialStatus.approved : TestimonialStatus.rejected,
         ),
-        child: _TestimonialCard(testimonial: item, onTap: () => _openEdit(item.id)),
+        child: GestureDetector(
+          // Appui long : changer le statut sans ouvrir la fiche.
+          onLongPress: () => showStatusSheet(
+            context,
+            ref,
+            type: 'testimonial',
+            id: item.id,
+            title: item.authorName,
+            current: item.status.wireValue,
+            options: [for (final s in TestimonialStatus.values) (value: s.wireValue, label: s.label)],
+            onChanged: () => ref.invalidate(testimonialListProvider),
+          ),
+          child: _TestimonialCard(testimonial: item, onTap: () => _openEdit(item.id)),
+        ),
       ),
     );
   }

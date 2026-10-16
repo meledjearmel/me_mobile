@@ -5,18 +5,19 @@ import '../../data/dashboard.dart';
 
 /// Courbe des visites sur 30 jours (§4.1), en aire dégradée façon sparkline.
 class VisitsChart extends StatelessWidget {
-  const VisitsChart({super.key, required this.daily});
+  const VisitsChart({super.key, required this.daily, this.height = 120});
 
   final List<DailyVisit> daily;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     if (daily.isEmpty) {
-      return const SizedBox(height: 120);
+      return SizedBox(height: height);
     }
     return SizedBox(
-      height: 120,
+      height: height,
       width: double.infinity,
       child: CustomPaint(
         painter: _VisitsPainter(

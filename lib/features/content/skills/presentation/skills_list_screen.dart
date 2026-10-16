@@ -5,6 +5,7 @@ import '../../../../core/models/publication_status.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../../data/reference_repository.dart';
 import '../application/skill_list_controller.dart';
@@ -74,6 +75,17 @@ class SkillsListScreen extends ConsumerWidget {
       ],
       itemBuilder: (context, skill) => ListTile(
         onTap: () => _openForm(context, ref, id: skill.id),
+        // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'skill',
+          id: skill.id,
+          title: skill.name.display,
+          current: skill.status.wireValue,
+          options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(skillListProvider),
+        ),
         leading: skill.domain != null
             ? CircleAvatar(backgroundColor: parseHexColor(skill.domain!.color), radius: 14)
             : const Icon(Icons.psychology_outlined),

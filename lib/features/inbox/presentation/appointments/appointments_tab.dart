@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../shared/widgets/resource_list_scaffold.dart';
+import '../../../../shared/widgets/status_sheet.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../application/appointment_list_controller.dart';
@@ -76,7 +77,20 @@ class _AppointmentsTabState extends ConsumerState<AppointmentsTab> {
             onTap: () => setFilter('location', currentLocation == location.wireValue ? null : location.wireValue),
           ),
       ],
-      itemBuilder: (context, item) => _AppointmentTile(appointment: item, onTap: () => _openDetail(item.id)),
+      itemBuilder: (context, item) => GestureDetector(
+        // Appui long : changer le statut sans ouvrir la fiche.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'appointment',
+          id: item.id,
+          title: item.name,
+          current: item.status.wireValue,
+          options: [for (final s in AppointmentStatus.values) (value: s.wireValue, label: s.label)],
+          onChanged: () => ref.invalidate(appointmentListProvider),
+        ),
+        child: _AppointmentTile(appointment: item, onTap: () => _openDetail(item.id)),
+      ),
     );
   }
 }

@@ -19,10 +19,13 @@ import '../../billing/presentation/widgets/reminders_card.dart';
 import '../data/dashboard.dart';
 import '../data/dashboard_repository.dart';
 import '../data/health_labels.dart';
+import '../../billing/presentation/documents_list_screen.dart';
+import '../../content/professional_references/presentation/professional_references_list_screen.dart';
+import '../../profile/presentation/profile_screen.dart';
+import '../../projects/presentation/projects_list_screen.dart';
 import 'widgets/health_checklist.dart';
-import 'widgets/recent_section.dart';
+import 'widgets/home_sections.dart';
 import 'statistics_screen.dart';
-import 'widgets/stat_tile.dart';
 import 'widgets/review_cards.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -76,29 +79,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     context.go('/inbox');
   }
 
-  void _openContact(int id) {
-    ref.read(pendingPushTargetProvider.notifier).state = PushTarget(type: PushResourceType.contact, id: id);
-    context.go('/inbox');
-  }
-
-  void _openEngagement(int id) {
-    ref.read(pendingPushTargetProvider.notifier).state = PushTarget(type: PushResourceType.engagement, id: id);
-    context.go('/inbox');
-  }
-
-  void _openTestimonial(int id) {
-    ref.read(pendingPushTargetProvider.notifier).state = PushTarget(type: PushResourceType.testimonial, id: id);
+  /// Ouvre l'élément dans la boîte de réception, comme une notification.
+  void _openItem(PushResourceType type, int id) {
+    ref.read(pendingPushTargetProvider.notifier).state = PushTarget(type: type, id: id);
     context.go('/inbox');
   }
 
   void _openHealthItem(HealthItem item) {
-    final destination = healthLabels[item.key]?.destination;
-    if (destination == 'Avis') {
-      _openInboxTab(2);
-    } else {
-      // Profil / Références / Projets : écrans prévus aux étapes 4-6.
-      context.go('/content');
+    final Widget screen;
+    switch (healthLabels[item.key]?.destination) {
+      case 'Avis':
+        _openInboxTab(2);
+        return;
+      case 'Profil':
+        screen = const ProfileScreen();
+      case 'Références':
+        screen = const ProfessionalReferencesListScreen();
+      case 'Projets':
+        screen = const ProjectsListScreen();
+      default:
+        context.go('/content');
+        return;
     }
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
   }
 
   @override
@@ -150,11 +153,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 style: theme.textTheme.headlineMedium?.copyWith(color: muted),
               ),
               const SizedBox(height: 20),
+              // Échec d'une actualisation : on garde les dernières données, avec un bandeau.
+              if (dashboard.hasError && dashboard.hasValue)
+                _StaleBanner(onRetry: () => ref.invalidate(dashboardProvider)),
               dashboard.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 64),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+                skipError: true,
+                loading: () => const _DashboardSkeleton(),
                 error: (error, _) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 48),
                   child: Column(
@@ -168,13 +172,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 data: (data) => _DashboardBody(
                   dashboard: data,
                   onTodoTap: _openInboxTab,
-                  onContactTap: _openContact,
-                  onEngagementTap: _openEngagement,
-                  onTestimonialTap: _openTestimonial,
+                  onItemTap: _openItem,
                   onHealthTap: _openHealthItem,
-                  onSeeAllContacts: () => _openInboxTab(0),
-                  onSeeAllEngagements: () => _openInboxTab(1),
-                  onSeeAllTestimonials: () => _openInboxTab(2),
+                  onSeeInbox: () => context.go('/inbox'),
                 ),
               ),
             ],
@@ -189,34 +189,32 @@ class _DashboardBody extends StatelessWidget {
   const _DashboardBody({
     required this.dashboard,
     required this.onTodoTap,
-    required this.onContactTap,
-    required this.onEngagementTap,
-    required this.onTestimonialTap,
+    required this.onItemTap,
     required this.onHealthTap,
-    required this.onSeeAllContacts,
-    required this.onSeeAllEngagements,
-    required this.onSeeAllTestimonials,
+    required this.onSeeInbox,
   });
 
   final Dashboard dashboard;
   final ValueChanged<int> onTodoTap;
-  final ValueChanged<int> onContactTap;
-  final ValueChanged<int> onEngagementTap;
-  final ValueChanged<int> onTestimonialTap;
+  final void Function(PushResourceType type, int id) onItemTap;
   final ValueChanged<HealthItem> onHealthTap;
-  final VoidCallback onSeeAllContacts;
-  final VoidCallback onSeeAllEngagements;
-  final VoidCallback onSeeAllTestimonials;
+  final VoidCallback onSeeInbox;
 
   @override
   Widget build(BuildContext context) {
-    final content = dashboard.content;
+    final trends = dashboard.trends;
     const gap = SizedBox(height: 28);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _TodoCard(todo: dashboard.todo, onTap: onTodoTap),
+        TodayCard(
+          dashboard: dashboard,
+          onAppointmentTap: (id) => onItemTap(PushResourceType.appointment, id),
+          onBillingTap: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const DocumentsListScreen())),
+        ),
         const SizedBox(height: 10),
         ReviewCards(todo: dashboard.todo),
         // Devis sans réponse et factures en retard ; rien tant qu'aucune relance n'est suggérée.
@@ -228,76 +226,33 @@ class _DashboardBody extends StatelessWidget {
           onAction: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const StatisticsScreen())),
         ),
         const SizedBox(height: 8),
+        AudienceCard(dashboard: dashboard),
+        const SizedBox(height: 10),
         _TileGrid(
           children: [
-            StatTile(
-              value: content.projects.published,
-              label: 'Projets publiés',
-              caption: '${content.projects.featured} à la une',
-            ),
-            StatTile(value: content.engagements.cvSent, label: 'CV envoyés'),
-            StatTile(
-              value: content.testimonials.approved,
-              label: 'Avis approuvés',
-              caption: content.testimonials.pending > 0 ? '${content.testimonials.pending} en attente' : null,
-            ),
-            StatTile(value: content.yearsOfExperience, label: 'Ans d\'expérience'),
+            TrendTile(label: 'Visiteurs uniques', trend: trends?['visitors']),
+            TrendTile(label: 'Demandes de collab.', trend: trends?['engagements']),
+            TrendTile(label: 'Messages reçus', trend: trends?['contacts']),
+            TrendTile(label: 'Rendez-vous demandés', trend: trends?['appointments']),
           ],
-        ),
-        const SizedBox(height: 10),
-        CongratulationsCard(
-          count: content.congratulations,
-          onTap: () =>
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CongratulationsScreen())),
         ),
         const SizedBox(height: 10),
         CvDownloadsCard(
           summary: dashboard.cvDownloads,
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CvDownloadsScreen())),
         ),
+        const SizedBox(height: 10),
+        CongratulationsCard(
+          count: dashboard.content.congratulations,
+          onTap: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CongratulationsScreen())),
+        ),
+        gap,
+        ActivityFeed(items: recentActivity(dashboard.recent), onTap: onItemTap, onSeeAll: onSeeInbox),
         gap,
         const SectionHeader('À compléter'),
         const SizedBox(height: 8),
         HealthChecklist(items: dashboard.health, onTap: onHealthTap),
-        gap,
-        RecentSection(
-          title: 'Derniers messages',
-          items: [
-            for (final c in dashboard.recent.contacts)
-              (id: c.id, title: c.name, subtitle: c.subject ?? '', isNew: c.isNew, at: c.at),
-          ],
-          onTapItem: onContactTap,
-          onSeeAll: onSeeAllContacts,
-          emptyLabel: 'Aucun message pour l\'instant.',
-        ),
-        gap,
-        RecentSection(
-          title: 'Dernières demandes',
-          items: [
-            for (final e in dashboard.recent.engagements)
-              (
-                id: e.id,
-                title: e.name,
-                subtitle: [e.company, e.subject].whereType<String>().join(' · '),
-                isNew: e.isNew,
-                at: e.at,
-              ),
-          ],
-          onTapItem: onEngagementTap,
-          onSeeAll: onSeeAllEngagements,
-          emptyLabel: 'Aucune demande pour l\'instant.',
-        ),
-        gap,
-        RecentSection(
-          title: 'Avis en attente',
-          items: [
-            for (final t in dashboard.recent.testimonials)
-              (id: t.id, title: t.name, subtitle: t.excerpt, isNew: true, at: t.at),
-          ],
-          onTapItem: onTestimonialTap,
-          onSeeAll: onSeeAllTestimonials,
-          emptyLabel: 'Aucun avis en attente.',
-        ),
       ],
     );
   }
@@ -334,6 +289,8 @@ class _TodoCard extends StatelessWidget {
       (label: 'Messages non lus', count: todo.contacts, tab: 0),
       (label: 'Demandes de collaboration', count: todo.engagements, tab: 1),
       (label: 'Avis en attente', count: todo.testimonials, tab: 2),
+      (label: 'Rendez-vous à confirmer', count: todo.appointments, tab: 3),
+      (label: 'Commentaires à modérer', count: todo.comments, tab: 4),
     ].where((r) => r.count > 0).toList();
 
     return SurfaceCard(
@@ -416,6 +373,85 @@ class _TileGrid extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Bandeau discret quand l'actualisation échoue alors que des données sont affichées.
+class _StaleBanner extends StatelessWidget {
+  const _StaleBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SurfaceCard(
+        padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+        child: Row(
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 18, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 10),
+            Expanded(child: Text('Hors ligne : dernières données affichées.', style: theme.textTheme.bodySmall)),
+            TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Squelette de l'accueil au premier chargement : la forme des cartes, en pulsation.
+class _DashboardSkeleton extends StatefulWidget {
+  const _DashboardSkeleton();
+
+  @override
+  State<_DashboardSkeleton> createState() => _DashboardSkeletonState();
+}
+
+class _DashboardSkeletonState extends State<_DashboardSkeleton> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.surfaceContainerHigh;
+    Widget block(double height, {double radius = 24}) => Container(
+      height: height,
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(radius)),
+    );
+
+    return Semantics(
+      label: 'Chargement en cours',
+      child: FadeTransition(
+        opacity: _controller.drive(Tween(begin: 0.5, end: 1)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            block(190, radius: 28),
+            const SizedBox(height: 10),
+            block(130),
+            const SizedBox(height: 28),
+            block(160),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: block(92, radius: 22)),
+                const SizedBox(width: 10),
+                Expanded(child: block(92, radius: 22)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

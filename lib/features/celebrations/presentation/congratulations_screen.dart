@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/api_exception.dart';
 import '../../../core/utils/relative_date.dart';
+import '../../content/distinctions/data/distinction_repository.dart';
+import '../../content/distinctions/presentation/distinction_form_screen.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
@@ -32,6 +35,23 @@ class _CongratulationsScreenState extends ConsumerState<CongratulationsScreen> {
         ref.invalidate(congratulationListProvider);
       }
     });
+  }
+
+  /// Ouvre la fiche de la distinction félicitée, si elle existe encore.
+  Future<void> _openDistinction(int id) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(distinctionRepositoryProvider).get(id);
+    } on NotFoundException {
+      messenger.showSnackBar(const SnackBar(content: Text('Cette distinction n\'existe plus.')));
+      return;
+    } on ApiException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      return;
+    }
+    if (mounted) {
+      await Navigator.of(context).push(MaterialPageRoute(builder: (context) => DistinctionFormScreen(id: id)));
+    }
   }
 
   @override
@@ -69,6 +89,7 @@ class _CongratulationsScreenState extends ConsumerState<CongratulationsScreen> {
         meta: item.createdAt == null ? null : relativeDate(item.createdAt!),
         badge: StatusBadge(item.source.label),
         unread: item.id == widget.highlightId,
+        onTap: item.distinctionId == null ? null : () => _openDistinction(item.distinctionId!),
       ),
     );
   }

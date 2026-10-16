@@ -7,6 +7,8 @@ import '../../../blog/application/post_list_controller.dart';
 import '../../../blog/presentation/posts_list_screen.dart';
 import '../../../content/certifications/application/certification_list_controller.dart';
 import '../../../content/certifications/presentation/certifications_list_screen.dart';
+import '../../../content/distinctions/application/distinction_list_controller.dart';
+import '../../../content/distinctions/presentation/distinctions_list_screen.dart';
 import '../../../content/educations/application/education_list_controller.dart';
 import '../../../content/educations/presentation/educations_list_screen.dart';
 import '../../../content/experiences/application/experience_list_controller.dart';
@@ -159,6 +161,11 @@ void showDraftsSheet(BuildContext context, WidgetRef ref, DashboardTodo todo) {
                 'Certifications',
                 null,
                 () => _openDrafts(sheetContext, ref, certificationListProvider, const CertificationsListScreen()),
+              ),
+              row(
+                'Distinctions',
+                null,
+                () => _openDrafts(sheetContext, ref, distinctionListProvider, const DistinctionsListScreen()),
               ),
               row(
                 'Uses',

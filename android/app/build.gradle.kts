@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -10,6 +12,13 @@ plugins {
 // Vos applications → app Android `com.meledjearmel.me` → google-services.json).
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+}
+
+// Clé de release (jamais celle de debug) : sans la même clé d'une version à
+// l'autre, Android refuse d'installer la mise à jour par-dessus l'app. Voir CLAUDE.md.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -40,11 +49,23 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (!keystoreProperties.isEmpty) {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (keystoreProperties.isEmpty && gradle.startParameter.taskNames.any { it.contains("Release") }) {
+                throw GradleException("android/key.properties manquant : le build release doit être signé avec la clé de release.")
+            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

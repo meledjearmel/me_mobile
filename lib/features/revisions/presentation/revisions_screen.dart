@@ -5,6 +5,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/utils/relative_date.dart';
 import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../data/revision.dart';
 import '../data/revision_repository.dart';
@@ -93,7 +94,20 @@ class _RevisionsScreenState extends ConsumerState<RevisionsScreen> {
                       ]
                     : [
                         for (final revision in revisions) ...[
-                          _RevisionTile(revision: revision, onTap: () => _open(revision)),
+                          GestureDetector(
+                            // Appui long : appliquer ou rejeter sans ouvrir la révision.
+                            onLongPress: () => showStatusSheet(
+                              context,
+                              ref,
+                              type: 'revision',
+                              id: revision.id,
+                              title: revision.title,
+                              current: revision.status.wireValue,
+                              options: [for (final s in RevisionStatus.values) (value: s.wireValue, label: s.label)],
+                              onChanged: () => ref.invalidate(revisionListProvider),
+                            ),
+                            child: _RevisionTile(revision: revision, onTap: () => _open(revision)),
+                          ),
                           const SizedBox(height: 10),
                         ],
                       ],
