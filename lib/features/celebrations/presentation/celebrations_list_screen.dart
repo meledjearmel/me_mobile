@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/theme/app_palette.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
+import '../../../shared/widgets/status_tones.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../application/celebration_list_controller.dart';
 import '../data/celebration.dart';
@@ -44,14 +44,32 @@ class CelebrationsListScreen extends ConsumerWidget {
       emptyIcon: Icons.celebration_outlined,
       emptyTitle: 'Aucune surprise pour l\'instant',
       emptyDescription: 'Annoncez une bonne nouvelle aux visiteurs avec le bouton +.',
-      itemBuilder: (context, celebration) => ListCardTile(
-        onTap: () => _openForm(context, ref, id: celebration.id),
-        leading: const IconTile(Icons.celebration_outlined, size: 38),
-        title: celebration.message.display,
-        subtitle:
-            '${celebration.congratulationsCount} félicitation${celebration.congratulationsCount > 1 ? 's' : ''}'
-            ' · ${celebration.chancePercent} % des visites',
-        badge: StatusBadge(celebration.statusLabel, color: celebration.isLive ? context.appColors.accent : null),
+      itemBuilder: (context, celebration) => GestureDetector(
+        // Appui long : activer ou désactiver sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'celebration',
+          id: celebration.id,
+          title: celebration.message.display,
+          current: toggleStatus(celebration.isActive),
+          options: toggleStatusOptions['celebration']!,
+          onChanged: () => ref.invalidate(celebrationListProvider),
+        ),
+        child: ListCardTile(
+          onTap: () => _openForm(context, ref, id: celebration.id),
+          leading: const IconTile(Icons.celebration_outlined, size: 38),
+          title: celebration.message.display,
+          subtitle:
+              '${celebration.congratulationsCount} félicitation${celebration.congratulationsCount > 1 ? 's' : ''}'
+              ' · ${celebration.chancePercent} % des visites',
+          // Active : « En ligne », « Programmée » ou « Terminée » selon sa période.
+          badge: TypedStatusBadge(
+            type: 'celebration',
+            status: toggleStatus(celebration.isActive),
+            label: celebration.statusLabel,
+          ),
+        ),
       ),
     );
   }

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_exception.dart';
-import '../../../core/api/content_status_repository.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/models/publication_status.dart';
 import '../../../shared/pagination/list_query.dart';
 import '../../../shared/pagination/paginated_list_controller.dart';
 import '../../../shared/widgets/ai_badge.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
+import '../../../shared/widgets/status_tones.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../data/service.dart';
 import '../data/service_repository.dart';
@@ -31,53 +30,6 @@ class ServicesListScreen extends ConsumerWidget {
   Future<void> _open(BuildContext context, WidgetRef ref, {int? id}) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (context) => ServiceFormScreen(id: id)));
     ref.invalidate(serviceListProvider);
-  }
-
-  /// Publier ou repasser en brouillon sans ouvrir le formulaire.
-  Future<void> _toggleStatus(BuildContext context, WidgetRef ref, Service service) async {
-    final target = service.status == PublicationStatus.published
-        ? PublicationStatus.draft
-        : PublicationStatus.published;
-    final messenger = ScaffoldMessenger.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          target == PublicationStatus.published
-              ? 'Publier « ${service.title.display} » ?'
-              : 'Masquer « ${service.title.display} » ?',
-        ),
-        content: Text(
-          target == PublicationStatus.published
-              ? 'L\'offre apparaîtra sur la page « Services » du site.'
-              : 'L\'offre disparaîtra de la page « Services » du site.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(target == PublicationStatus.published ? 'Publier' : 'Masquer'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) {
-      return;
-    }
-    try {
-      final status = await ref.read(contentStatusRepositoryProvider).update('service', service.id, target.wireValue);
-      ref
-          .read(serviceListProvider.notifier)
-          .updateItem((s) => s.id == service.id, (s) => s.copyWith(status: PublicationStatus.fromWire(status)));
-      messenger.showSnackBar(
-        SnackBar(content: Text(target == PublicationStatus.published ? 'Offre publiée.' : 'Offre masquée.')),
-      );
-    } on ValidationException catch (e) {
-      // Publier sans le titre anglais est refusé.
-      messenger.showSnackBar(SnackBar(content: Text(e.errors.values.expand((m) => m).firstOrNull ?? e.message)));
-    } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    }
   }
 
   @override
@@ -111,7 +63,17 @@ class ServicesListScreen extends ConsumerWidget {
       itemBuilder: (context, service) {
         final isDraft = service.status == PublicationStatus.draft;
         return GestureDetector(
-          onLongPress: () => _toggleStatus(context, ref, service),
+          // Appui long : publier ou repasser en brouillon sans ouvrir le formulaire.
+          onLongPress: () => showStatusSheet(
+            context,
+            ref,
+            type: 'service',
+            id: service.id,
+            title: service.title.display,
+            current: service.status.wireValue,
+            options: [for (final s in PublicationStatus.values) (value: s.wireValue, label: s.label)],
+            onChanged: () => ref.invalidate(serviceListProvider),
+          ),
           child: ListCardTile(
             onTap: () => _open(context, ref, id: service.id),
             leading: const IconTile(Icons.storefront_outlined),
@@ -123,13 +85,13 @@ class ServicesListScreen extends ConsumerWidget {
             badge: StatusWithAiBadge(
               draftedBy: service.draftedBy,
               isDraft: isDraft,
-              status: StatusBadge(service.status.label, prominent: isDraft),
+              status: TypedStatusBadge(type: 'service', status: service.status.wireValue, label: service.status.label),
             ),
           ),
         );
       },
       header: Text(
-        'Appui long sur une offre : la publier ou la masquer.',
+        'Appui long sur une offre : changer son statut.',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );

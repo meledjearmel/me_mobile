@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/education_list_controller.dart';
 import '../data/education.dart';
@@ -65,7 +65,11 @@ class EducationsListScreen extends ConsumerWidget {
         trailing: StatusWithAiBadge(
           draftedBy: education.draftedBy,
           isDraft: education.status == PublicationStatus.draft,
-          status: StatusBadge(education.status.label, prominent: education.status == PublicationStatus.draft),
+          status: TypedStatusBadge(
+            type: 'education',
+            status: education.status.wireValue,
+            label: education.status.label,
+          ),
         ),
       ),
     );

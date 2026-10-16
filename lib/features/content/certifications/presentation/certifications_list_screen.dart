@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/certification_list_controller.dart';
 import '../data/certification.dart';
@@ -84,13 +84,15 @@ class CertificationsListScreen extends ConsumerWidget {
           '${certification.issuer} · ${DateFormat('MMM y', 'fr_FR').format(certification.issuedOn)}'
           '${certification.isExpired ? ' · expirée' : ''}',
         ),
-        trailing: certification.status == PublicationStatus.draft
-            ? StatusWithAiBadge(
-                draftedBy: certification.draftedBy,
-                isDraft: true,
-                status: const StatusBadge('Brouillon', prominent: true),
-              )
-            : null,
+        trailing: StatusWithAiBadge(
+          draftedBy: certification.draftedBy,
+          isDraft: certification.status == PublicationStatus.draft,
+          status: TypedStatusBadge(
+            type: 'certification',
+            status: certification.status.wireValue,
+            label: certification.status.label,
+          ),
+        ),
       ),
     );
   }

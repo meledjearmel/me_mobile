@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../application/appointment_list_controller.dart';
@@ -116,7 +117,11 @@ class _AppointmentTile extends StatelessWidget {
         appointment.location.label,
         if (appointment.company?.isNotEmpty == true) appointment.company,
       ].whereType<String>().join(' · '),
-      badge: isPending ? null : StatusBadge(appointment.status.label),
+      badge: TypedStatusBadge(
+        type: 'appointment',
+        status: appointment.status.wireValue,
+        label: appointment.status.label,
+      ),
     );
   }
 }

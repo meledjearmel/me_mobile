@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../application/engagement_list_controller.dart';
@@ -103,17 +104,20 @@ class _EngagementTile extends StatelessWidget {
         if (engagement.company?.isNotEmpty == true) engagement.company,
         engagement.subject,
       ].whereType<String>().join(' · '),
-      // Une nouvelle demande venue de l'estimateur se repère à son badge.
-      badge: isNew
-          ? (engagement.estimate == null
-                ? null
-                : StatusBadge('Estimation', color: Theme.of(context).colorScheme.primary))
-          // Une issue enregistrée dit plus que « Traitée ».
-          : switch (engagement.outcome) {
-              EngagementOutcome.won => StatusBadge('Gagnée', color: Theme.of(context).colorScheme.primary),
-              EngagementOutcome.lost => const StatusBadge('Perdue'),
-              null => StatusBadge(engagement.status.label),
-            },
+      badge: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Une demande venue de l'estimateur, ou son issue enregistrée, se repère à un second badge.
+          ...switch ((engagement.outcome, isNew && engagement.estimate != null)) {
+            (EngagementOutcome.won, _) => [StatusBadge('Gagnée', color: Theme.of(context).colorScheme.primary)],
+            (EngagementOutcome.lost, _) => [const StatusBadge('Perdue')],
+            (null, true) => [StatusBadge('Estimation', color: Theme.of(context).colorScheme.primary)],
+            (null, false) => const <Widget>[],
+          },
+          if (engagement.outcome != null || (isNew && engagement.estimate != null)) const SizedBox(width: 6),
+          TypedStatusBadge(type: 'engagement', status: engagement.status.wireValue, label: engagement.status.label),
+        ],
+      ),
     );
   }
 }

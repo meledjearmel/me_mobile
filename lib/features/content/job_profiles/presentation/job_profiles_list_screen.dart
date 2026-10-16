@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../application/job_profile_list_controller.dart';
 import '../data/job_profile.dart';
 import 'job_profile_form_screen.dart';
@@ -61,7 +61,11 @@ class JobProfilesListScreen extends ConsumerWidget {
         leading: const Icon(Icons.assignment_ind_outlined),
         title: Text(jobProfile.label.display),
         subtitle: Text(jobProfile.key),
-        trailing: StatusBadge(jobProfile.status.label, prominent: jobProfile.status == PublicationStatus.draft),
+        trailing: TypedStatusBadge(
+          type: 'job_profile',
+          status: jobProfile.status.wireValue,
+          label: jobProfile.status.label,
+        ),
       ),
     );
   }

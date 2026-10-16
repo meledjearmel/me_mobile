@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../../data/reference_repository.dart';
 import '../application/skill_list_controller.dart';
@@ -94,7 +94,7 @@ class SkillsListScreen extends ConsumerWidget {
         trailing: StatusWithAiBadge(
           draftedBy: skill.draftedBy,
           isDraft: skill.status == PublicationStatus.draft,
-          status: StatusBadge(skill.status.label, prominent: skill.status == PublicationStatus.draft),
+          status: TypedStatusBadge(type: 'skill', status: skill.status.wireValue, label: skill.status.label),
         ),
       ),
     );
