@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/publication_status.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../application/domain_list_controller.dart';
 import '../data/domain.dart';
 import 'domain_form_screen.dart';
@@ -62,7 +62,7 @@ class DomainsListScreen extends ConsumerWidget {
         leading: CircleAvatar(backgroundColor: parseHexColor(domain.color), radius: 14),
         title: Text(domain.label.display),
         subtitle: Text(domain.key),
-        trailing: StatusBadge(domain.status.label, prominent: domain.status == PublicationStatus.draft),
+        trailing: TypedStatusBadge(type: 'domain', status: domain.status.wireValue, label: domain.status.label),
       ),
     );
   }

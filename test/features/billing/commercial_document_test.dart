@@ -68,6 +68,14 @@ void main() {
     );
   });
 
+  test('LineUnit lit les unités récurrentes', () {
+    expect(LineUnit.fromWire('month'), LineUnit.month);
+    expect(LineUnit.fromWire('quarter').short, 'trimestre');
+    expect(LineUnit.fromWire('semester').label, 'semestre');
+    expect(LineUnit.fromWire('year').short, 'an');
+    expect(LineUnit.fromWire('inconnue'), LineUnit.flat);
+  });
+
   test('DocumentLine.toJson garde une quantité entière et vide la description blanche', () {
     expect(
       const DocumentLine(

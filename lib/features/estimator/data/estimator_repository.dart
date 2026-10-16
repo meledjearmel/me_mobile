@@ -69,6 +69,7 @@ class EstimatorRepository {
     int? hoursMax,
     EstimatorPricing? pricing,
     int? percent,
+    EstimatorPeriods periods = const {},
     EstimatorBilling? billing,
     List<int> projectTypeIds = const [],
     int? rateId,
@@ -86,6 +87,10 @@ class EstimatorRepository {
       'hours_max': isPercent ? null : hoursMax,
       'pricing': isFeature ? pricing?.wireValue : null,
       'percent': isPercent ? percent : null,
+      // Seulement les périodes activées ; aucune : le serveur met le mensuel.
+      'periods': isFeature && pricing == EstimatorPricing.recurring && periods.isNotEmpty
+          ? estimatorPeriodsToJson(periods)
+          : null,
       'billing': isFeature ? null : billing?.wireValue,
       'project_type_ids': isFeature ? projectTypeIds : <int>[],
       'estimator_rate_id': rateId,

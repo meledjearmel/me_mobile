@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/experience_list_controller.dart';
 import '../data/experience.dart';
@@ -65,7 +65,11 @@ class ExperiencesListScreen extends ConsumerWidget {
         trailing: StatusWithAiBadge(
           draftedBy: experience.draftedBy,
           isDraft: experience.status == PublicationStatus.draft,
-          status: StatusBadge(experience.status.label, prominent: experience.status == PublicationStatus.draft),
+          status: TypedStatusBadge(
+            type: 'experience',
+            status: experience.status.wireValue,
+            label: experience.status.label,
+          ),
         ),
       ),
     );

@@ -42,7 +42,11 @@ enum DocumentStatus {
 enum LineUnit {
   hour('hour', 'heure', 'h'),
   day('day', 'jour', 'j'),
-  flat('flat', 'forfait', 'forfait');
+  flat('flat', 'forfait', 'forfait'),
+  month('month', 'mois', 'mois'),
+  quarter('quarter', 'trimestre', 'trimestre'),
+  semester('semester', 'semestre', 'semestre'),
+  year('year', 'an', 'an');
 
   const LineUnit(this.wireValue, this.label, this.short);
 

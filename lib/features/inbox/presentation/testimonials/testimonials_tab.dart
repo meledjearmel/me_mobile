@@ -6,6 +6,7 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../application/testimonial_list_controller.dart';
@@ -205,7 +206,11 @@ class _TestimonialCard extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 6),
                   child: Icon(Icons.star_rounded, size: 18, color: context.appColors.accent),
                 ),
-              StatusBadge(testimonial.status.label, prominent: testimonial.status == TestimonialStatus.pending),
+              TypedStatusBadge(
+                type: 'testimonial',
+                status: testimonial.status.wireValue,
+                label: testimonial.status.label,
+              ),
             ],
           ),
           if (testimonial.authorRole?.isNotEmpty == true) ...[

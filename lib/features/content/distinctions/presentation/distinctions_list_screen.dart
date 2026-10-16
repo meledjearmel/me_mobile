@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/models/publication_status.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/ai_badge.dart';
 import '../application/distinction_list_controller.dart';
 import '../data/distinction.dart';
@@ -68,13 +68,15 @@ class DistinctionsListScreen extends ConsumerWidget {
             '${distinction.congratulationsCount} félicitation${distinction.congratulationsCount > 1 ? 's' : ''}',
           ].join(' · '),
         ),
-        trailing: distinction.status == PublicationStatus.draft
-            ? StatusWithAiBadge(
-                draftedBy: distinction.draftedBy,
-                isDraft: true,
-                status: const StatusBadge('Brouillon', prominent: true),
-              )
-            : null,
+        trailing: StatusWithAiBadge(
+          draftedBy: distinction.draftedBy,
+          isDraft: distinction.status == PublicationStatus.draft,
+          status: TypedStatusBadge(
+            type: 'distinction',
+            status: distinction.status.wireValue,
+            label: distinction.status.label,
+          ),
+        ),
       ),
     );
   }

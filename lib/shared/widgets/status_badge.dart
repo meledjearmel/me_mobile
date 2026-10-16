@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_palette.dart';
 
+/// Rendu d'un badge de statut, le même pour un statut donné sur tous les
+/// écrans (voir `statusTone`) : plein (or), secondaire, contour ou rouge.
+enum StatusTone { filled, secondary, outline, danger }
+
 /// Pastille de statut discrète (§3.6 : libellés français à afficher).
 class StatusBadge extends StatelessWidget {
-  const StatusBadge(this.label, {super.key, this.color, this.prominent = false});
+  const StatusBadge(this.label, {super.key, this.color, this.prominent = false}) : tone = null;
+
+  /// Badge de statut d'une ligne de liste, rendu selon [tone].
+  const StatusBadge.tone(this.label, StatusTone this.tone, {super.key}) : color = null, prominent = false;
 
   final String label;
+
+  /// Quand il est donné, il remplace [color] et [prominent].
+  final StatusTone? tone;
 
   /// Couleur d'accent ; par défaut neutre (comme le back-office web).
   final Color? color;
@@ -17,6 +27,24 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600);
+    if (tone != null) {
+      final (background, foreground, border) = switch (tone!) {
+        StatusTone.filled => (colors.accent, colors.onAccent, null),
+        StatusTone.secondary => (colors.second, colors.onSecond, null),
+        StatusTone.outline => (Colors.transparent, colors.muted, colors.muted),
+        StatusTone.danger => (AppPalette.danger.withValues(alpha: 0.14), AppPalette.danger, null),
+      };
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: border == null ? 10 : 9, vertical: border == null ? 4 : 3),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+          border: border == null ? null : Border.all(color: border),
+        ),
+        child: Text(label, style: textStyle?.copyWith(color: foreground)),
+      );
+    }
     // Sans couleur imposée : la couleur secondaire de la palette, discrète.
     final tint = color ?? colors.onSecond;
     final background = prominent

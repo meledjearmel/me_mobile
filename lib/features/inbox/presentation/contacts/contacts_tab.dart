@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../application/contact_list_controller.dart';
@@ -103,7 +104,7 @@ class _ContactTile extends StatelessWidget {
       unread: isNew,
       meta: contact.createdAt == null ? null : relativeDate(contact.createdAt!),
       subtitle: contact.subject?.isNotEmpty == true ? contact.subject! : contact.message,
-      badge: contact.status == ContactStatus.replied ? StatusBadge(contact.status.label) : null,
+      badge: TypedStatusBadge(type: 'contact', status: contact.status.wireValue, label: contact.status.label),
     );
   }
 }

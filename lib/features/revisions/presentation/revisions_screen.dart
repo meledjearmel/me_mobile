@@ -6,6 +6,7 @@ import '../../../core/utils/relative_date.dart';
 import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/status_sheet.dart';
+import '../../../shared/widgets/status_tones.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../data/revision.dart';
 import '../data/revision_repository.dart';
@@ -144,10 +145,16 @@ class _RevisionTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(revision.summary, maxLines: 3, overflow: TextOverflow.ellipsis),
           ],
-          if (revision.draftedBy != null) ...[
-            const SizedBox(height: 10),
-            StatusBadge('IA · ${revision.draftedBy}', color: theme.colorScheme.tertiary),
-          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              TypedStatusBadge(type: 'revision', status: revision.status.wireValue, label: revision.status.label),
+              if (revision.draftedBy != null)
+                StatusBadge('IA · ${revision.draftedBy}', color: theme.colorScheme.tertiary),
+            ],
+          ),
         ],
       ),
     );

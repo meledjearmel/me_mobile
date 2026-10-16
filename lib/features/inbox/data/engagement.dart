@@ -60,10 +60,10 @@ class JobProfileRef {
 
 /// `fixed` (forfait estimé) ou `hourly` (facturé à l'heure).
 String billingLabel(String billing) => switch (billing) {
-      'fixed' => 'Forfait',
-      'hourly' => 'À l\'heure',
-      _ => billing,
-    };
+  'fixed' => 'Forfait',
+  'hourly' => 'À l\'heure',
+  _ => billing,
+};
 
 /// Estimation calculée par l'estimateur du site, telle que le visiteur l'a vue.
 @immutable
@@ -81,22 +81,27 @@ class EngagementEstimate {
     required this.priceMax,
     required this.weeksMin,
     required this.weeksMax,
+    this.recurring = const [],
   });
 
   factory EngagementEstimate.fromJson(Map<String, dynamic> json) => EngagementEstimate(
-        billing: json['billing'] as String? ?? 'fixed',
-        currency: json['currency'] as String? ?? '',
-        hourlyRate: json['hourly_rate'] as int? ?? 0,
-        riskPercent: json['risk_percent'] as int? ?? 0,
-        projectType: json['project_type'] as String? ?? '',
-        features: [for (final f in json['features'] as List<dynamic>? ?? const []) f as String],
-        hoursMin: json['hours_min'] as int? ?? 0,
-        hoursMax: json['hours_max'] as int? ?? 0,
-        priceMin: json['price_min'] as int? ?? 0,
-        priceMax: json['price_max'] as int? ?? 0,
-        weeksMin: json['weeks_min'] as int? ?? 0,
-        weeksMax: json['weeks_max'] as int? ?? 0,
-      );
+    billing: json['billing'] as String? ?? 'fixed',
+    currency: json['currency'] as String? ?? '',
+    hourlyRate: json['hourly_rate'] as int? ?? 0,
+    riskPercent: json['risk_percent'] as int? ?? 0,
+    projectType: json['project_type'] as String? ?? '',
+    features: [for (final f in json['features'] as List<dynamic>? ?? const []) f as String],
+    hoursMin: json['hours_min'] as int? ?? 0,
+    hoursMax: json['hours_max'] as int? ?? 0,
+    priceMin: json['price_min'] as int? ?? 0,
+    priceMax: json['price_max'] as int? ?? 0,
+    weeksMin: json['weeks_min'] as int? ?? 0,
+    weeksMax: json['weeks_max'] as int? ?? 0,
+    recurring: [
+      for (final r in json['recurring'] as List<dynamic>? ?? const [])
+        if (r is Map<String, dynamic>) EstimateRecurring.fromJson(r),
+    ],
+  );
 
   final String billing;
   final String currency;
@@ -112,6 +117,60 @@ class EngagementEstimate {
   final int priceMax;
   final int weeksMin;
   final int weeksMax;
+
+  /// Options récurrentes, payées à chaque période : jamais dans le total du projet.
+  final List<EstimateRecurring> recurring;
+}
+
+/// Option récurrente d'une estimation (maintenance, hébergement…), prix par période.
+@immutable
+class EstimateRecurring {
+  const EstimateRecurring({
+    required this.id,
+    required this.label,
+    required this.period,
+    required this.months,
+    required this.discountPercent,
+    required this.hoursMin,
+    required this.hoursMax,
+    required this.rate,
+    required this.priceMin,
+    required this.priceMax,
+  });
+
+  factory EstimateRecurring.fromJson(Map<String, dynamic> json) => EstimateRecurring(
+    id: json['id'] as int?,
+    label: json['label'] as String? ?? '',
+    period: json['period'] as String? ?? 'monthly',
+    months: json['months'] as int? ?? 1,
+    discountPercent: json['discount_percent'] as int? ?? 0,
+    hoursMin: json['hours_min'] as int? ?? 0,
+    hoursMax: json['hours_max'] as int? ?? 0,
+    rate: json['rate'] as int? ?? 0,
+    priceMin: json['price_min'] as int? ?? 0,
+    priceMax: json['price_max'] as int? ?? 0,
+  );
+
+  final int? id;
+  final String label;
+
+  /// `monthly`, `quarterly`, `semiannual` ou `yearly`.
+  final String period;
+  final int months;
+  final int discountPercent;
+  final int hoursMin;
+  final int hoursMax;
+  final int rate;
+  final int priceMin;
+  final int priceMax;
+
+  /// « mois », « trimestre », « semestre » ou « an ».
+  String get periodUnit => switch (period) {
+    'quarterly' => 'trimestre',
+    'semiannual' => 'semestre',
+    'yearly' => 'an',
+    _ => 'mois',
+  };
 }
 
 /// Analyse de l'IA : risques, points flous, questions, heures réalistes (marge comprise).
@@ -195,38 +254,38 @@ class Engagement {
   });
 
   factory Engagement.fromJson(Map<String, dynamic> json) => Engagement(
-        id: json['id'] as int,
-        type: EngagementType.fromWire(json['type'] as String?),
-        status: EngagementStatus.fromWire(json['status'] as String?),
-        name: json['name'] as String,
-        email: json['email'] as String,
-        company: json['company'] as String?,
-        subject: json['subject'] as String?,
-        jobProfile: json['job_profile'] == null
-            ? null
-            : JobProfileRef.fromJson(json['job_profile'] as Map<String, dynamic>),
-        contract: json['contract'] as String?,
-        budget: json['budget'] as String?,
-        estimate: json['estimate'] is Map<String, dynamic>
-            ? EngagementEstimate.fromJson(json['estimate'] as Map<String, dynamic>)
-            : null,
-        estimateLabel: (json['estimate_label'] as String?)?.trim().isEmpty ?? true
-            ? null
-            : json['estimate_label'] as String,
-        aiAnalysis: json['ai_analysis'] is Map<String, dynamic>
-            ? EngagementAnalysis.fromJson(json['ai_analysis'] as Map<String, dynamic>)
-            : null,
-        aiAnalyzedAt: json['ai_analyzed_at'] == null ? null : DateTime.parse(json['ai_analyzed_at'] as String),
-        outcome: EngagementOutcome.fromWire(json['outcome'] as String?),
-        outcomeAmount: json['outcome_amount'] as int?,
-        outcomeCurrency: json['outcome_currency'] as String?,
-        outcomeAt: json['outcome_at'] == null ? null : DateTime.parse(json['outcome_at'] as String),
-        timeline: json['timeline'] as String?,
-        message: json['message'] as String?,
-        locale: json['locale'] as String? ?? 'fr',
-        cvSentAt: json['cv_sent_at'] == null ? null : DateTime.parse(json['cv_sent_at'] as String),
-        createdAt: json['created_at'] == null ? null : DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    type: EngagementType.fromWire(json['type'] as String?),
+    status: EngagementStatus.fromWire(json['status'] as String?),
+    name: json['name'] as String,
+    email: json['email'] as String,
+    company: json['company'] as String?,
+    subject: json['subject'] as String?,
+    jobProfile: json['job_profile'] == null
+        ? null
+        : JobProfileRef.fromJson(json['job_profile'] as Map<String, dynamic>),
+    contract: json['contract'] as String?,
+    budget: json['budget'] as String?,
+    estimate: json['estimate'] is Map<String, dynamic>
+        ? EngagementEstimate.fromJson(json['estimate'] as Map<String, dynamic>)
+        : null,
+    estimateLabel: (json['estimate_label'] as String?)?.trim().isEmpty ?? true
+        ? null
+        : json['estimate_label'] as String,
+    aiAnalysis: json['ai_analysis'] is Map<String, dynamic>
+        ? EngagementAnalysis.fromJson(json['ai_analysis'] as Map<String, dynamic>)
+        : null,
+    aiAnalyzedAt: json['ai_analyzed_at'] == null ? null : DateTime.parse(json['ai_analyzed_at'] as String),
+    outcome: EngagementOutcome.fromWire(json['outcome'] as String?),
+    outcomeAmount: json['outcome_amount'] as int?,
+    outcomeCurrency: json['outcome_currency'] as String?,
+    outcomeAt: json['outcome_at'] == null ? null : DateTime.parse(json['outcome_at'] as String),
+    timeline: json['timeline'] as String?,
+    message: json['message'] as String?,
+    locale: json['locale'] as String? ?? 'fr',
+    cvSentAt: json['cv_sent_at'] == null ? null : DateTime.parse(json['cv_sent_at'] as String),
+    createdAt: json['created_at'] == null ? null : DateTime.parse(json['created_at'] as String),
+  );
 
   final int id;
   final EngagementType? type;
@@ -267,28 +326,28 @@ class Engagement {
   final DateTime? createdAt;
 
   Engagement copyWith({EngagementStatus? status}) => Engagement(
-        id: id,
-        type: type,
-        status: status ?? this.status,
-        name: name,
-        email: email,
-        company: company,
-        subject: subject,
-        jobProfile: jobProfile,
-        contract: contract,
-        budget: budget,
-        estimate: estimate,
-        estimateLabel: estimateLabel,
-        aiAnalysis: aiAnalysis,
-        aiAnalyzedAt: aiAnalyzedAt,
-        outcome: outcome,
-        outcomeAmount: outcomeAmount,
-        outcomeCurrency: outcomeCurrency,
-        outcomeAt: outcomeAt,
-        timeline: timeline,
-        message: message,
-        locale: locale,
-        cvSentAt: cvSentAt,
-        createdAt: createdAt,
-      );
+    id: id,
+    type: type,
+    status: status ?? this.status,
+    name: name,
+    email: email,
+    company: company,
+    subject: subject,
+    jobProfile: jobProfile,
+    contract: contract,
+    budget: budget,
+    estimate: estimate,
+    estimateLabel: estimateLabel,
+    aiAnalysis: aiAnalysis,
+    aiAnalyzedAt: aiAnalyzedAt,
+    outcome: outcome,
+    outcomeAmount: outcomeAmount,
+    outcomeCurrency: outcomeCurrency,
+    outcomeAt: outcomeAt,
+    timeline: timeline,
+    message: message,
+    locale: locale,
+    cvSentAt: cvSentAt,
+    createdAt: createdAt,
+  );
 }

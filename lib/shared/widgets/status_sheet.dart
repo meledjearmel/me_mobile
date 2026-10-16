@@ -113,7 +113,8 @@ Future<void> showStatusSheet(
     onChanged();
   } on ValidationException catch (e) {
     // Publier sans l'anglais obligatoire, ou un changement impossible, est refusé.
-    messenger.showSnackBar(SnackBar(content: Text(e.errors.values.expand((m) => m).firstOrNull ?? e.message)));
+    final message = e.errors['status']?.firstOrNull ?? e.errors.values.expand((m) => m).firstOrNull ?? e.message;
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   } on ApiException catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.message)));
   }
