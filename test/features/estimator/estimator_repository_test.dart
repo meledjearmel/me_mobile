@@ -47,6 +47,16 @@ Map<String, dynamic> _page(List<Map<String, dynamic>> items, {int page = 1, int 
 };
 
 void main() {
+  late FakeDioAdapter adapter;
+  late EstimatorRepository repository;
+
+  setUp(() {
+    adapter = FakeDioAdapter();
+    repository = EstimatorRepository(
+      ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
+    );
+  });
+
   test('EstimatorItem lit un type de projet et une option en pourcentage', () {
     final type = EstimatorItem.fromJson(_projectTypeJson);
     final feature = EstimatorItem.fromJson(_percentFeatureJson);
@@ -62,19 +72,66 @@ void main() {
     expect(feature.description.isEmpty, isTrue);
   });
 
+  test('option récurrente : pricing recurring, périodes et heures par mois', () {
+    final item = EstimatorItem.fromJson({
+      ..._percentFeatureJson,
+      'hours_min': 2,
+      'hours_max': 4,
+      'pricing': 'recurring',
+      'percent': null,
+      'periods': {'monthly': 0, 'quarterly': 5, 'yearly': 15, 'weekly': 3},
+    });
+
+    expect(item.isRecurring, isTrue);
+    expect(item.effortLabel, '2 – 4 h / mois');
+    // Une clé inconnue est ignorée.
+    expect(item.periods, {EstimatorPeriod.monthly: 0, EstimatorPeriod.quarterly: 5, EstimatorPeriod.yearly: 15});
+  });
+
+  test('option ponctuelle avec periods: null', () {
+    final item = EstimatorItem.fromJson({
+      ..._percentFeatureJson,
+      'pricing': 'hours',
+      'hours_min': 8,
+      'hours_max': 8,
+      'periods': null,
+    });
+    expect(item.periods, isNull);
+    expect(item.isRecurring, isFalse);
+    expect(item.effortLabel, '8 h');
+  });
+
+  test('saveItem : une option récurrente n\'envoie que les périodes activées', () async {
+    adapter.whenRequest('POST', '/v1/estimator-items', statusCode: 201, body: _percentFeatureJson);
+    await repository.saveItem(
+      kind: EstimatorItemKind.feature,
+      name: const Translated(fr: 'Maintenance', en: 'Maintenance'),
+      description: const Translated(),
+      hoursMin: 2,
+      hoursMax: 4,
+      pricing: EstimatorPricing.recurring,
+      periods: {EstimatorPeriod.monthly: 0, EstimatorPeriod.yearly: 15},
+    );
+    final data = adapter.requests.last.data as Map<String, dynamic>;
+    expect(data['pricing'], 'recurring');
+    expect(data['hours_min'], 2);
+    expect(data['periods'], {'monthly': 0, 'yearly': 15});
+
+    await repository.saveItem(
+      kind: EstimatorItemKind.feature,
+      name: const Translated(fr: 'Blog', en: 'Blog'),
+      description: const Translated(),
+      hoursMin: 8,
+      hoursMax: 8,
+      pricing: EstimatorPricing.hours,
+      periods: {EstimatorPeriod.monthly: 0},
+    );
+    expect((adapter.requests.last.data as Map<String, dynamic>)['periods'], isNull);
+  });
+
   test('hourlyRatesToJson envoie les quatre devises, absentes à null', () {
     expect(hourlyRatesToJson({'EUR': 60}), {'XOF': null, 'EUR': 60, 'USD': null, 'CHF': null});
     expect(describeRates({'XOF': 25000, 'CHF': 90}), '25000 XOF · 90 CHF');
-  });
-
-  late FakeDioAdapter adapter;
-  late EstimatorRepository repository;
-
-  setUp(() {
-    adapter = FakeDioAdapter();
-    repository = EstimatorRepository(
-      ApiClient(baseUrl: 'https://armeldev.xyz/api', tokens: MemoryTokenStorage(), adapter: adapter),
-    );
   });
 
   test('settings et saveSettings utilisent les clés estimator_*', () async {
