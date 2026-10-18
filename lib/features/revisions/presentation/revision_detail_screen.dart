@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/utils/relative_date.dart';
 import '../../../shared/widgets/feedback.dart';
+import '../../../shared/widgets/full_screen_image_viewer.dart';
 import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
@@ -167,6 +168,7 @@ class _RevisionDetailScreenState extends ConsumerState<RevisionDetailScreen> {
         if (revision.summary.isNotEmpty) ...[const SizedBox(height: 12), Text(revision.summary)],
         if (_error != null) ...[const SizedBox(height: 12), ErrorBanner(_error!)],
         const SizedBox(height: 20),
+        if (revision.image != null) ...[_ImageProposal(image: revision.image!), const SizedBox(height: 12)],
         for (final field in revision.fields) ...[
           _FieldDiff(field: field, pending: revision.status == RevisionStatus.pending),
           const SizedBox(height: 12),
@@ -222,6 +224,85 @@ class _FieldDiff extends StatelessWidget {
           ],
           const SizedBox(height: 10),
           _ValueBlock(label: 'Après', value: field.after, highlight: true),
+        ],
+      ),
+    );
+  }
+}
+
+/// Image proposée ; pour une couverture, l'actuelle à côté (avant / après).
+class _ImageProposal extends StatelessWidget {
+  const _ImageProposal({required this.image});
+
+  final RevisionImage image;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final showCurrent = image.isCover && image.currentUrl != null;
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(image.isCover ? 'Image de couverture' : 'Image de galerie', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showCurrent) ...[
+                Expanded(child: _ImageTile(label: 'Avant', url: image.currentUrl!)),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: _ImageTile(label: image.isCover ? 'Après' : 'Ajoutée', url: image.url, highlight: true),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImageTile extends StatelessWidget {
+  const _ImageTile({required this.label, required this.url, this.highlight = false});
+
+  final String label;
+  final String url;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: highlight
+            ? theme.colorScheme.tertiary.withValues(alpha: 0.10)
+            : theme.colorScheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () => FullScreenImageViewer.open(context, url),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: AspectRatio(
+                aspectRatio: 16 / 10,
+                child: Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Center(child: Icon(Icons.broken_image_outlined)),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

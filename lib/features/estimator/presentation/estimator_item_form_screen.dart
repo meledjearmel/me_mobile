@@ -42,6 +42,12 @@ class _EstimatorItemFormScreenState extends ConsumerState<EstimatorItemFormScree
   late HourlyRates _ownRates = _item?.hourlyRates ?? const {};
   late bool _isActive = _item?.isActive ?? true;
 
+  /// Option récurrente : périodes proposées et leur remise.
+  late final Set<EstimatorPeriod> _periodsOn = {...?_item?.periods?.keys};
+  late final Map<EstimatorPeriod, TextEditingController> _discounts = {
+    for (final period in EstimatorPeriod.values) period: TextEditingController(text: '${_item?.periods?[period] ?? 0}'),
+  };
+
   /// Explication de l'IA après « Chiffrer avec l'IA ».
   String? _aiReasoning;
 
@@ -53,10 +59,11 @@ class _EstimatorItemFormScreenState extends ConsumerState<EstimatorItemFormScree
 
   bool get _isFeature => widget.kind == EstimatorItemKind.feature;
   bool get _isPercent => _isFeature && _pricing == EstimatorPricing.percent;
+  bool get _isRecurring => _isFeature && _pricing == EstimatorPricing.recurring;
 
   @override
   void dispose() {
-    for (final controller in [_hoursMin, _hoursMax, _percent, _sortOrder]) {
+    for (final controller in [_hoursMin, _hoursMax, _percent, _sortOrder, ..._discounts.values]) {
       controller.dispose();
     }
     super.dispose();
@@ -129,6 +136,10 @@ class _EstimatorItemFormScreenState extends ConsumerState<EstimatorItemFormScree
             hoursMax: int.tryParse(_hoursMax.text),
             pricing: _isFeature ? _pricing : null,
             percent: int.tryParse(_percent.text),
+            periods: {
+              for (final period in EstimatorPeriod.values)
+                if (_periodsOn.contains(period)) period: int.tryParse(_discounts[period]!.text) ?? 0,
+            },
             billing: _isFeature ? null : _billing,
             projectTypeIds: _projectTypeIds,
             // Une option en pourcentage suit le taux du type de projet.
@@ -305,19 +316,27 @@ class _EstimatorItemFormScreenState extends ConsumerState<EstimatorItemFormScree
                 'pricing',
                 'billing',
                 'project_type_ids',
-              ].any((k) => v?.errorFor(k) != null),
+                'periods',
+              ].any((k) => v?.errorFor(k) != null || (v?.errors.keys.any((e) => e.startsWith('periods.')) ?? false)),
               children: [
-                if (_isFeature)
+                if (_isFeature) ...[
                   SegmentedButton<EstimatorPricing>(
                     showSelectedIcon: false,
                     segments: [for (final p in EstimatorPricing.values) ButtonSegment(value: p, label: Text(p.label))],
                     selected: {_pricing},
                     onSelectionChanged: (selection) {
-                      setState(() => _pricing = selection.first);
+                      setState(() {
+                        _pricing = selection.first;
+                        // Sans période choisie, le mensuel est proposé par défaut.
+                        if (_isRecurring && _periodsOn.isEmpty) {
+                          _periodsOn.add(EstimatorPeriod.monthly);
+                        }
+                      });
                       _markDirty();
                     },
-                  )
-                else ...[
+                  ),
+                  if (_isRecurring) Text('Service récurrent (heures par mois, payé à chaque période).', style: muted),
+                ] else ...[
                   SegmentedButton<EstimatorBilling>(
                     showSelectedIcon: false,
                     segments: [for (final b in EstimatorBilling.values) ButtonSegment(value: b, label: Text(b.label))],
@@ -341,12 +360,67 @@ class _EstimatorItemFormScreenState extends ConsumerState<EstimatorItemFormScree
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: numberField(_hoursMin, 'Heures min.', 'hours_min', suffix: 'h')),
+                      Expanded(
+                        child: numberField(
+                          _hoursMin,
+                          _isRecurring ? 'Heures min. par mois' : 'Heures min.',
+                          'hours_min',
+                          suffix: 'h',
+                        ),
+                      ),
                       const SizedBox(width: 10),
-                      Expanded(child: numberField(_hoursMax, 'Heures max.', 'hours_max', suffix: 'h')),
+                      Expanded(
+                        child: numberField(
+                          _hoursMax,
+                          _isRecurring ? 'Heures max. par mois' : 'Heures max.',
+                          'hours_max',
+                          suffix: 'h',
+                        ),
+                      ),
                     ],
                   ),
-                if (!_isPercent) Text('Hors marge pour imprévus, ajoutée par les réglages.', style: muted),
+                if (_isRecurring)
+                  Text('Heures (min/max) par mois, sans marge pour imprévus.', style: muted)
+                else if (!_isPercent)
+                  Text('Hors marge pour imprévus, ajoutée par les réglages.', style: muted),
+                if (_isRecurring) ...[
+                  for (final period in EstimatorPeriod.values)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(period.label),
+                            subtitle: const Text('Proposée'),
+                            value: _periodsOn.contains(period),
+                            onChanged: (on) {
+                              setState(() => on ? _periodsOn.add(period) : _periodsOn.remove(period));
+                              _markDirty();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 110,
+                          child: TextField(
+                            controller: _discounts[period],
+                            enabled: _periodsOn.contains(period),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            onChanged: (_) => _markDirty(),
+                            decoration: InputDecoration(
+                              labelText: 'Remise',
+                              suffixText: '%',
+                              errorText: v?.errorFor('periods.${period.wireValue}'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (v?.errorFor('periods') != null)
+                    Text(v!.errorFor('periods')!, style: TextStyle(color: theme.colorScheme.error)),
+                ],
                 if (_isFeature)
                   MultiSelectField(
                     label: 'Réservée aux types de projet',

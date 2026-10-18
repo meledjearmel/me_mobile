@@ -5,6 +5,7 @@ import '../../../../core/api/api_exception.dart';
 import '../../../../core/utils/relative_date.dart';
 import '../../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../../shared/widgets/status_sheet.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/surfaces.dart';
 import '../../../dashboard/data/dashboard_repository.dart';
@@ -174,7 +175,7 @@ class _CommentCard extends StatelessWidget {
               InitialsTile(comment.authorName, size: 36),
               const SizedBox(width: 10),
               Expanded(child: Text(comment.authorName, style: theme.textTheme.titleSmall)),
-              StatusBadge(comment.status.label, prominent: comment.status == CommentStatus.pending),
+              TypedStatusBadge(type: 'comment', status: comment.status.wireValue, label: comment.status.label),
             ],
           ),
           if (comment.postTitle != null) ...[

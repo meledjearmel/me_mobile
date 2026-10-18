@@ -47,6 +47,28 @@ class RevisionField {
   bool get changedSince => !_jsonEquals(current, before);
 }
 
+/// Image proposée par une révision : couverture (remplace l'actuelle) ou
+/// image de galerie (ajoutée).
+@immutable
+class RevisionImage {
+  const RevisionImage({required this.role, required this.url, required this.currentUrl});
+
+  factory RevisionImage.fromJson(Map<String, dynamic> json) => RevisionImage(
+    role: json['role'] as String? ?? 'gallery',
+    url: json['url'] as String? ?? '',
+    currentUrl: json['current_url'] as String?,
+  );
+
+  /// `cover` ou `gallery`.
+  final String role;
+  final String url;
+
+  /// Image actuelle (couverture), sinon `null`.
+  final String? currentUrl;
+
+  bool get isCover => role == 'cover';
+}
+
 /// Égalité de valeurs JSON (textes, listes, objets) ; `null`, texte vide et liste vide se valent.
 bool _jsonEquals(Object? a, Object? b) {
   if (a is List && b is List) {
@@ -79,6 +101,7 @@ class Revision {
     required this.decidedAt,
     required this.editUrl,
     this.fields = const [],
+    this.image,
   });
 
   factory Revision.fromJson(Map<String, dynamic> json) => Revision(
@@ -97,6 +120,7 @@ class Revision {
       for (final item in json['fields'] as List<dynamic>? ?? const [])
         if (item is Map<String, dynamic>) RevisionField.fromJson(item),
     ],
+    image: json['image'] is Map<String, dynamic> ? RevisionImage.fromJson(json['image'] as Map<String, dynamic>) : null,
   );
 
   final int id;
@@ -117,4 +141,7 @@ class Revision {
 
   /// Vide dans la liste : seulement au détail.
   final List<RevisionField> fields;
+
+  /// Image proposée, au détail seulement ; les champs peuvent alors être vides.
+  final RevisionImage? image;
 }

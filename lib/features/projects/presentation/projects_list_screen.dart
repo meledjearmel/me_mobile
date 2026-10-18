@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/hex_color.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/status_sheet.dart';
+import '../../../shared/widgets/status_tones.dart';
 import '../../../shared/widgets/ai_badge.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../application/project_list_controller.dart';
@@ -167,11 +167,7 @@ class _ProjectCard extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                StatusBadge(
-                  project.status.label,
-                  color: project.status == ProjectStatus.published ? context.appColors.success : null,
-                  prominent: project.status == ProjectStatus.draft,
-                ),
+                TypedStatusBadge(type: 'project', status: project.status.wireValue, label: project.status.label),
                 if (AiBadge.shows(project.draftedBy, project.status == ProjectStatus.draft))
                   AiBadge(draftedBy: project.draftedBy, isDraft: true),
                 if (project.isFeatured) const StatusBadge('À la une'),

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_palette.dart';
 import '../../../core/models/publication_status.dart';
 import '../../../shared/widgets/resource_list_scaffold.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/status_sheet.dart';
+import '../../../shared/widgets/status_tones.dart';
 import '../../../shared/widgets/ai_badge.dart';
 import '../application/post_list_controller.dart';
 import '../data/post.dart';
@@ -24,15 +24,13 @@ class PostsListScreen extends ConsumerWidget {
     ref.invalidate(postListProvider);
   }
 
-  static String _stateLabel(Post post) {
-    if (post.status == PublicationStatus.draft) {
-      return 'Brouillon';
-    }
-    if (post.isScheduled && post.publishedAt != null) {
-      return 'Le ${DateFormat('d MMM', 'fr_FR').format(post.publishedAt!)}';
-    }
-    return 'En ligne';
-  }
+  /// Publié avec une date de publication encore à venir.
+  static bool _isScheduled(Post post) =>
+      post.status == PublicationStatus.published &&
+      post.publishedAt != null &&
+      post.publishedAt!.isAfter(DateTime.now());
+
+  static String _stateLabel(Post post) => _isScheduled(post) ? 'Programmé' : post.status.label;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -136,7 +134,12 @@ class PostsListScreen extends ConsumerWidget {
         trailing: StatusWithAiBadge(
           draftedBy: post.draftedBy,
           isDraft: post.status == PublicationStatus.draft,
-          status: StatusBadge(_stateLabel(post), prominent: post.status == PublicationStatus.draft),
+          status: TypedStatusBadge(
+            type: 'post',
+            status: post.status.wireValue,
+            label: _stateLabel(post),
+            tone: _isScheduled(post) ? StatusTone.outline : null,
+          ),
         ),
       ),
     );

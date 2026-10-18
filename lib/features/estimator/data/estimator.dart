@@ -51,10 +51,12 @@ enum EstimatorBilling {
   static EstimatorBilling? fromWire(String? value) => values.where((b) => b.wireValue == value).firstOrNull;
 }
 
-/// Option : des heures, ou un pourcentage des heures du projet.
+/// Option : des heures, un pourcentage des heures du projet, ou un service
+/// récurrent (heures par mois, payé à chaque période).
 enum EstimatorPricing {
   hours('hours', 'En heures'),
-  percent('percent', 'En pourcentage');
+  percent('percent', 'En pourcentage'),
+  recurring('recurring', 'Récurrent');
 
   const EstimatorPricing(this.wireValue, this.label);
 
@@ -63,6 +65,42 @@ enum EstimatorPricing {
 
   static EstimatorPricing? fromWire(String? value) => values.where((p) => p.wireValue == value).firstOrNull;
 }
+
+/// Période de paiement d'une option récurrente.
+enum EstimatorPeriod {
+  monthly('monthly', 'Mensuel', 'mois'),
+  quarterly('quarterly', 'Trimestriel', 'trimestre'),
+  semiannual('semiannual', 'Semestriel', 'semestre'),
+  yearly('yearly', 'Annuel', 'an');
+
+  const EstimatorPeriod(this.wireValue, this.label, this.unitLabel);
+
+  final String wireValue;
+  final String label;
+
+  /// « / mois », « / an »…
+  final String unitLabel;
+
+  static EstimatorPeriod? fromWire(String? value) => values.where((p) => p.wireValue == value).firstOrNull;
+}
+
+/// Périodes proposées et leur remise en % ; une période absente n'est pas proposée.
+typedef EstimatorPeriods = Map<EstimatorPeriod, int>;
+
+EstimatorPeriods? estimatorPeriodsFromJson(Object? json) {
+  if (json is! Map) {
+    return null;
+  }
+  return {
+    for (final period in EstimatorPeriod.values)
+      if (json[period.wireValue] is num) period: (json[period.wireValue] as num).toInt(),
+  };
+}
+
+Map<String, int> estimatorPeriodsToJson(EstimatorPeriods periods) => {
+  for (final period in EstimatorPeriod.values)
+    if (periods.containsKey(period)) period.wireValue: periods[period]!,
+};
 
 /// Réglages globaux (`/v1/estimator-settings`).
 @immutable
@@ -133,6 +171,7 @@ class EstimatorItem {
     required this.hoursMax,
     this.pricing,
     this.percent,
+    this.periods,
     this.billing,
     this.projectTypeIds = const [],
     this.rateId,
@@ -150,6 +189,7 @@ class EstimatorItem {
     hoursMax: json['hours_max'] as int? ?? 0,
     pricing: EstimatorPricing.fromWire(json['pricing'] as String?),
     percent: json['percent'] as int?,
+    periods: estimatorPeriodsFromJson(json['periods']),
     billing: EstimatorBilling.fromWire(json['billing'] as String?),
     projectTypeIds: [for (final id in json['project_type_ids'] as List<dynamic>? ?? const []) id as int],
     rateId: json['estimator_rate_id'] as int?,
@@ -171,6 +211,9 @@ class EstimatorItem {
   final EstimatorPricing? pricing;
   final int? percent;
 
+  /// Options récurrentes seulement ; `null` sinon.
+  final EstimatorPeriods? periods;
+
   /// Types de projet seulement.
   final EstimatorBilling? billing;
 
@@ -186,13 +229,15 @@ class EstimatorItem {
   final int sortOrder;
 
   bool get isPercent => kind == EstimatorItemKind.feature && pricing == EstimatorPricing.percent;
+  bool get isRecurring => kind == EstimatorItemKind.feature && pricing == EstimatorPricing.recurring;
 
-  /// « 20 – 40 h », « + 15 % » ou « 8 h ».
+  /// « 20 – 40 h », « + 15 % », « 8 h » ou « 2 – 4 h / mois ».
   String get effortLabel {
     if (isPercent) {
       return '+ ${percent ?? 0} %';
     }
-    return hoursMin == hoursMax ? '$hoursMin h' : '$hoursMin – $hoursMax h';
+    final hours = hoursMin == hoursMax ? '$hoursMin h' : '$hoursMin – $hoursMax h';
+    return isRecurring ? '$hours / mois' : hours;
   }
 }
 
@@ -257,7 +302,8 @@ class ProposedItem {
     if (pricing == EstimatorPricing.percent) {
       return '+ ${percent ?? 0} %';
     }
-    return hoursMin == hoursMax ? '$hoursMin h' : '$hoursMin – $hoursMax h';
+    final hours = hoursMin == hoursMax ? '$hoursMin h' : '$hoursMin – $hoursMax h';
+    return pricing == EstimatorPricing.recurring ? '$hours / mois' : hours;
   }
 }
 

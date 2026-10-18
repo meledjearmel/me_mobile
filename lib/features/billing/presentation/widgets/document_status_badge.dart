@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_tones.dart';
 import '../../data/commercial_document.dart';
 
-/// Statut d'un document ; « En retard » ou « À relancer » prennent le dessus
-/// quand ils s'appliquent.
+/// Statut d'un document, toujours affiché, suivi d'un badge rouge « En retard »
+/// ou « À relancer » quand il s'applique.
 class DocumentStatusBadge extends StatelessWidget {
   const DocumentStatusBadge(this.document, {super.key});
 
@@ -12,18 +13,21 @@ class DocumentStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    if (document.isOverdue) {
-      return StatusBadge('En retard', color: scheme.error);
-    }
-    if (document.hasReminder) {
-      return StatusBadge('À relancer', color: scheme.tertiary);
-    }
-    return switch (document.status) {
-      DocumentStatus.draft => StatusBadge(document.status.label, prominent: true),
-      DocumentStatus.accepted || DocumentStatus.paid => StatusBadge(document.status.label, color: scheme.primary),
-      DocumentStatus.declined || DocumentStatus.cancelled => StatusBadge(document.status.label),
-      DocumentStatus.issued => StatusBadge(document.sentAt == null ? 'Émis' : 'Envoyé', color: scheme.secondary),
-    };
+    final alert = document.isOverdue
+        ? 'En retard'
+        : document.hasReminder
+        ? 'À relancer'
+        : null;
+    final label = document.status == DocumentStatus.issued && document.sentAt != null
+        ? 'Envoyé'
+        : document.status.label;
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        TypedStatusBadge(type: 'commercial_document', status: document.status.wireValue, label: label),
+        if (alert != null) StatusBadge.tone(alert, StatusTone.danger),
+      ],
+    );
   }
 }

@@ -65,6 +65,17 @@ class EngagementEstimateCard extends StatelessWidget {
             'Taux ${_number.format(estimate.hourlyRate)} ${estimate.currency}/h · marge pour imprévus ${estimate.riskPercent} %',
             style: muted,
           ),
+          // Payé à chaque période, hors total du projet.
+          if (estimate.recurring.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Ensuite, en continu', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 6),
+            for (final r in estimate.recurring)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('${r.label} : ${_range(r.priceMin, r.priceMax)} ${estimate.currency} / ${r.periodUnit}'),
+              ),
+          ],
         ],
       ),
     );
@@ -226,9 +237,8 @@ class _EngagementOutcomeCardState extends ConsumerState<EngagementOutcomeCard> {
     try {
       final document = await ref.read(commercialDocumentRepositoryProvider).fromEngagement(widget.engagement.id);
       if (mounted) {
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: (context) => DocumentDetailScreen(id: document.id)));
+        await Navigator.of(context)
+            .push(MaterialPageRoute<void>(builder: (context) => DocumentDetailScreen(id: document.id)));
       }
     } on ApiException catch (e) {
       if (mounted) {
@@ -246,7 +256,8 @@ class _EngagementOutcomeCardState extends ConsumerState<EngagementOutcomeCard> {
     final engagement = widget.engagement;
     final estimate = engagement.estimate;
     final amount = TextEditingController(
-      text: engagement.outcomeAmount?.toString() ??
+      text:
+          engagement.outcomeAmount?.toString() ??
           (estimate == null ? '' : '${((estimate.priceMin + estimate.priceMax) / 2).round()}'),
     );
     var currency = engagement.outcomeCurrency ?? estimate?.currency ?? 'XOF';

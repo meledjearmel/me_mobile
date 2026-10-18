@@ -120,8 +120,40 @@ void main() {
     expect(engagement.copyWith(status: EngagementStatus.handled).aiAnalysis, isNotNull);
   });
 
+  test('options récurrentes de l\'estimation, à part du total', () {
+    final estimate = EngagementEstimate.fromJson({
+      'currency': 'CHF',
+      'price_min': 3600,
+      'price_max': 6000,
+      'recurring': [
+        {
+          'id': 9,
+          'label': 'Maintenance',
+          'period': 'yearly',
+          'months': 12,
+          'discount_percent': 15,
+          'hours_min': 2,
+          'hours_max': 4,
+          'rate': 100,
+          'price_min': 2040,
+          'price_max': 4080,
+        },
+      ],
+    });
+
+    expect(estimate.priceMax, 6000);
+    expect(estimate.recurring.single.periodUnit, 'an');
+    expect(estimate.recurring.single.discountPercent, 15);
+    expect(EngagementEstimate.fromJson(const {}).recurring, isEmpty);
+  });
+
   test('sans estimation, les champs restent vides (libellé vide compris)', () {
-    final engagement = Engagement.fromJson({..._engagementJson, 'estimate': null, 'estimate_label': '', 'ai_analysis': null});
+    final engagement = Engagement.fromJson({
+      ..._engagementJson,
+      'estimate': null,
+      'estimate_label': '',
+      'ai_analysis': null,
+    });
 
     expect(engagement.estimate, isNull);
     expect(engagement.estimateLabel, isNull);

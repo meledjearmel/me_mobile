@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/glass.dart';
-import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
+import '../../../shared/widgets/status_tones.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../data/estimator.dart';
 import '../data/estimator_repository.dart';
@@ -70,12 +71,29 @@ class EstimatorItemsScreen extends ConsumerWidget {
         onRefresh: () => ref.refresh(estimatorItemsProvider.future),
         emptyIcon: _isFeature ? Icons.extension_outlined : Icons.category_outlined,
         emptyText: _isFeature ? 'Aucune option pour l\'instant.' : 'Aucun type de projet pour l\'instant.',
-        itemBuilder: (context, item) => ListCardTile(
-          onTap: () => _open(context, ref, item),
-          leading: IconTile(_isFeature ? Icons.extension_outlined : Icons.category_outlined),
-          title: item.name.display,
-          subtitle: subtitleOf(item),
-          badge: item.isActive ? null : const StatusBadge('Masqué', prominent: true),
+        itemBuilder: (context, item) => GestureDetector(
+          // Appui long : proposer ou masquer sans ouvrir le formulaire.
+          onLongPress: () => showStatusSheet(
+            context,
+            ref,
+            type: 'estimator_item',
+            id: item.id,
+            title: item.name.display,
+            current: toggleStatus(item.isActive),
+            options: toggleStatusOptions['estimator_item']!,
+            onChanged: () => ref.invalidate(estimatorItemsProvider),
+          ),
+          child: ListCardTile(
+            onTap: () => _open(context, ref, item),
+            leading: IconTile(_isFeature ? Icons.extension_outlined : Icons.category_outlined),
+            title: item.name.display,
+            subtitle: subtitleOf(item),
+            badge: TypedStatusBadge(
+              type: 'estimator_item',
+              status: toggleStatus(item.isActive),
+              label: item.isActive ? 'Proposé' : 'Masqué',
+            ),
+          ),
         ),
       ),
     );

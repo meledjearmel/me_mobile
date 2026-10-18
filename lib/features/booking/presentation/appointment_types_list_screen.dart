@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/resource_list_scaffold.dart';
-import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/status_sheet.dart';
+import '../../../shared/widgets/status_tones.dart';
 import '../application/appointment_type_list_controller.dart';
 import '../data/appointment_type.dart';
 import 'appointment_type_form_screen.dart';
@@ -34,10 +35,25 @@ class AppointmentTypesListScreen extends ConsumerWidget {
       emptyDescription: 'Créez un type (ex. « Appel découverte, 30 min ») pour ouvrir la réservation.',
       itemBuilder: (context, type) => ListTile(
         onTap: () => _openForm(context, ref, id: type.id),
+        // Appui long : proposer ou masquer sans ouvrir le formulaire.
+        onLongPress: () => showStatusSheet(
+          context,
+          ref,
+          type: 'appointment_type',
+          id: type.id,
+          title: type.name.display,
+          current: toggleStatus(type.isActive),
+          options: toggleStatusOptions['appointment_type']!,
+          onChanged: () => ref.invalidate(appointmentTypeListProvider),
+        ),
         leading: Icon(type.locations.length == 1 ? type.locations.single.icon : Icons.event_note_outlined),
         title: Text(type.name.display),
         subtitle: Text(['${type.durationMinutes} min', type.locations.map((l) => l.label).join(', ')].join(' · ')),
-        trailing: type.isActive ? null : const StatusBadge('Inactif', prominent: true),
+        trailing: TypedStatusBadge(
+          type: 'appointment_type',
+          status: toggleStatus(type.isActive),
+          label: type.isActive ? 'Proposé' : 'Masqué',
+        ),
       ),
     );
   }
