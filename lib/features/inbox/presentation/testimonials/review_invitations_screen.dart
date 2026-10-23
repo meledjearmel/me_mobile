@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/api/api_exception.dart';
@@ -12,6 +13,7 @@ import '../../application/review_invitation_list_controller.dart';
 import '../../data/review_invitation.dart';
 import 'review_invitation_form_screen.dart';
 import 'testimonial_edit_screen.dart';
+import 'testimonial_links_card.dart';
 
 /// Copie le lien d'une demande d'avis dans le presse-papiers.
 Future<void> copyInvitationLink(BuildContext context, ReviewInvitation invitation) async {
@@ -21,18 +23,39 @@ Future<void> copyInvitationLink(BuildContext context, ReviewInvitation invitatio
   }
 }
 
-/// Ouvre l'app de messagerie avec un e-mail prérempli contenant le lien,
-/// dans la langue de la demande.
-Future<void> emailInvitationLink(ReviewInvitation invitation) {
+/// Message d'invitation dans la langue de la demande, lien compris.
+String _invitationMessage(ReviewInvitation invitation) {
   final english = invitation.locale == 'en';
   final greeting = invitation.name?.isNotEmpty == true
       ? (english ? 'Hello ${invitation.name},' : 'Bonjour ${invitation.name},')
       : (english ? 'Hello,' : 'Bonjour,');
-  final body = english
+  final link = invitation.collective
+      ? (english ? 'This link' : 'Ce lien')
+      : (english ? 'This personal link' : 'Ce lien personnel');
+  return english
       ? '$greeting\n\nWould you share a few words about our work together? '
-            'This personal link opens a short form:\n${invitation.url}\n\nThank you!'
+            '$link opens a short form:\n${invitation.url}\n\nThank you!'
       : '$greeting\n\nAccepteriez-vous de laisser quelques mots sur notre collaboration ? '
-            'Ce lien personnel ouvre un court formulaire :\n${invitation.url}\n\nMerci !';
+            '$link ouvre un court formulaire :\n${invitation.url}\n\nMerci !';
+}
+
+/// Feuille de partage native (lien collectif : WhatsApp, Slack…).
+Future<void> shareInvitationLink(BuildContext context, ReviewInvitation invitation) async {
+  final box = context.findRenderObject() as RenderBox?;
+  await SharePlus.instance.share(
+    ShareParams(
+      text: _invitationMessage(invitation),
+      subject: invitation.locale == 'en' ? 'Your feedback' : 'Votre avis',
+      sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    ),
+  );
+}
+
+/// Ouvre l'app de messagerie avec un e-mail prérempli contenant le lien,
+/// dans la langue de la demande.
+Future<void> emailInvitationLink(ReviewInvitation invitation) {
+  final english = invitation.locale == 'en';
+  final body = _invitationMessage(invitation);
   return launchUrl(
     Uri(
       scheme: 'mailto',
@@ -47,16 +70,27 @@ Future<void> emailInvitationLink(ReviewInvitation invitation) {
 String _encodeQuery(Map<String, String> params) =>
     params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
 
-/// Demandes d'avis : liens personnels à usage unique vers le formulaire d'avis.
+/// Demandes d'avis : liens personnels à usage unique ou liens collectifs
+/// vers le formulaire d'avis.
 class ReviewInvitationsScreen extends ConsumerWidget {
   const ReviewInvitationsScreen({super.key});
 
   static const _statuses = [null, 'pending', 'used', 'expired'];
 
+  /// Formulaire en feuille modale, comme dans l'admin web.
   Future<void> _create(BuildContext context, WidgetRef ref) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ReviewInvitationFormScreen()));
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => const FractionallySizedBox(heightFactor: 0.95, child: ReviewInvitationFormScreen()),
+    );
     ref.invalidate(reviewInvitationListProvider);
   }
+
+  Future<void> _openTestimonial(BuildContext context, int id) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => TestimonialEditScreen(id: id)));
 
   Future<void> _openActions(BuildContext context, WidgetRef ref, ReviewInvitation invitation) async {
     final action = await showModalBottomSheet<String>(
@@ -70,11 +104,13 @@ class ReviewInvitationsScreen extends ConsumerWidget {
               title: Text(invitation.displayName),
               subtitle: Text(invitation.url, maxLines: 2, overflow: TextOverflow.ellipsis),
             ),
-            if (invitation.testimonialId != null)
+            for (final (index, id) in invitation.testimonialIds.indexed)
               ListTile(
                 leading: const Icon(Icons.rate_review_outlined),
-                title: const Text('Voir l\'avis reçu'),
-                onTap: () => Navigator.pop(context, 'open'),
+                title: Text(
+                  invitation.testimonialIds.length == 1 ? 'Voir l\'avis reçu' : 'Voir l\'avis reçu n° ${index + 1}',
+                ),
+                onTap: () => Navigator.pop(context, 'open:$id'),
               ),
             if (invitation.status == ReviewInvitationStatus.pending) ...[
               ListTile(
@@ -82,6 +118,12 @@ class ReviewInvitationsScreen extends ConsumerWidget {
                 title: const Text('Copier le lien'),
                 onTap: () => Navigator.pop(context, 'copy'),
               ),
+              if (invitation.collective)
+                ListTile(
+                  leading: const Icon(Icons.share_outlined),
+                  title: const Text('Partager le lien'),
+                  onTap: () => Navigator.pop(context, 'share'),
+                ),
               ListTile(
                 leading: const Icon(Icons.email_outlined),
                 title: const Text('Envoyer par e-mail'),
@@ -102,11 +144,12 @@ class ReviewInvitationsScreen extends ConsumerWidget {
       return;
     }
     switch (action) {
-      case 'open':
-        await Navigator.of(context)
-            .push(MaterialPageRoute(builder: (context) => TestimonialEditScreen(id: invitation.testimonialId!)));
+      case final String open when open.startsWith('open:'):
+        await _openTestimonial(context, int.parse(open.substring(5)));
       case 'copy':
         await copyInvitationLink(context, invitation);
+      case 'share':
+        await shareInvitationLink(context, invitation);
       case 'email':
         await emailInvitationLink(invitation);
       case 'delete':
@@ -138,7 +181,7 @@ class ReviewInvitationsScreen extends ConsumerWidget {
       onCreate: () => _create(context, ref),
       emptyIcon: Icons.forward_to_inbox_outlined,
       emptyTitle: 'Aucune demande pour l\'instant',
-      emptyDescription: 'Créez un lien personnel avec le bouton + et envoyez-le à un client ou un collègue.',
+      emptyDescription: 'Créez un lien avec le bouton + et envoyez-le à un client, un collègue ou toute une équipe.',
       filterChips: [
         for (final status in _statuses)
           ChoiceChip(
@@ -148,23 +191,71 @@ class ReviewInvitationsScreen extends ConsumerWidget {
             showCheckmark: false,
           ),
       ],
-      itemBuilder: (context, invitation) => ListTile(
+      itemBuilder: (context, invitation) => _InvitationTile(
+        invitation: invitation,
         onTap: () => _openActions(context, ref, invitation),
-        leading: CircleAvatar(child: Text(invitation.locale.toUpperCase(), style: const TextStyle(fontSize: 12))),
-        title: Text(invitation.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-          [
-            invitation.subject ?? 'Avis général',
-            if (invitation.note?.isNotEmpty == true) invitation.note!,
-            if (invitation.status == ReviewInvitationStatus.pending && invitation.expiresAt != null)
-              'expire le ${DateFormat('d MMM', 'fr_FR').format(invitation.expiresAt!)}',
-            if (invitation.usedAt != null) 'reçu ${relativeDate(invitation.usedAt!)}',
-          ].join(' · '),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: StatusBadge(invitation.status.label, prominent: invitation.status == ReviewInvitationStatus.used),
+        // Lien personnel utilisé : le badge mène droit à l'avis reçu.
+        onStatusTap: !invitation.collective && invitation.testimonialIds.isNotEmpty
+            ? () => _openTestimonial(context, invitation.testimonialIds.first)
+            : null,
       ),
+    );
+  }
+}
+
+class _InvitationTile extends StatelessWidget {
+  const _InvitationTile({required this.invitation, required this.onTap, this.onStatusTap});
+
+  final ReviewInvitation invitation;
+  final VoidCallback onTap;
+  final VoidCallback? onStatusTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final badge = StatusBadge(invitation.status.label, prominent: invitation.status == ReviewInvitationStatus.used);
+
+    return ListTile(
+      onTap: onTap,
+      leading: CircleAvatar(
+        child: invitation.collective
+            ? const Icon(Icons.groups_outlined, size: 20, semanticLabel: 'Lien collectif')
+            : Text(invitation.locale.toUpperCase(), style: const TextStyle(fontSize: 12)),
+      ),
+      title: Text(invitation.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          SubjectChips(
+            labels: [
+              for (final s in invitation.subjects)
+                (icon: subjectIcons[s.type] ?? Icons.label_outline_rounded, label: s.label),
+            ],
+            // Anciennes réponses : seulement le résumé en une ligne.
+            emptyLabel: invitation.subject ?? 'Avis général',
+          ),
+          const SizedBox(height: 4),
+          Text(
+            [
+              if (invitation.collective) '${invitation.locale.toUpperCase()} · ${invitation.usesLabel}',
+              if (invitation.note?.isNotEmpty == true) invitation.note!,
+              if (invitation.status == ReviewInvitationStatus.pending && invitation.expiresAt != null)
+                'expire le ${DateFormat('d MMM', 'fr_FR').format(invitation.expiresAt!)}',
+              if (invitation.usedAt != null && !invitation.collective) 'reçu ${relativeDate(invitation.usedAt!)}',
+            ].join(' · '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+      trailing: onStatusTap == null
+          ? badge
+          : Tooltip(
+              message: 'Voir l\'avis reçu',
+              child: InkWell(borderRadius: BorderRadius.circular(999), onTap: onStatusTap, child: badge),
+            ),
     );
   }
 }

@@ -39,9 +39,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
   Translated _highlight = const Translated();
   Translated _videoTranscript = const Translated();
   XFile? _videoPending;
-  int? _projectId;
-  int? _experienceId;
-  int? _educationId;
+  Set<int> _projectIds = {};
+  Set<int> _experienceIds = {};
+  Set<int> _educationIds = {};
 
   bool _saving = false;
   bool _removingVideo = false;
@@ -59,9 +59,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
     _content = testimonial.content;
     _highlight = testimonial.highlight;
     _videoTranscript = testimonial.videoTranscript;
-    _projectId = testimonial.project?.id;
-    _experienceId = testimonial.experience?.id;
-    _educationId = testimonial.education?.id;
+    _projectIds = {for (final p in testimonial.projects) p.id};
+    _experienceIds = {for (final e in testimonial.experiences) e.id};
+    _educationIds = {for (final e in testimonial.educations) e.id};
     return testimonial;
   }
 
@@ -111,9 +111,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
             content: _content,
             highlight: _highlight,
             videoTranscript: _videoTranscript,
-            projectId: _projectId,
-            experienceId: _experienceId,
-            educationId: _educationId,
+            projectIds: _projectIds.toList(),
+            experienceIds: _experienceIds.toList(),
+            educationIds: _educationIds.toList(),
             video: pending == null ? null : await dio.MultipartFile.fromFile(pending.path, filename: pending.name),
             onProgress: pending == null
                 ? null
@@ -285,6 +285,15 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
                             ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      SubjectChips(labels: testimonialSubjectLabels(testimonial)),
+                      if (testimonial.reviewInvitationId != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Reçu par une demande d\'avis.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       Text('Modération', style: theme.textTheme.labelLarge),
                       const SizedBox(height: 8),
@@ -361,19 +370,19 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
                 const SizedBox(height: 12),
                 TestimonialLinksCard(
                   testimonial: testimonial,
-                  projectId: _projectId,
-                  experienceId: _experienceId,
-                  educationId: _educationId,
-                  onProjectChanged: (id) {
-                    setState(() => _projectId = id);
+                  projectIds: _projectIds,
+                  experienceIds: _experienceIds,
+                  educationIds: _educationIds,
+                  onProjectsChanged: (ids) {
+                    setState(() => _projectIds = ids);
                     _markDirty();
                   },
-                  onExperienceChanged: (id) {
-                    setState(() => _experienceId = id);
+                  onExperiencesChanged: (ids) {
+                    setState(() => _experienceIds = ids);
                     _markDirty();
                   },
-                  onEducationChanged: (id) {
-                    setState(() => _educationId = id);
+                  onEducationsChanged: (ids) {
+                    setState(() => _educationIds = ids);
                     _markDirty();
                   },
                 ),

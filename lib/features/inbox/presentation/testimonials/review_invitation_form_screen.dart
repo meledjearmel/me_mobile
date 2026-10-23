@@ -25,9 +25,11 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
   final _email = TextEditingController();
   final _note = TextEditingController();
   String _locale = 'fr';
-  int? _projectId;
-  int? _experienceId;
-  int? _educationId;
+  final _maxUses = TextEditingController();
+  bool _collective = false;
+  Set<int> _projectIds = {};
+  Set<int> _experienceIds = {};
+  Set<int> _educationIds = {};
   DateTime? _expiresAt;
 
   bool _saving = false;
@@ -42,6 +44,7 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
     _name.dispose();
     _email.dispose();
     _note.dispose();
+    _maxUses.dispose();
     super.dispose();
   }
 
@@ -73,9 +76,11 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
             locale: _locale,
             name: _orNull(_name),
             email: _orNull(_email),
-            projectId: _projectId,
-            experienceId: _experienceId,
-            educationId: _educationId,
+            collective: _collective,
+            maxUses: int.tryParse(_maxUses.text.trim()),
+            projectIds: _projectIds.toList(),
+            experienceIds: _experienceIds.toList(),
+            educationIds: _educationIds.toList(),
             note: _orNull(_note),
             expiresAt: _expiresAt,
           );
@@ -110,9 +115,14 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
     return ListView(
       padding: pageInsets(context),
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
-          child: FormHeader(title: 'Lien créé', subtitle: 'Envoyez-le à la personne : il ne sert qu\'une fois.'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: FormHeader(
+            title: 'Lien créé',
+            subtitle: invitation.collective
+                ? 'Partagez-le à l\'équipe : chaque personne peut laisser un avis.'
+                : 'Envoyez-le à la personne : il ne sert qu\'une fois.',
+          ),
         ),
         const SizedBox(height: 16),
         SurfaceCard(
@@ -131,6 +141,14 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
                 icon: const Icon(Icons.copy_rounded),
                 label: const Text('Copier le lien'),
               ),
+              if (invitation.collective) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => shareInvitationLink(context, invitation),
+                  icon: const Icon(Icons.share_outlined),
+                  label: const Text('Partager'),
+                ),
+              ],
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => emailInvitationLink(invitation),
@@ -157,7 +175,7 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
           padding: EdgeInsets.symmetric(horizontal: 4),
           child: FormHeader(
             title: 'Nouvelle demande d\'avis',
-            subtitle: 'Un lien personnel, à usage unique, vers le formulaire d\'avis prérempli.',
+            subtitle: 'Un lien personnel prérempli à usage unique, ou un lien collectif pour une équipe.',
           ),
         ),
         const SizedBox(height: 16),
@@ -167,19 +185,40 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Personne invitée (facultatif)', style: theme.textTheme.labelLarge),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.groups_outlined),
+                title: const Text('Lien collectif'),
+                subtitle: const Text('À partager à toute une équipe : une personne, un avis.'),
+                value: _collective,
+                onChanged: (value) => setState(() => _collective = value),
+              ),
               const SizedBox(height: 8),
-              TextField(
-                controller: _name,
-                textCapitalization: TextCapitalization.words,
-                decoration: InputDecoration(labelText: 'Nom', errorText: v?.errorFor('name')),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(labelText: 'E-mail', errorText: v?.errorFor('email')),
-              ),
+              if (_collective)
+                TextField(
+                  controller: _maxUses,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre d\'avis au plus',
+                    helperText: 'De 2 à 1000 ; vide = sans limite.',
+                    errorText: v?.errorFor('max_uses'),
+                  ),
+                )
+              else ...[
+                Text('Personne invitée (facultatif)', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _name,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(labelText: 'Nom', errorText: v?.errorFor('name')),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(labelText: 'E-mail', errorText: v?.errorFor('email')),
+                ),
+              ],
               const SizedBox(height: 16),
               Text('Langue du lien', style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),
@@ -197,12 +236,12 @@ class _ReviewInvitationFormScreenState extends ConsumerState<ReviewInvitationFor
         ),
         const SizedBox(height: 12),
         TestimonialLinksCard(
-          projectId: _projectId,
-          experienceId: _experienceId,
-          educationId: _educationId,
-          onProjectChanged: (id) => setState(() => _projectId = id),
-          onExperienceChanged: (id) => setState(() => _experienceId = id),
-          onEducationChanged: (id) => setState(() => _educationId = id),
+          projectIds: _projectIds,
+          experienceIds: _experienceIds,
+          educationIds: _educationIds,
+          onProjectsChanged: (ids) => setState(() => _projectIds = ids),
+          onExperiencesChanged: (ids) => setState(() => _experienceIds = ids),
+          onEducationsChanged: (ids) => setState(() => _educationIds = ids),
         ),
         const SizedBox(height: 12),
         SurfaceCard(

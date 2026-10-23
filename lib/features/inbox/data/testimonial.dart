@@ -26,6 +26,8 @@ class ProjectRef {
   final int id;
   final String slug;
   final Translated title;
+
+  String get label => title.display;
 }
 
 /// Expérience à laquelle un avis est rattaché.
@@ -42,6 +44,8 @@ class ExperienceRef {
   final int id;
   final String company;
   final Translated role;
+
+  String get label => '${role.display} · $company';
 }
 
 /// Formation à laquelle un avis est rattaché.
@@ -58,6 +62,8 @@ class EducationRef {
   final int id;
   final String institution;
   final Translated degree;
+
+  String get label => '${degree.display} · $institution';
 }
 
 /// Vidéo jointe ou filmée par le visiteur. `duration` (secondes), `width` et
@@ -107,13 +113,14 @@ class Testimonial {
     required this.content,
     required this.status,
     required this.isFeatured,
-    required this.project,
     required this.submittedAt,
+    this.projects = const [],
+    this.experiences = const [],
+    this.educations = const [],
+    this.reviewInvitationId,
     this.highlight = const Translated(),
     this.videoTranscript = const Translated(),
     this.video,
-    this.experience,
-    this.education,
   });
 
   factory Testimonial.fromJson(Map<String, dynamic> json) => Testimonial(
@@ -124,20 +131,32 @@ class Testimonial {
     content: Translated.fromJson(json['content']),
     status: TestimonialStatus.fromWire(json['status'] as String?),
     isFeatured: json['is_featured'] as bool? ?? false,
-    project: json['project'] == null ? null : ProjectRef.fromJson(json['project'] as Map<String, dynamic>),
     submittedAt: json['submitted_at'] == null ? null : DateTime.parse(json['submitted_at'] as String),
+    projects: _refs(json, 'projects', 'project', ProjectRef.fromJson),
+    experiences: _refs(json, 'experiences', 'experience', ExperienceRef.fromJson),
+    educations: _refs(json, 'educations', 'education', EducationRef.fromJson),
+    reviewInvitationId: json['review_invitation_id'] as int?,
     highlight: Translated.fromJson(json['highlight']),
     videoTranscript: Translated.fromJson(json['video_transcript']),
     video: json['video'] is Map<String, dynamic>
         ? TestimonialVideo.fromJson(json['video'] as Map<String, dynamic>)
         : null,
-    experience: json['experience'] is Map<String, dynamic>
-        ? ExperienceRef.fromJson(json['experience'] as Map<String, dynamic>)
-        : null,
-    education: json['education'] is Map<String, dynamic>
-        ? EducationRef.fromJson(json['education'] as Map<String, dynamic>)
-        : null,
   );
+
+  /// Liste `key` ; à défaut (ancienne réponse), le champ unique déprécié `legacy`.
+  static List<T> _refs<T>(
+    Map<String, dynamic> json,
+    String key,
+    String legacy,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    final list = json[key];
+    if (list is List) {
+      return [for (final item in list) if (item is Map<String, dynamic>) fromJson(item)];
+    }
+    final single = json[legacy];
+    return single is Map<String, dynamic> ? [fromJson(single)] : const [];
+  }
 
   final int id;
   final String authorName;
@@ -146,8 +165,15 @@ class Testimonial {
   final Translated content;
   final TestimonialStatus status;
   final bool isFeatured;
-  final ProjectRef? project;
   final DateTime? submittedAt;
+
+  /// Projets, expériences et formations liés : plusieurs possibles, aucun pour un avis général.
+  final List<ProjectRef> projects;
+  final List<ExperienceRef> experiences;
+  final List<EducationRef> educations;
+
+  /// Lien d'invitation par lequel l'avis est arrivé.
+  final int? reviewInvitationId;
 
   /// Phrase d'accroche affichée en grand sur les cartes du site (facultative).
   final Translated highlight;
@@ -156,9 +182,15 @@ class Testimonial {
   /// `null` : avis texte.
   final TestimonialVideo? video;
 
-  /// Projet, expérience et formation liés : indépendants, chacun facultatif.
-  final ExperienceRef? experience;
-  final EducationRef? education;
+  /// Rattachements en une ligne (« Projet A · Acme »), ou « Général ».
+  String get subjectSummary {
+    final labels = [
+      for (final p in projects) p.label,
+      for (final e in experiences) e.company,
+      for (final e in educations) e.institution,
+    ];
+    return labels.isEmpty ? 'Général' : labels.join(' · ');
+  }
 
   Testimonial copyWith({
     TestimonialStatus? status,
@@ -174,12 +206,13 @@ class Testimonial {
     content: content ?? this.content,
     status: status ?? this.status,
     isFeatured: isFeatured ?? this.isFeatured,
-    project: project,
     submittedAt: submittedAt,
+    projects: projects,
+    experiences: experiences,
+    educations: educations,
+    reviewInvitationId: reviewInvitationId,
     highlight: highlight,
     videoTranscript: videoTranscript,
     video: video,
-    experience: experience,
-    education: education,
   );
 }
