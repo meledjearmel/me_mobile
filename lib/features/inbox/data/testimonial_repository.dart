@@ -53,9 +53,9 @@ class TestimonialRepository {
     required Translated content,
     Translated highlight = const Translated(),
     Translated videoTranscript = const Translated(),
-    int? projectId,
-    int? experienceId,
-    int? educationId,
+    List<int> projectIds = const [],
+    List<int> experienceIds = const [],
+    List<int> educationIds = const [],
     MultipartFile? video,
     void Function(int sent, int total)? onProgress,
   }) {
@@ -67,11 +67,16 @@ class TestimonialRepository {
       'content': content,
       'highlight': highlight,
       'video_transcript': videoTranscript,
-      'project_id': projectId,
-      'experience_id': experienceId,
-      'education_id': educationId,
       if (video != null) 'video': video,
     }, method: 'PUT');
+    // Une liste vide n'enverrait rien (type inchangé) : `ids[]` vide la retire.
+    for (final (key, ids) in [
+      ('project_ids', projectIds),
+      ('experience_ids', experienceIds),
+      ('education_ids', educationIds),
+    ]) {
+      form.fields.addAll(ids.isEmpty ? [MapEntry('$key[]', '')] : [for (final id in ids) MapEntry('$key[]', '$id')]);
+    }
     return _guardFeatured(
       () async => Testimonial.fromJson(
         await _api.upload('/v1/testimonials/$id', form, onProgress: onProgress) as Map<String, dynamic>,

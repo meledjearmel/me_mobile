@@ -89,8 +89,8 @@ void main() {
         'submitted_at': '2026-09-25T10:00:00Z',
       });
 
-      expect(testimonial.project!.slug, 'mon-projet');
-      expect(testimonial.project!.title.en, 'My project');
+      expect(testimonial.projects.single.slug, 'mon-projet');
+      expect(testimonial.projects.single.title.en, 'My project');
     });
 
     test('accroche, transcription et vidéo sont parsées', () {
@@ -121,6 +121,47 @@ void main() {
       expect(testimonial.video!.aspectRatio, 720 / 1280);
     });
 
+    test('plusieurs rattachements et lien d\x27invitation', () {
+      final testimonial = Testimonial.fromJson({
+        'id': 1,
+        'author_name': 'Alice',
+        'author_email': 'a@example.com',
+        'author_role': null,
+        'content': {'fr': 'Bien', 'en': 'Good'},
+        'status': 'approved',
+        'project': {'id': 1, 'slug': 'a', 'title': {'fr': 'Projet A', 'en': ''}},
+        'projects': [
+          {'id': 1, 'slug': 'a', 'title': {'fr': 'Projet A', 'en': ''}},
+          {'id': 2, 'slug': 'b', 'title': {'fr': 'Projet B', 'en': ''}},
+        ],
+        'experiences': [
+          {'id': 4, 'company': 'Acme', 'role': {'fr': 'Dev', 'en': ''}},
+        ],
+        'educations': <dynamic>[],
+        'review_invitation_id': 5,
+        'submitted_at': '2026-09-25T10:00:00Z',
+      });
+
+      expect(testimonial.projects.map((p) => p.id), [1, 2]);
+      expect(testimonial.reviewInvitationId, 5);
+      expect(testimonial.subjectSummary, 'Projet A · Projet B · Acme');
+    });
+
+    test('sans rattachement : avis général', () {
+      final testimonial = Testimonial.fromJson({
+        'id': 1,
+        'author_name': 'Alice',
+        'author_email': 'a@example.com',
+        'author_role': null,
+        'content': {'fr': 'Bien', 'en': 'Good'},
+        'status': 'approved',
+        'submitted_at': null,
+      });
+
+      expect(testimonial.projects, isEmpty);
+      expect(testimonial.subjectSummary, 'Général');
+    });
+
     test('expérience et formation liées sont parsées', () {
       final testimonial = Testimonial.fromJson({
         'id': 1,
@@ -143,9 +184,10 @@ void main() {
         'submitted_at': '2026-09-25T10:00:00Z',
       });
 
-      expect(testimonial.experience!.company, 'ACME');
-      expect(testimonial.experience!.role.en, 'Developer');
-      expect(testimonial.education!.institution, 'ESATIC');
+      expect(testimonial.experiences.single.company, 'ACME');
+      expect(testimonial.experiences.single.role.en, 'Developer');
+      expect(testimonial.educations.single.institution, 'ESATIC');
+      expect(testimonial.subjectSummary, 'ACME · ESATIC');
     });
 
     test('une vidéo non traitée garde un format 16:9 et pas de durée', () {

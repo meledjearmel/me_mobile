@@ -340,22 +340,25 @@ class _ValueBlock extends StatelessWidget {
   }
 }
 
-/// Valeur lisible : texte tel quel, liste en puces, objet en « clé : valeur ».
+/// Valeur lisible : texte tel quel, liste en puces, objet en « clé : valeur »
+/// à raison d'une clé par ligne (réglages de l'estimateur, par exemple).
 String formatRevisionValue(Object? value) => switch (value) {
   null || '' => '(vide)',
   List<dynamic>() when value.isEmpty => '(vide)',
+  Map<dynamic, dynamic>() when value.isEmpty => '(vide)',
   List<dynamic>() => value.map((item) => '• ${_inline(item)}').join('\n'),
-  Map<dynamic, dynamic>() => _inline(value),
-  _ => '$value',
+  Map<dynamic, dynamic>() => _entries(value).join('\n'),
+  _ => _inline(value),
 };
 
+Iterable<String> _entries(Map<dynamic, dynamic> map) =>
+    map.entries.where((e) => e.value != null && e.value != '').map((e) => '${e.key} : ${_inline(e.value)}');
+
 String _inline(Object? value) => switch (value) {
-  Map<dynamic, dynamic>() =>
-    value.entries
-        .where((e) => e.value != null && e.value != '')
-        .map((e) => '${e.key} : ${_inline(e.value)}')
-        .join(' — '),
+  Map<dynamic, dynamic>() => _entries(value).join(' — '),
   List<dynamic>() => value.map(_inline).join(', '),
+  true => 'oui',
+  false => 'non',
   null => '',
   _ => '$value',
 };

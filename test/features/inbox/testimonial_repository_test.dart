@@ -59,11 +59,13 @@ void main() {
       content: const Translated(fr: 'Corrigé', en: 'Fixed'),
       highlight: const Translated(fr: 'Top'),
       videoTranscript: const Translated(en: 'Hello'),
-      experienceId: 4,
+      projectIds: [7, 8],
+      experienceIds: [4],
     );
 
     final form = adapter.requests.single.data as FormData;
     final fields = {for (final f in form.fields) f.key: f.value};
+    List<String> all(String key) => [for (final f in form.fields) if (f.key == key) f.value];
     expect(fields['_method'], 'PUT');
     expect(fields['author_name'], 'Alice B.');
     expect(fields['author_role'], '');
@@ -72,9 +74,10 @@ void main() {
     expect(fields['highlight[fr]'], 'Top');
     expect(fields['video_transcript[en]'], 'Hello');
     expect(fields['is_featured'], '1');
-    expect(fields['project_id'], '');
-    expect(fields['experience_id'], '4');
-    expect(fields['education_id'], '');
+    expect(all('project_ids[]'), ['7', '8']);
+    expect(all('experience_ids[]'), ['4']);
+    // Liste vide : `ids[]` vide pour retirer les rattachements de ce type.
+    expect(all('education_ids[]'), ['']);
     expect(form.files, isEmpty);
   });
 

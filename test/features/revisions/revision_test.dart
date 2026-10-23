@@ -127,6 +127,16 @@ void main() {
       ]),
       '• value : 3× — label : plus rapide',
     );
+    // Estimateur : objets JSON, une clé par ligne.
+    expect(
+      formatRevisionValue({
+        'currency': 'XOF',
+        'vat': 18,
+        'rush': {'enabled': true, 'percent': 20},
+      }),
+      'currency : XOF\nvat : 18\nrush : enabled : oui — percent : 20',
+    );
+    expect(formatRevisionValue(<String, dynamic>{}), '(vide)');
   });
 
   testWidgets('détail : avant/après, alerte si changé, application confirmée', (tester) async {

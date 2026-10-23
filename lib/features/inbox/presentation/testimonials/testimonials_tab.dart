@@ -237,8 +237,15 @@ class _TestimonialCard extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 10),
-          if (testimonial.submittedAt != null)
-            Text(relativeDate(testimonial.submittedAt!), style: theme.textTheme.bodySmall),
+          Text(
+            [
+              testimonial.subjectSummary,
+              if (testimonial.submittedAt != null) relativeDate(testimonial.submittedAt!),
+            ].join(' · '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall,
+          ),
         ],
       ),
     );
