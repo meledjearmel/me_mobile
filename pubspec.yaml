@@ -4,7 +4,7 @@ homepage: https://armeldev.xyz
 publish_to: 'none'
 
 # X.Y.Z+N : voir la règle de versionnage dans CLAUDE.md.
-version: 1.7.0+8
+version: 1.8.0+9
 
 environment:
   sdk: ^3.13.2
