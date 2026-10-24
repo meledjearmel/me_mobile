@@ -24,6 +24,9 @@ import 'package:me_mobile/features/job_applications/presentation/job_application
 import 'package:me_mobile/features/job_applications/presentation/job_application_form_screen.dart';
 import 'package:me_mobile/features/job_applications/presentation/job_applications_list_screen.dart';
 import 'package:me_mobile/features/mcp/presentation/mcp_activity_screen.dart';
+import 'package:me_mobile/features/proposals/presentation/proposal_detail_screen.dart';
+import 'package:me_mobile/features/proposals/presentation/proposal_form_screen.dart';
+import 'package:me_mobile/features/proposals/presentation/proposals_list_screen.dart';
 import 'package:me_mobile/features/services/presentation/service_form_screen.dart';
 import 'package:me_mobile/features/services/presentation/services_list_screen.dart';
 import 'package:me_mobile/features/weekly_report/presentation/weekly_report_screen.dart';
@@ -40,6 +43,23 @@ Map<String, dynamic> _page(List<Map<String, dynamic>> items) => {
 };
 
 const _translated = {'fr': 'Titre un peu long pour voir si le texte déborde', 'en': 'Title'};
+
+const _proposal = {
+  'id': 4,
+  'platform': 'upwork',
+  'locale': 'fr',
+  'job_title': 'Développeur Flutter pour une application de paiement mobile',
+  'client_name': 'John',
+  'job_url': 'https://www.upwork.com/jobs/~01',
+  'job_posting': 'Annonce',
+  'body': 'Bonjour John,\n\nJ\'ai déjà livré une app de paiement.',
+  'screening_answers': 'Oui, cinq ans.',
+  'bid': '40 \$/h',
+  'connects': 16,
+  'status': 'interview',
+  'drafted_by': 'Claude Code',
+  'sent_at': '2026-10-20T09:00:00Z',
+};
 
 const _jobApplication = {
   'id': 7,
@@ -192,6 +212,8 @@ FakeDioAdapter _adapter() => FakeDioAdapter()
   ]))
   ..whenRequest('GET', '/v1/job-applications', statusCode: 200, body: _page([_jobApplication]))
   ..whenRequest('GET', '/v1/job-applications/7', statusCode: 200, body: _jobApplication)
+  ..whenRequest('GET', '/v1/proposals', statusCode: 200, body: _page([_proposal]))
+  ..whenRequest('GET', '/v1/proposals/4', statusCode: 200, body: _proposal)
   ..whenRequest('GET', '/v1/job-applications/7/events', statusCode: 200, body: {
     'data': [
       {'id': 1, 'type': 'view', 'city': 'Abidjan', 'country': 'Côte d\'Ivoire', 'device': 'mobile', 'created_at': '2026-10-09T08:00:00Z'},
@@ -286,6 +308,10 @@ void main() {
     'Candidatures : fiche': (const JobApplicationDetailScreen(id: 7), 'Lien privé'),
     'Candidatures : formulaire': (const JobApplicationFormScreen(), 'Nouvelle candidature'),
     'Candidatures : modification': (const JobApplicationFormScreen(id: 7), 'Modifier la candidature'),
+    'Propositions : liste': (const ProposalsListScreen(), 'Développeur Flutter pour une application de paiement mobile'),
+    'Propositions : fiche': (const ProposalDetailScreen(id: 4), 'Réponses aux questions'),
+    'Propositions : formulaire': (const ProposalFormScreen(), 'Nouvelle proposition'),
+    'Propositions : modification': (const ProposalFormScreen(id: 4), 'Rédigée par Claude Code'),
     'Estimateur : accueil': (const EstimatorScreen(), 'Estimateur'),
     'Estimateur : tarifs': (const EstimatorSettingsScreen(), 'Tarifs'),
     'Estimateur : grilles': (const EstimatorRatesScreen(), 'Grilles tarifaires'),

@@ -24,6 +24,10 @@ StatusTone statusTone(String type, String status) => switch ((type, status)) {
   // Candidatures.
   ('job_application', 'active') => StatusTone.filled,
   ('job_application', _) => StatusTone.secondary,
+  // Propositions freelance : entretien et mission obtenue en avant.
+  ('proposal', 'interview' || 'hired') => StatusTone.filled,
+  ('proposal', 'declined') => StatusTone.outline,
+  ('proposal', _) => StatusTone.secondary,
   // Devis et factures.
   ('commercial_document', 'draft' || 'cancelled') => StatusTone.outline,
   ('commercial_document', 'issued') => StatusTone.secondary,

@@ -12,6 +12,7 @@ import '../../estimator/presentation/estimator_screen.dart';
 import '../../services/presentation/services_list_screen.dart';
 import '../../weekly_report/presentation/weekly_report_screen.dart';
 import '../../job_applications/presentation/job_applications_list_screen.dart';
+import '../../proposals/presentation/proposals_list_screen.dart';
 import '../../../shared/widgets/surfaces.dart';
 import '../../dashboard/data/dashboard.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -58,6 +59,7 @@ class ContentScreen extends ConsumerWidget {
         (icon: Icons.work_outline_rounded, label: 'Projets', builder: _projectsScreen),
         (icon: Icons.handshake_outlined, label: 'Références', builder: _referencesScreen),
         (icon: Icons.send_outlined, label: 'Candidatures', builder: _jobApplicationsScreen),
+        (icon: Icons.work_history_outlined, label: 'Propositions freelance', builder: _proposalsScreen),
       ],
     ),
     (
@@ -115,6 +117,7 @@ class ContentScreen extends ConsumerWidget {
   static Widget _jobProfilesScreen(BuildContext context) => const JobProfilesListScreen();
   static Widget _referencesScreen(BuildContext context) => const ProfessionalReferencesListScreen();
   static Widget _jobApplicationsScreen(BuildContext context) => const JobApplicationsListScreen();
+  static Widget _proposalsScreen(BuildContext context) => const ProposalsListScreen();
   static Widget _musicScreen(BuildContext context) => const MusicScreen();
   static Widget _celebrationsScreen(BuildContext context) => const CelebrationsListScreen();
   static Widget _postsScreen(BuildContext context) => const PostsListScreen();

@@ -33,6 +33,10 @@ void main() {
     expect(statusTone('job_application', 'active'), StatusTone.filled);
     expect(statusTone('job_application', 'draft'), StatusTone.secondary);
     expect(statusTone('job_application', 'archived'), StatusTone.secondary);
+    expect(statusTone('proposal', 'interview'), StatusTone.filled);
+    expect(statusTone('proposal', 'hired'), StatusTone.filled);
+    expect(statusTone('proposal', 'sent'), StatusTone.secondary);
+    expect(statusTone('proposal', 'declined'), StatusTone.outline);
 
     expect(statusTone('commercial_document', 'draft'), StatusTone.outline);
     expect(statusTone('commercial_document', 'issued'), StatusTone.secondary);
