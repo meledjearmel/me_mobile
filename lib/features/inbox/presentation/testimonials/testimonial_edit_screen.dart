@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart' as dio;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,6 +15,7 @@ import '../../../../shared/widgets/translated_field.dart';
 import '../../application/testimonial_list_controller.dart';
 import '../../data/testimonial.dart';
 import '../../data/testimonial_repository.dart';
+import 'testimonial_captions_card.dart';
 import 'testimonial_links_card.dart';
 import 'testimonial_video_card.dart';
 
@@ -39,6 +41,9 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
   Translated _highlight = const Translated();
   Translated _videoTranscript = const Translated();
   XFile? _videoPending;
+  Map<String, PlatformFile> _captionsPending = {};
+  Set<String> _captionsRemoved = {};
+  Map<String, String> _captionErrors = {};
   Set<int> _projectIds = {};
   Set<int> _experienceIds = {};
   Set<int> _educationIds = {};
@@ -96,9 +101,11 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
     setState(() {
       _saving = true;
       _error = null;
+      _captionErrors = {};
       _uploadProgress = null;
     });
     final pending = _videoPending;
+    final uploads = pending != null || _captionsPending.isNotEmpty;
     try {
       final updated = await ref
           .read(testimonialRepositoryProvider)
@@ -115,7 +122,15 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
             experienceIds: _experienceIds.toList(),
             educationIds: _educationIds.toList(),
             video: pending == null ? null : await dio.MultipartFile.fromFile(pending.path, filename: pending.name),
-            onProgress: pending == null
+            captionFiles: {
+              for (final MapEntry(key: language, value: file) in _captionsPending.entries)
+                language: dio.MultipartFile.fromFileSync(file.path!, filename: file.name),
+            },
+            removeCaptions: [
+              for (final language in _captionsRemoved)
+                if (!_captionsPending.containsKey(language)) language,
+            ],
+            onProgress: !uploads
                 ? null
                 : (sent, total) {
                     if (total > 0 && mounted) {
@@ -129,7 +144,13 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
         Navigator.of(context).pop();
       }
     } on ValidationException catch (e) {
-      setState(() => _error = e.message);
+      setState(() {
+        _error = e.message;
+        _captionErrors = {
+          for (final language in TestimonialCaption.languages)
+            language: ?e.errorFor('video_captions_files.$language'),
+        };
+      });
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -165,6 +186,10 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
       setState(() {
         _testimonial = updated;
         _future = Future.value(updated);
+        // Les sous-titres partent avec la vidéo.
+        _captionsPending = {};
+        _captionsRemoved = {};
+        _captionErrors = {};
       });
     } on ApiException catch (e) {
       if (mounted) {
@@ -399,6 +424,28 @@ class _TestimonialEditScreenState extends ConsumerState<TestimonialEditScreen> {
                   onRemove: _removeVideo,
                 ),
                 if (testimonial.video != null || _videoPending != null) ...[
+                  const SizedBox(height: 12),
+                  TestimonialCaptionsCard(
+                    video: testimonial.video,
+                    pendingFiles: _captionsPending,
+                    removed: _captionsRemoved,
+                    errors: _captionErrors,
+                    onPicked: (language, file) {
+                      setState(() {
+                        _captionsPending = {..._captionsPending, language: file};
+                        _captionErrors = {..._captionErrors}..remove(language);
+                      });
+                      _markDirty();
+                    },
+                    onCancelPending: (language) =>
+                        setState(() => _captionsPending = {..._captionsPending}..remove(language)),
+                    onRemove: (language) {
+                      setState(() => _captionsRemoved = {..._captionsRemoved, language});
+                      _markDirty();
+                    },
+                    onUndoRemove: (language) =>
+                        setState(() => _captionsRemoved = {..._captionsRemoved}..remove(language)),
+                  ),
                   const SizedBox(height: 12),
                   SurfaceCard(
                     radius: 22,

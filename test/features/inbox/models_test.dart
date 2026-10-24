@@ -195,6 +195,22 @@ void main() {
 
       expect(video.durationLabel, isNull);
       expect(video.aspectRatio, 16 / 9);
+      expect(video.captions, isEmpty);
+    });
+
+    test('sous-titres : pistes par langue et piste par défaut selon l\x27appareil', () {
+      final video = TestimonialVideo.fromJson({
+        'url': 'https://armeldev.xyz/v.mp4',
+        'captions': [
+          {'language': 'fr', 'url': 'https://armeldev.xyz/api/testimonials/9/captions/fr.vtt'},
+        ],
+      });
+
+      expect(video.captions.single.label, 'Français');
+      expect(TestimonialCaption.labelFor('en'), 'English');
+      expect(video.defaultCaption('fr')?.url, endsWith('/fr.vtt'));
+      expect(video.defaultCaption('en'), isNull);
+      expect(video.defaultCaption('de'), isNull);
     });
   });
 }

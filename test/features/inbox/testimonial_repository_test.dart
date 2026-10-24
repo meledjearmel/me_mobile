@@ -81,6 +81,58 @@ void main() {
     expect(form.files, isEmpty);
   });
 
+  test('updateContent envoie les sous-titres par langue et les pistes à retirer', () async {
+    adapter.whenRequest('POST', '/v1/testimonials/9', statusCode: 200, body: _testimonialJson);
+
+    await repository.updateContent(
+      9,
+      status: TestimonialStatus.approved,
+      isFeatured: false,
+      authorName: 'Alice',
+      authorRole: null,
+      content: const Translated(fr: 'Bien'),
+      captionFiles: {'fr': MultipartFile.fromString('WEBVTT\n', filename: 'fr.vtt')},
+      removeCaptions: ['en'],
+    );
+
+    final form = adapter.requests.single.data as FormData;
+    expect(form.files.map((f) => f.key), ['video_captions_files[fr]']);
+    expect([for (final f in form.fields) if (f.key == 'remove_video_captions[]') f.value], ['en']);
+  });
+
+  test('un 422 sur un fichier de sous-titres reste attaché à sa langue', () async {
+    adapter.whenRequest(
+      'POST',
+      '/v1/testimonials/9',
+      statusCode: 422,
+      body: {
+        'message': 'Fichier invalide.',
+        'errors': {
+          'video_captions_files.en': ['Ce fichier ne contient pas de sous-titres minutés.'],
+        },
+      },
+    );
+
+    await expectLater(
+      repository.updateContent(
+        9,
+        status: TestimonialStatus.approved,
+        isFeatured: false,
+        authorName: 'Alice',
+        authorRole: null,
+        content: const Translated(fr: 'Bien'),
+        captionFiles: {'en': MultipartFile.fromString('{}', filename: 'en.json')},
+      ),
+      throwsA(
+        isA<ValidationException>().having(
+          (e) => e.errorFor('video_captions_files.en'),
+          'erreur EN',
+          'Ce fichier ne contient pas de sous-titres minutés.',
+        ),
+      ),
+    );
+  });
+
   test('deleteVideo retire la vidéo et renvoie l\'avis texte', () async {
     adapter.whenRequest('DELETE', '/v1/testimonials/9/video', statusCode: 200, body: _testimonialJson);
 

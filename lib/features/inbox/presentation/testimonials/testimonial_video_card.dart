@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -124,6 +125,12 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
   bool _loading = false;
   bool _failed = false;
 
+  /// Piste affichée, `null` : sous-titres coupés.
+  late TestimonialCaption? _caption = _defaultCaption();
+
+  TestimonialCaption? _defaultCaption() =>
+      widget.video.defaultCaption(WidgetsBinding.instance.platformDispatcher.locale.languageCode);
+
   @override
   void didUpdateWidget(covariant _VideoPlayerView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -132,6 +139,25 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
       _controller = null;
       _failed = false;
     }
+    final caption = _caption;
+    if (caption != null && widget.video.captionFor(caption.language)?.url != caption.url) {
+      _selectCaption(widget.video.captionFor(caption.language));
+    }
+  }
+
+  /// Fichier WebVTT public ; en cas d'échec, la vidéo se lit sans sous-titres.
+  static Future<ClosedCaptionFile> _loadCaptions(TestimonialCaption caption) async {
+    try {
+      final response = await Dio().get<String>(caption.url, options: Options(responseType: ResponseType.plain));
+      return WebVTTCaptionFile(response.data ?? '');
+    } catch (_) {
+      return WebVTTCaptionFile('WEBVTT\n');
+    }
+  }
+
+  void _selectCaption(TestimonialCaption? caption) {
+    setState(() => _caption = caption);
+    _controller?.setClosedCaptionFile(caption == null ? null : _loadCaptions(caption));
   }
 
   @override
@@ -145,7 +171,11 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
       _loading = true;
       _failed = false;
     });
-    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.video.url));
+    final caption = _caption;
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.video.url),
+      closedCaptionFile: caption == null ? null : _loadCaptions(caption),
+    );
     try {
       await controller.initialize();
       controller.addListener(() {
@@ -182,7 +212,8 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
     final controller = _controller;
     final posterUrl = widget.video.posterUrl;
 
-    return ClipRRect(
+    final captions = widget.video.captions;
+    final player = ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
         aspectRatio: controller?.value.aspectRatio ?? widget.video.aspectRatio,
@@ -193,6 +224,11 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
                   fit: StackFit.expand,
                   children: [
                     VideoPlayer(controller),
+                    if (_caption != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ClosedCaption(text: controller.value.caption.text),
+                      ),
                     if (!controller.value.isPlaying) const _PlayIcon(icon: Icons.play_arrow_rounded),
                     Align(
                       alignment: Alignment.bottomCenter,
@@ -216,6 +252,52 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
                 ),
               ),
       ),
+    );
+    if (captions.isEmpty) {
+      return player;
+    }
+    return Stack(
+      children: [
+        player,
+        Positioned(
+          top: 4,
+          right: 4,
+          child: CaptionMenuButton(captions: captions, selected: _caption, onSelected: _selectCaption),
+        ),
+      ],
+    );
+  }
+}
+
+/// Choix de la piste de sous-titres, ou « Désactivés ».
+class CaptionMenuButton extends StatelessWidget {
+  const CaptionMenuButton({super.key, required this.captions, required this.selected, required this.onSelected});
+
+  final List<TestimonialCaption> captions;
+  final TestimonialCaption? selected;
+  final ValueChanged<TestimonialCaption?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Sous-titres',
+      icon: DecoratedBox(
+        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(
+            selected == null ? Icons.closed_caption_disabled_outlined : Icons.closed_caption_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+      ),
+      initialValue: selected?.language ?? '',
+      onSelected: (language) => onSelected(captions.where((c) => c.language == language).firstOrNull),
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: '', child: Text('Désactivés')),
+        for (final caption in captions) PopupMenuItem(value: caption.language, child: Text(caption.label)),
+      ],
     );
   }
 }

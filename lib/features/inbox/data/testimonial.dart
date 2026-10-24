@@ -66,11 +66,34 @@ class EducationRef {
   String get label => '${degree.display} · $institution';
 }
 
+/// Piste de sous-titres WebVTT d'une vidéo d'avis (`fr` ou `en`).
+@immutable
+class TestimonialCaption {
+  const TestimonialCaption({required this.language, required this.url});
+
+  factory TestimonialCaption.fromJson(Map<String, dynamic> json) =>
+      TestimonialCaption(language: json['language'] as String, url: json['url'] as String);
+
+  /// Langues acceptées par l'API, dans l'ordre d'affichage.
+  static const languages = ['fr', 'en'];
+
+  final String language;
+  final String url;
+
+  String get label => labelFor(language);
+
+  static String labelFor(String language) => switch (language) {
+    'fr' => 'Français',
+    'en' => 'English',
+    _ => language.toUpperCase(),
+  };
+}
+
 /// Vidéo jointe ou filmée par le visiteur. `duration` (secondes), `width` et
 /// `height` restent nuls tant que le serveur n'a pas traité la vidéo.
 @immutable
 class TestimonialVideo {
-  const TestimonialVideo({required this.url, this.posterUrl, this.duration, this.width, this.height, this.uploadedAt});
+  const TestimonialVideo({required this.url, this.posterUrl, this.duration, this.width, this.height, this.uploadedAt, this.captions = const []});
 
   factory TestimonialVideo.fromJson(Map<String, dynamic> json) => TestimonialVideo(
     url: json['url'] as String,
@@ -79,6 +102,11 @@ class TestimonialVideo {
     width: json['width'] as int?,
     height: json['height'] as int?,
     uploadedAt: json['uploaded_at'] == null ? null : DateTime.parse(json['uploaded_at'] as String),
+    captions: [
+      if (json['captions'] case final List<dynamic> list)
+        for (final item in list)
+          if (item is Map<String, dynamic>) TestimonialCaption.fromJson(item),
+    ],
   );
 
   final String url;
@@ -87,6 +115,14 @@ class TestimonialVideo {
   final int? width;
   final int? height;
   final DateTime? uploadedAt;
+
+  /// Sous-titres en ligne, vide s'il n'y en a pas.
+  final List<TestimonialCaption> captions;
+
+  TestimonialCaption? captionFor(String language) => captions.where((c) => c.language == language).firstOrNull;
+
+  /// Piste activée par défaut : celle de la langue de l'appareil, sinon aucune.
+  TestimonialCaption? defaultCaption(String deviceLanguage) => captionFor(deviceLanguage.toLowerCase());
 
   /// Ratio largeur / hauteur, 16:9 tant que la vidéo n'est pas traitée.
   double get aspectRatio => width != null && height != null && height! > 0 ? width! / height! : 16 / 9;

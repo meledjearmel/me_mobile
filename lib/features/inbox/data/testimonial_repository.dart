@@ -44,6 +44,10 @@ class TestimonialRepository {
   /// Correction du texte (auteur, rôle, contenu, accroche, transcription) en
   /// même temps que la modération. En multipart (`_method=PUT`, §3.4) pour
   /// pouvoir joindre une [video] de remplacement (95 Mo maximum).
+  ///
+  /// [captionFiles] : sous-titres par langue (`fr`, `en` ; .vtt, .srt ou .json
+  /// ElevenLabs, 2 Mo), qui remplacent la piste de leur langue ;
+  /// [removeCaptions] : langues dont la piste est retirée.
   Future<Testimonial> updateContent(
     int id, {
     required TestimonialStatus status,
@@ -57,6 +61,8 @@ class TestimonialRepository {
     List<int> experienceIds = const [],
     List<int> educationIds = const [],
     MultipartFile? video,
+    Map<String, MultipartFile> captionFiles = const {},
+    List<String> removeCaptions = const [],
     void Function(int sent, int total)? onProgress,
   }) {
     final form = buildFormData({
@@ -68,6 +74,8 @@ class TestimonialRepository {
       'highlight': highlight,
       'video_transcript': videoTranscript,
       if (video != null) 'video': video,
+      'video_captions_files': captionFiles,
+      'remove_video_captions': removeCaptions,
     }, method: 'PUT');
     // Une liste vide n'enverrait rien (type inchangé) : `ids[]` vide la retire.
     for (final (key, ids) in [
